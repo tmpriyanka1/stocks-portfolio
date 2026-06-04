@@ -1,0 +1,455 @@
+/* ==========================================================================
+   PORTFOLIO SCREEN SPECIFIC STYLES
+   ========================================================================== */
+
+
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.greeting-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sub-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notification-btn {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-btn:hover {
+  background: var(--glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.notification-btn .badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--danger);
+  border: 1.5px solid var(--bg-primary);
+}
+
+/* BALANCE METRICS CARD */
+.balance-card {
+  position: relative;
+  margin: 6px 24px 10px 24px;
+  padding: 14px 20px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 12px 32px var(--glass-shadow);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  --chart-color: var(--accent); /* Default indicator */
+}
+
+.balance-card.profit {
+  --chart-color: var(--success);
+}
+
+.balance-card.loss {
+  --chart-color: var(--danger);
+}
+
+.card-glow {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.balance-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.card-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.balance-amount {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.balance-change {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.balance-change.positive {
+  color: var(--success);
+}
+.balance-change.negative {
+  color: var(--danger);
+}
+
+.card-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 10px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+
+/* BALANCE METRICS CARD CHART */
+.portfolio-chart-container {
+  height: 55px;
+  margin: 8px -20px 8px -20px; /* Pull to card edges */
+  position: relative;
+  overflow: hidden;
+}
+
+.portfolio-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw-chart-line 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.chart-area {
+  opacity: 0;
+  animation: fade-in-chart-area 1.2s ease-out 1s forwards;
+}
+
+@keyframes draw-chart-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-in-chart-area {
+  to {
+    opacity: 1;
+  }
+}
+
+
+/* HOLDINGS TABLE COLUMN HEADER ROW */
+.holdings-header {
+  display: grid;
+  grid-template-columns: 1.8fr 2fr 1.6fr 2.6fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.8px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 8px;
+}
+
+.holdings-header span:first-child {
+  text-align: center;
+}
+
+.holdings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.asset-row {
+  display: grid;
+  grid-template-columns: 1.8fr 2fr 1.6fr 2.6fr;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.asset-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.09);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Col 1: Icon & Ticker (Vertical Stack layout) */
+.asset-col-ticker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+
+.asset-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  font-size: 11.5px;
+  color: var(--text-primary);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+
+.ticker-text-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  width: 100%;
+}
+
+.asset-ticker {
+  font-size: 11.5px; /* Slightly smaller to fit vertical stack layout beautifully */
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.asset-sub-ticker {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.1px;
+}
+
+/* Col 2: Quantity @ Avg cost */
+.asset-col-shares-avg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asset-shares-qty {
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--text-primary);
+}
+
+.asset-avg-cost {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+/* Col 3: Live price */
+.asset-col-live-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Col 4: Total Value & Sparkline Graph */
+.asset-col-total-graph {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  width: 100%;
+}
+
+.total-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+}
+
+.asset-total-val {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.asset-row-perf {
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.asset-row-perf.positive {
+  color: var(--success);
+}
+
+.asset-row-perf.negative {
+  color: var(--danger);
+}
+
+.asset-mini-chart {
+  width: 90px;
+  height: 24px;
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
+}
+
+.asset-row:hover .asset-mini-chart {
+  opacity: 1;
+}
+
+.mini-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* SKELETON ROW LAYOUT & PULSE SHIMMER */
+.skeleton-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.skeleton-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+
+.skeleton-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 14px;
+}
+
+.skeleton-value {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 80px;
+  align-items: flex-end;
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: 5px;
+}
+
+.skeleton-line.title {
+  width: 45%;
+  height: 12px;
+}
+
+.skeleton-line.subtitle {
+  width: 30%;
+  height: 9px;
+}
+
+.skeleton-line.align-right {
+  width: 70%;
+}
+
+.skeleton-line.align-right.subtitle {
+  width: 50%;
+}
+
+

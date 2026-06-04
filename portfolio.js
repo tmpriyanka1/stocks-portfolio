@@ -52,6 +52,32 @@ const portfolioAssets = [
   }
 ];
 
+// 2. MOCK SPARKLINE HISTORY DATA (for mini graphs)
+const sparklineData = {
+  'NVDA': [420, 435, 430, 460, 480, 485],
+  'AAPL': [160, 163, 168, 172, 174, 175.50],
+  'TSLA': [215, 212, 208, 195, 202, 198.20],
+  'NVDA $490 Call': [10.5, 12.0, 11.5, 14.0, 16.5, 18.50],
+  'AAPL $180 Call': [7.2, 6.8, 5.5, 5.0, 5.2, 4.80]
+};
+
+/**
+ * Generates an SVG path string from an array of numeric data points
+ */
+function generateSparklinePath(points, width, height) {
+  if (!points || points.length === 0) return '';
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min === 0 ? 1 : max - min;
+  
+  return points.map((p, i) => {
+    const x = (i / (points.length - 1)) * width;
+    // Invert y axis for SVG coordinates
+    const y = height - ((p - min) / range) * height;
+    return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(' ');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   updateBalanceMetrics();
   initNavigation();
@@ -59,16 +85,17 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Render full portfolio instantly on load
   renderAssetsTable('all');
-  initNotificationBell();
+  initNotificationToggle();
 });
 
 /**
  * Calculates and updates top portfolio balance card metrics dynamically
  */
 function updateBalanceMetrics() {
+  const balanceCard = document.querySelector('.balance-card');
   const balanceAmountEl = document.querySelector('.balance-amount');
   const balanceChangeEl = document.querySelector('.balance-change');
-  const activeOptionsEl = document.querySelector('.stat-item:last-child .stat-value');
+  const activeOptionsEl = document.getElementById('active-options-value');
   
   if (!balanceAmountEl || !balanceChangeEl) return;
   
@@ -102,6 +129,17 @@ function updateBalanceMetrics() {
   
   balanceChangeEl.className = `balance-change ${changeClass}`;
   
+  // Add profit/loss class to balance card to update main chart colors dynamically
+  if (balanceCard) {
+    if (isPositive) {
+      balanceCard.classList.remove('loss');
+      balanceCard.classList.add('profit');
+    } else {
+      balanceCard.classList.remove('profit');
+      balanceCard.classList.add('loss');
+    }
+  }
+  
   const formattedChangeStr = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -125,7 +163,7 @@ function updateBalanceMetrics() {
 
 /**
  * 2. ASSET HOLDERS GRID BUILDER ENGINE: dynamic layout function
- * targets the '#tableBody' element in index.html.
+ * targets the '#tableBody' element in portfolio.html.
  */
 function renderAssetsTable(filterMode) {
   const tableBody = document.getElementById('tableBody');
@@ -167,22 +205,54 @@ function renderAssetsTable(filterMode) {
     const isPositive = asset.change24h >= 0;
     const changeSign = isPositive ? 'positive' : 'negative';
     const arrowSymbol = isPositive ? '▲' : '▼';
-    const formattedPct = `${arrowSymbol} ${Math.abs(asset.change24h).toFixed(2)}%`;
+    const formattedPct = `${arrowSymbol}${Math.abs(asset.change24h).toFixed(2)}%`;
+    
+    // Quantity label depending on asset type
+    const qtySuffix = asset.type === 'options' ? (asset.shares === 1 ? 'Cont.' : 'Conts.') : (asset.shares === 1 ? 'Share' : 'Shares');
+    
+    // Generate mini sparkline path coordinates dynamically
+    const points = sparklineData[asset.ticker] || [asset.avgCost, asset.currentPrice];
+    const sparklinePath = generateSparklinePath(points, 90, 24);
+    const chartStrokeColor = isPositive ? 'var(--success)' : 'var(--danger)';
+    
+    // Split ticker name for premium two-line display (e.g. NVDA $490 Call -> NVDA and $490 Call)
+    const tickerParts = asset.ticker.split(' ');
+    const mainTicker = tickerParts[0];
+    const subTicker = tickerParts.slice(1).join(' ');
     
     const rowHTML = `
       <div class="asset-row" data-ticker="${asset.ticker}" role="button" tabindex="0">
-        <div class="asset-left">
+        <!-- Column 1: Icon & Ticker -->
+        <div class="asset-col-ticker">
           <div class="asset-icon-box">${asset.icon}</div>
-          <div class="asset-info">
-            <span class="asset-ticker">${asset.ticker}</span>
-            <span class="asset-name">${asset.name} • ${asset.type === 'options' ? asset.shares + ' Contracts' : asset.shares + ' Shares'}</span>
+          <div class="ticker-text-container">
+            <span class="asset-ticker">${mainTicker}</span>
+            ${subTicker ? `<span class="asset-sub-ticker">${subTicker}</span>` : ''}
           </div>
         </div>
-        <div class="asset-right">
-          <span class="asset-value">${formattedVal}</span>
-          <span class="asset-performance ${changeSign}">
-            <span>${formattedPct}</span>
-          </span>
+        
+        <!-- Column 2: Number of stocks @ avg value -->
+        <div class="asset-col-shares-avg">
+          <span class="asset-shares-qty">${asset.shares} ${qtySuffix}</span>
+          <span class="asset-avg-cost">@ $${asset.avgCost.toFixed(2)}</span>
+        </div>
+        
+        <!-- Column 3: Live value price -->
+        <div class="asset-col-live-price">
+          <span class="live-price-val">$${asset.currentPrice.toFixed(2)}</span>
+        </div>
+        
+        <!-- Column 4: Total holding value and mini graph -->
+        <div class="asset-col-total-graph">
+          <div class="total-value-row">
+            <span class="asset-total-val">${formattedVal}</span>
+            <span class="asset-row-perf ${changeSign}">${formattedPct}</span>
+          </div>
+          <div class="asset-mini-chart">
+            <svg class="mini-chart" viewBox="0 0 90 24" preserveAspectRatio="none">
+              <path d="${sparklinePath}" fill="none" stroke="${chartStrokeColor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
         </div>
       </div>
     `;
@@ -251,16 +321,34 @@ function initFilters() {
 }
 
 /**
- * 4. NATIVE APPLICATION ROUTER TOGGLES:
- * Fixed global navigation tab routing
+ * 4. NATIVE ROUTER TOGGLES & REDIRECTS:
+ * Global navigation routing supporting redirect to ledger.html
  */
 function initNavigation() {
   const tabs = document.querySelectorAll('.tab-btn');
   const screens = document.querySelectorAll('.screen-view');
   
   tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', (e) => {
       const targetId = tab.getAttribute('data-target');
+      
+      if (targetId === 'screen-ledger') {
+        e.preventDefault();
+        window.location.href = 'ledger.html';
+        return;
+      }
+      
+      if (targetId === 'screen-entry') {
+        e.preventDefault();
+        window.location.href = 'entry.html';
+        return;
+      }
+      
+      if (targetId === 'settings-screen') {
+        e.preventDefault();
+        window.location.href = 'settings.html';
+        return;
+      }
       
       // Toggle active state design classes on bottom navigation tabs
       tabs.forEach(t => t.classList.remove('active'));
@@ -290,6 +378,18 @@ function initNavigation() {
       }
     });
   });
+
+  // Handle deep linking via URL params on load
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetTab = urlParams.get('tab');
+  if (targetTab && document.getElementById(targetTab)) {
+    const matchingTab = Array.from(tabs).find(t => t.getAttribute('data-target') === targetTab);
+    if (matchingTab) {
+      requestAnimationFrame(() => {
+        matchingTab.click();
+      });
+    }
+  }
 }
 
 /**
@@ -342,49 +442,62 @@ function showAssetFeedback(asset) {
 }
 
 /**
- * Initializes interactions for the notification bell badge element
+ * Manages system notification toggle preferences and header bell clicks
  */
-function initNotificationBell() {
-  const bell = document.getElementById('notification-bell');
-  if (!bell) return;
-  
-  bell.addEventListener('click', () => {
-    const badge = bell.querySelector('.badge');
-    if (badge) badge.style.display = 'none';
-    
-    const toast = document.createElement('div');
-    toast.innerText = 'No new alerts at this time.';
-    Object.assign(toast.style, {
-      position: 'absolute',
-      top: '80px',
-      left: '50%',
-      transform: 'translateX(-50%) translateY(-20px)',
-      background: 'rgba(30, 41, 59, 0.95)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
-      color: '#f8fafc',
-      padding: '10px 16px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-      zIndex: '200',
-      pointerEvents: 'none',
-      opacity: '0',
-      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-      width: '80%',
-      textAlign: 'center'
+function initNotificationToggle() {
+  const bellBtn = document.getElementById('notification-bell');
+  const badge = document.getElementById('notification-badge');
+
+  // Load and apply initial state on boot
+  const isEnabled = localStorage.getItem('portfolio_notifications_enabled') === 'true';
+  syncNotificationUI(isEnabled);
+
+  // Bell click quick toggle
+  if (bellBtn) {
+    bellBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const currentState = localStorage.getItem('portfolio_notifications_enabled') === 'true';
+      handleToggle(!currentState);
     });
-    
-    document.getElementById('app-container').appendChild(toast);
-    
-    requestAnimationFrame(() => {
-      toast.style.opacity = '1';
-      toast.style.transform = 'translateX(-50%) translateY(0)';
-    });
-    
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(-50%) translateY(10px)';
-      setTimeout(() => toast.remove(), 300);
-    }, 2000);
-  });
+  }
+
+  function handleToggle(enable) {
+    if (enable) {
+      if (typeof Notification !== 'undefined') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            saveState(true);
+            showToast('🔔 System notifications enabled!');
+          } else {
+            saveState(false);
+            showToast('⚠️ Permission denied for notifications.', true);
+          }
+        });
+      } else {
+        saveState(true);
+        showToast('🔔 Notifications enabled (mock mode)!');
+      }
+    } else {
+      saveState(false);
+      showToast('🔕 System notifications disabled.');
+    }
+  }
+
+  function saveState(enabled) {
+    localStorage.setItem('portfolio_notifications_enabled', enabled ? 'true' : 'false');
+    syncNotificationUI(enabled);
+  }
+
+  function syncNotificationUI(enabled) {
+    if (badge) {
+      badge.style.display = enabled ? 'block' : 'none';
+    }
+    if (bellBtn) {
+      if (enabled) {
+        bellBtn.classList.remove('disabled');
+      } else {
+        bellBtn.classList.add('disabled');
+      }
+    }
+  }
 }

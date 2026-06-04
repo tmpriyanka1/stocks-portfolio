@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Grouped Position Reports</title>
+  <!-- Modern Font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Core Styles -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- Screen-specific Styles -->
+  <link rel="stylesheet" href="ledger.css">
+</head>
+
+<body>
+  <!-- Ambient background glow elements for premium aesthetics -->
+  <div class="glow-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <!-- Master App Container (constrained viewport) -->
+  <div class="app-container" id="app-container">
+
+    <!-- Screen 2: The Grouped Position Ledger -->
+    <main class="screen-view active" id="screen-ledger-view" aria-label="Ledger Screen">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-title-area">
+          <span class="sub-title">History & Transactions</span>
+          <h1 class="user-title">Reports</h1>
+        </div>
+      </header>
+
+      <!-- Time Filter Button Row at the very top of the ledger -->
+      <section class="filter-section" id="ledger-filters">
+        <div class="pill-group">
+          <div class="pill-slider" id="ledger-slider"></div>
+          <button class="pill-btn active" data-range="daily">Daily</button>
+          <button class="pill-btn" data-range="weekly">Weekly</button>
+          <button class="pill-btn" data-range="monthly">Monthly</button>
+          <button class="pill-btn" data-range="yearly">Yearly</button>
+        </div>
+      </section>
+
+      <!-- Split layout inside independent table scroll track -->
+      <section class="table-section">
+        <div class="table-container" id="ledger-scroll-container">
+
+          <!-- 🟢 Active Positions section -->
+          <div class="ledger-section">
+            <h2 class="ledger-group-header">
+              <span class="status-icon active-dot">🟢</span> Active Positions
+            </h2>
+            <div class="ledger-list" id="active-ledger-list">
+              <!-- Rendered Active Master Cards will go here -->
+              <div class="ledger-empty pulse-text">Loading active ledger...</div>
+            </div>
+          </div>
+
+          <!-- ⚪ Completed Positions section -->
+          <div class="ledger-section" style="margin-top: 24px;">
+            <h2 class="ledger-group-header">
+              <span class="status-icon completed-dot">⚪</span> Completed Positions
+            </h2>
+            <div class="ledger-list" id="completed-ledger-list">
+              <!-- Rendered Completed Master Cards will go here -->
+              <div class="ledger-empty pulse-text">Loading completed ledger...</div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Tab Bar (System Navigation Pinned to Bottom) -->
+    <nav class="bottom-tab-bar" aria-label="Main Navigation">
+      <button class="tab-btn" data-target="screen-dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9"></rect>
+          <rect x="14" y="3" width="7" height="5"></rect>
+          <rect x="14" y="12" width="7" height="9"></rect>
+          <rect x="3" y="16" width="7" height="5"></rect>
+        </svg>
+        <span class="tab-label">Portfolio</span>
+      </button>
+      <button class="tab-btn active" data-target="screen-ledger">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+          <polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
+        <span class="tab-label">Reports</span>
+      </button>
+      <button class="tab-btn" data-target="analytics-screen">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20V10"></path>
+          <path d="M18 20V4"></path>
+          <path d="M6 20v-4"></path>
+        </svg>
+        <span class="tab-label">Analytics</span>
+      </button>
+      <button class="tab-btn" data-target="settings-screen">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+        <span class="tab-label">Settings</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <script src="ledger.js"></script>
+</body>
+
+</html>

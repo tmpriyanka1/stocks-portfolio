@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Malathi's Portfolio Tracker</title>
+  <!-- Modern Font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Core Styles -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- Screen-specific Styles -->
+  <link rel="stylesheet" href="portfolio.css">
+</head>
+
+<body>
+  <!-- Ambient background glow elements for premium aesthetics -->
+  <div class="glow-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <!-- Master App Container (constrained viewport) -->
+  <div class="app-container" id="app-container">
+
+    <!-- Screen 1: Portfolio View -->
+    <main class="screen-view active" id="screen-dashboard" aria-label="Portfolio Screen">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="profile-section">
+          <div class="avatar">M</div>
+          <div class="greeting-info">
+            <span class="sub-title">Welcome</span>
+            <h1 class="user-title">Vanai</h1>
+          </div>
+        </div>
+        <button class="notification-btn" aria-label="Notifications" id="notification-bell">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="badge"></span>
+        </button>
+      </header>
+
+      <!-- Balance Metrics Card -->
+      <section class="balance-card">
+        <div class="card-glow"></div>
+        <div class="balance-details">
+          <span class="card-label">Total Portfolio Balance</span>
+          <h2 class="balance-amount">$142,580.42</h2>
+          <div class="balance-change positive">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+            <span>+$2,450.18 (1.75%) Today</span>
+          </div>
+        </div>
+
+        <!-- Portfolio SVG Area Chart -->
+        <div class="portfolio-chart-container">
+          <svg class="portfolio-chart" viewBox="0 0 350 100" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="chart-glow-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--chart-color, var(--accent))" stop-opacity="0.35"></stop>
+                <stop offset="100%" stop-color="var(--chart-color, var(--accent))" stop-opacity="0.0"></stop>
+              </linearGradient>
+            </defs>
+            <path class="chart-area"
+              d="M 0 80 C 50 85, 80 60, 120 65 C 160 70, 200 45, 240 50 C 280 55, 300 25, 350 20 L 350 100 L 0 100 Z"
+              fill="url(#chart-glow-grad)"></path>
+            <path class="chart-line" d="M 0 80 C 50 85, 80 60, 120 65 C 160 70, 200 45, 240 50 C 280 55, 300 25, 350 20"
+              fill="none" stroke="var(--chart-color, var(--accent))" stroke-width="2.5"></path>
+          </svg>
+        </div>
+
+        <div class="card-stats">
+          <div class="stat-item" style="align-items: center;">
+            <span class="stat-label">Buying Power</span>
+            <span class="stat-value">$12,342.90</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Middle Pill Filter Visibility Guarantee -->
+      <section class="filter-section" id="portfolio-filters">
+        <div class="pill-group">
+          <div class="pill-slider"></div>
+          <button class="pill-btn active" data-filter="all">All Assets</button>
+          <button class="pill-btn" data-filter="stocks">Stocks</button>
+          <button class="pill-btn" data-filter="options">Options</button>
+        </div>
+      </section>
+
+      <!-- Independent Table Scroll Track -->
+      <section class="table-section">
+        <!-- Holdings Table Header Row (Fixed) -->
+        <div class="holdings-header">
+          <span>Asset</span>
+          <span>Stocks</span>
+          <span>Live Price</span>
+          <span style="text-align: right;">Value / Trend</span>
+        </div>
+
+        <div class="table-container" id="holdings-container">
+
+          <!-- Skeletons (Pulse lines shown during data loading states) -->
+          <div class="skeleton-layout" id="skeleton-loader">
+            <div class="skeleton-row">
+              <div class="skeleton-icon pulse"></div>
+              <div class="skeleton-info">
+                <div class="skeleton-line title pulse"></div>
+                <div class="skeleton-line subtitle pulse"></div>
+              </div>
+              <div class="skeleton-value">
+                <div class="skeleton-line title pulse align-right"></div>
+                <div class="skeleton-line subtitle pulse align-right"></div>
+              </div>
+            </div>
+            <div class="skeleton-row">
+              <div class="skeleton-icon pulse"></div>
+              <div class="skeleton-info">
+                <div class="skeleton-line title pulse"></div>
+                <div class="skeleton-line subtitle pulse"></div>
+              </div>
+              <div class="skeleton-value">
+                <div class="skeleton-line title pulse align-right"></div>
+                <div class="skeleton-line subtitle pulse align-right"></div>
+              </div>
+            </div>
+            <div class="skeleton-row">
+              <div class="skeleton-icon pulse"></div>
+              <div class="skeleton-info">
+                <div class="skeleton-line title pulse"></div>
+                <div class="skeleton-line subtitle pulse"></div>
+              </div>
+              <div class="skeleton-value">
+                <div class="skeleton-line title pulse align-right"></div>
+                <div class="skeleton-line subtitle pulse align-right"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real Portfolio Asset List (populated/hidden via script) -->
+          <div class="holdings-list" id="tableBody">
+            <!-- Rendered asset rows go here -->
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+    <!-- Screen 3: Analytics (Hidden by default unless active) -->
+    <section class="screen-view" id="analytics-screen" aria-label="Analytics Screen">
+      <header class="app-header">
+        <h1 class="user-title">Analytics</h1>
+      </header>
+      <div class="empty-view">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+          <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+        </svg>
+        <h3>Portfolio Insights</h3>
+        <p>Performance charts and breakdown trends.</p>
+      </div>
+    </section>
+
+    <!-- Screen 4: Settings (Hidden by default unless active) -->
+    <section class="screen-view" id="settings-screen" aria-label="Settings Screen">
+      <header class="app-header">
+        <h1 class="user-title">Settings</h1>
+      </header>
+      <div class="empty-view">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+        <h3>Account & Settings</h3>
+        <p>Manage notifications, API keys, and theme settings.</p>
+      </div>
+    </section>
+
+    <!-- Bottom Tab Bar (System Navigation Pinned to Bottom) -->
+    <nav class="bottom-tab-bar" aria-label="Main Navigation">
+      <button class="tab-btn active" data-target="screen-dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9"></rect>
+          <rect x="14" y="3" width="7" height="5"></rect>
+          <rect x="14" y="12" width="7" height="9"></rect>
+          <rect x="3" y="16" width="7" height="5"></rect>
+        </svg>
+        <span class="tab-label">Portfolio</span>
+      </button>
+      <button class="tab-btn" data-target="screen-ledger">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+          <polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
+        <span class="tab-label">Ledger</span>
+      </button>
+      <button class="tab-btn" data-target="screen-entry">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <span class="tab-label">Add Trade</span>
+      </button>
+      <button class="tab-btn" data-target="settings-screen">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+        <span class="tab-label">Settings</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <script src="portfolio.js"></script>
+</body>
+
+</html>

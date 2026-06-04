@@ -4,7 +4,7 @@
 :root {
   --bg-primary: #06070c;
   --bg-secondary: #0b0d19;
-  
+
   /* Glassmorphism settings */
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-bg-hover: rgba(255, 255, 255, 0.06);
@@ -18,11 +18,14 @@
   --text-muted: #64748b;
 
   /* Accent Colors */
-  --accent: #6366f1; /* Indigo */
+  --accent: #6366f1;
+  /* Indigo */
   --accent-glow: rgba(99, 102, 241, 0.15);
-  --success: #10b981; /* Emerald Green */
+  --success: #10b981;
+  /* Emerald Green */
   --success-glow: rgba(16, 185, 129, 0.1);
-  --danger: #ef4444; /* Rose Red */
+  --danger: #ef4444;
+  /* Rose Red */
   --danger-glow: rgba(239, 68, 68, 0.1);
 
   /* Fonts */
@@ -40,7 +43,8 @@
   user-select: none;
 }
 
-html, body {
+html,
+body {
   width: 100vw;
   height: 100vh;
   background-color: var(--bg-primary);
@@ -129,10 +133,12 @@ html, body {
    ========================================================================== */
 /* Screen view wrapper base state */
 .screen-view {
-  display: none !important; /* Hide completely by default */
+  display: none !important;
+  /* Hide completely by default */
   width: 100%;
   height: 100%;
-  padding-bottom: 60px; /* Leave height space exactly for bottom-tab-bar */
+  padding-bottom: 60px;
+  /* Leave height space exactly for bottom-tab-bar */
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
@@ -140,7 +146,8 @@ html, body {
 
 /* Active screen view appended display state */
 .screen-view.active {
-  display: flex !important; /* Switch to flex immediately */
+  display: flex !important;
+  /* Switch to flex immediately */
 }
 
 /* Bottom Tab Navigation Bar */
@@ -209,9 +216,46 @@ html, body {
   filter: drop-shadow(0 0 4px var(--accent));
 }
 
+
+
 /* ==========================================================================
-   APP HEADER
+   OTHER VIEWS (MARKETS, ANALYTICS, SETTINGS)
    ========================================================================== */
+.empty-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-view svg {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.empty-view h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-view p {
+  font-size: 13px;
+  max-width: 250px;
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   SHARED LAYOUT COMPONENTS
+   ========================================================================== */
+
+/* APP HEADER */
 .app-header {
   padding: 24px 24px 12px 24px;
   display: flex;
@@ -220,169 +264,7 @@ html, body {
   background: transparent;
 }
 
-.profile-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 600;
-  font-size: 16px;
-  color: #fff;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.greeting-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.sub-title {
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.user-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.notification-btn {
-  position: relative;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.notification-btn:hover {
-  background: var(--glass-bg-hover);
-  border-color: rgba(255, 255, 255, 0.15);
-  transform: scale(1.05);
-}
-
-.notification-btn .badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--danger);
-  border: 1.5px solid var(--bg-primary);
-}
-
-/* ==========================================================================
-   BALANCE METRICS CARD
-   ========================================================================== */
-.balance-card {
-  position: relative;
-  margin: 12px 24px;
-  padding: 22px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 12px 32px var(--glass-shadow);
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-}
-
-.card-glow {
-  position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 150px;
-  height: 150px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.balance-details {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 20px;
-}
-
-.card-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.balance-amount {
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-}
-
-.balance-change {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  margin-top: 2px;
-}
-
-.balance-change.positive {
-  color: var(--success);
-}
-.balance-change.negative {
-  color: var(--danger);
-}
-
-.card-stats {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 16px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-label {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.stat-value {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 24px;
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-/* ==========================================================================
-   RULE 2: MIDDLE PILL FILTER VISIBILITY GUARANTEE
-   ========================================================================== */
+/* MIDDLE PILL FILTER VISIBILITY GUARANTEE */
 .filter-section {
   height: 54px;
   min-height: 54px;
@@ -392,7 +274,7 @@ html, body {
   padding: 0 24px;
   margin-bottom: 6px;
   position: relative;
-  z-index: 50; /* Keep active on top */
+  z-index: 50;
   width: 100%;
 }
 
@@ -450,12 +332,10 @@ html, body {
   pointer-events: none;
 }
 
-/* ==========================================================================
-   RULE 3: INDEPENDENT TABLE SCROLL TRACK
-   ========================================================================== */
+/* INDEPENDENT TABLE SCROLL TRACK */
 .table-section {
-  flex: 1; /* Stretch to fill all remaining vertical viewport space */
-  min-height: 0; /* Important: prevents layout overflow stretching */
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 0 24px;
@@ -464,12 +344,11 @@ html, body {
 
 .table-container {
   flex: 1;
-  overflow-y: auto; /* Forces content vertical scroll track */
-  -webkit-overflow-scrolling: touch; /* Kinetic scrolling smoothness on iOS */
-  padding-bottom: 24px; /* Give layout room at bottom of container */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 24px;
 }
 
-/* Custom premium scrollbar styling */
 .table-container::-webkit-scrollbar {
   width: 4px;
 }
@@ -487,165 +366,6 @@ html, body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Holdings row list styles */
-.holdings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.asset-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.asset-row:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-  transform: translateY(-1px);
-}
-
-.asset-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.asset-icon-box {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--text-primary);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
-
-.asset-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.asset-ticker {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.asset-name {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.asset-right {
-  text-align: right;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.asset-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.asset-performance {
-  font-size: 11px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
-
-.asset-performance.positive {
-  color: var(--success);
-}
-
-.asset-performance.negative {
-  color: var(--danger);
-}
-
-/* ==========================================================================
-   SKELETON ROW LAYOUT & PULSE SHIMMER (RULE 4)
-   ========================================================================== */
-.skeleton-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-.skeleton-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.skeleton-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-}
-
-.skeleton-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-left: 14px;
-}
-
-.skeleton-value {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 80px;
-  align-items: flex-end;
-}
-
-.skeleton-line {
-  height: 10px;
-  border-radius: 5px;
-}
-
-.skeleton-line.title {
-  width: 45%;
-  height: 12px;
-}
-
-.skeleton-line.subtitle {
-  width: 30%;
-  height: 9px;
-}
-
-.skeleton-line.align-right {
-  width: 70%;
-}
-
-.skeleton-line.align-right.subtitle {
-  width: 50%;
-}
-
-/* CRISP ANIMATED PULSE LINES KEYFRAME */
 @keyframes pulse-opacity {
   0%, 100% {
     opacity: 0.3;
@@ -660,37 +380,4 @@ html, body {
 .pulse {
   background: rgba(255, 255, 255, 0.06);
   animation: pulse-opacity 1.5s ease-in-out infinite;
-}
-
-/* ==========================================================================
-   OTHER VIEWS (MARKETS, ANALYTICS, SETTINGS)
-   ========================================================================== */
-.empty-view {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 48px 24px;
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.empty-view svg {
-  color: var(--text-muted);
-  margin-bottom: 16px;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-}
-
-.empty-view h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.empty-view p {
-  font-size: 13px;
-  max-width: 250px;
-  line-height: 1.5;
 }

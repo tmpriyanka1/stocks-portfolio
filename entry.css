@@ -1,0 +1,154 @@
+@import url('styles.css');
+
+/* ==========================================================================
+   DATA ENTRY SCREEN SPECIFIC STYLES
+   ========================================================================== */
+
+#entry-screen {
+  flex: 1;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 24px 80px 24px; /* Ensure space at the bottom for tab bar and scrolling */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphic Form Container */
+.entry-form-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 12px 32px var(--glass-shadow);
+  backdrop-filter: blur(10px);
+  margin-top: 10px;
+}
+
+/* Form Layout Elements */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.half-width {
+  flex: 1;
+}
+
+/* Form Control Labels */
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.8px;
+  padding-left: 2px;
+}
+
+/* Glassmorphic Inputs, Selects, and Textareas */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: var(--font-main);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.25s ease;
+  width: 100%;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Hover & Focus state highlights */
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* Dropdown Options Color Correction */
+.form-group select option {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Style date picker icon */
+.form-group input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.6);
+  cursor: pointer;
+}
+
+/* Submit Button styling */
+.submit-button {
+  background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.submit-button:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.45);
+}
+
+.submit-button:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* TOAST STYLING */
+.app-toast {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #f8fafc;
+  padding: 12px 18px;
+  borderRadius: 12px;
+  font-size: 12px;
+  font-weight: 550;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 85%;
+  text-align: center;
+}

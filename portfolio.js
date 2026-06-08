@@ -1,5 +1,17 @@
+const CLOUD_SPREADSHEET_CONFIG = {
+  endpointUrl: "https://sheetdb.io/api/v1/6q1u8mtg34ndo"
+};
+
+const defaultAssetData = {
+  'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
+  'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
+  'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
+  'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open', currentPrice: 18.50, stopLoss: 12.00, change24h: 20.31, icon: 'OC' },
+  'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
+};
+
 // 1. CORE DASHBOARD STATE ARRAY: global hardcoded portfolio asset array
-const portfolioAssets = [
+let portfolioAssets = [
   {
     ticker: 'NVDA',
     name: 'NVIDIA Corporation',
@@ -7,6 +19,7 @@ const portfolioAssets = [
     shares: 40,
     avgCost: 400.00,
     currentPrice: 485.00,
+    stopLoss: 380.00,
     change24h: 3.25,
     icon: 'NV'
   },
@@ -17,6 +30,7 @@ const portfolioAssets = [
     shares: 250,
     avgCost: 165.00,
     currentPrice: 175.50,
+    stopLoss: 150.00,
     change24h: 1.92,
     icon: 'AP'
   },
@@ -27,6 +41,7 @@ const portfolioAssets = [
     shares: 85,
     avgCost: 210.00,
     currentPrice: 198.20,
+    stopLoss: 185.00,
     change24h: -2.17,
     icon: 'TS'
   },
@@ -37,6 +52,7 @@ const portfolioAssets = [
     shares: 3,
     avgCost: 15.20,
     currentPrice: 18.50,
+    stopLoss: 12.00,
     change24h: 20.31,
     icon: 'OC'
   },
@@ -47,6 +63,7 @@ const portfolioAssets = [
     shares: 2,
     avgCost: 5.50,
     currentPrice: 4.80,
+    stopLoss: 4.00,
     change24h: -13.43,
     icon: 'OC'
   }
@@ -79,6 +96,120 @@ function generateSparklinePath(points, width, height) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Apply saved color theme
+  const savedAccent = localStorage.getItem('portfolio_accent_color');
+  if (savedAccent) {
+    applyAccentColor(savedAccent);
+  }
+
+  // Load local cache instantly for zero-blocking first print
+  rebootDashboard();
+
+  // Background Cloud Spreadsheet Pull
+  pullCloudData();
+});
+
+async function pullCloudData() {
+  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  if (url.includes("YOUR_SHEETDB_API_ID")) {
+    console.log("Running in offline fallback mode");
+    return;
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Cloud spreadsheet endpoint returned error response.');
+    }
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
+      
+      let marketPrices = {};
+      try {
+        marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+      } catch (e) {
+        marketPrices = {};
+      }
+
+      let localTxs = [];
+      try {
+        localTxs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
+      } catch (e) {
+        localTxs = [];
+      }
+
+      const parsedTxs = data.map(tx => {
+        const ticker = (tx.Symbol || tx.Ticker || tx.ticker || '').trim();
+        const name = tx.Name || tx.name || '';
+        const shares = parseInt(tx.Shares || tx.shares || 0, 10);
+        const costBasis = parseFloat(tx.CostBasis || tx['Cost Basis'] || tx.costBasis || tx.price || tx.avgCost || 0);
+        const assetType = tx.Type || tx.assetType || tx.type || 'stocks';
+        
+        // Find matching local transaction to preserve Action, Date, and Comment
+        const match = localTxs.find(local => 
+          local.ticker === ticker && 
+          local.shares === shares && 
+          Math.abs(local.price - costBasis) < 0.01 &&
+          local.assetType === assetType
+        );
+
+        const action = tx.Action || tx.action || (match ? match.action : 'BUY');
+        const date = tx.Date || tx.date || (match ? match.date : new Date().toISOString());
+        const comment = tx['Trade Journal Note'] || tx.Comment || tx.comment || (match ? match.comment : '');
+        
+        let stopLoss = 0;
+        let slSpecified = false;
+        if (tx.SL !== undefined && tx.SL !== null) {
+          slSpecified = true;
+          stopLoss = tx.SL === '' ? 0 : (isNaN(parseFloat(tx.SL)) ? 0 : parseFloat(tx.SL));
+        } else if (tx.sl !== undefined && tx.sl !== null) {
+          slSpecified = true;
+          stopLoss = tx.sl === '' ? 0 : (isNaN(parseFloat(tx.sl)) ? 0 : parseFloat(tx.sl));
+        } else if (match && match.stopLoss !== undefined) {
+          stopLoss = match.stopLoss;
+          slSpecified = true;
+        }
+
+        if (ticker) {
+          const isDefault = defaultTickerKeys.includes(ticker);
+          const defaultData = defaultAssetData[ticker] || {};
+
+          marketPrices[ticker] = {
+            name: name || (marketPrices[ticker] ? marketPrices[ticker].name : (isDefault ? defaultData.name : ticker + ' Corporation')),
+            currentPrice: isDefault ? defaultData.currentPrice : ((tx.CurrentPrice || tx.currentPrice) ? parseFloat(tx.CurrentPrice || tx.currentPrice) : (marketPrices[ticker] ? marketPrices[ticker].currentPrice : costBasis)),
+            change24h: isDefault ? defaultData.change24h : ((tx.change24h || tx.change) ? parseFloat(tx.change24h || tx.change) : (marketPrices[ticker] ? marketPrices[ticker].change24h : 0.0)),
+            icon: tx.Icon || tx.icon || (marketPrices[ticker] ? marketPrices[ticker].icon : (isDefault ? defaultData.icon : ticker.slice(0, 2).toUpperCase())),
+            stopLoss: slSpecified ? stopLoss : (isDefault ? defaultData.stopLoss : 0.0)
+          };
+        }
+
+        return {
+          ticker: ticker,
+          assetType: assetType,
+          action: action,
+          shares: shares,
+          price: costBasis,
+          date: date,
+          comment: comment,
+          stopLoss: stopLoss
+        };
+      }).filter(tx => tx.ticker !== '');
+
+      localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
+      localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
+      
+      // Re-render dashboard with new synced data
+      rebootDashboard();
+    }
+  } catch (err) {
+    console.error(err);
+    console.log("Running in offline fallback mode");
+  }
+}
+
+function rebootDashboard() {
+  refreshPortfolioAssets();
   updateBalanceMetrics();
   initNavigation();
   initFilters();
@@ -86,7 +217,267 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render full portfolio instantly on load
   renderAssetsTable('all');
   initNotificationToggle();
-});
+  initCSVImporter();
+}
+
+function applyAccentColor(hexColor) {
+  document.documentElement.style.setProperty('--accent', hexColor);
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  document.documentElement.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.15)`);
+}
+
+function initCSVImporter() {
+  const openImportBtn = document.getElementById('openImportBtn');
+  const importModal = document.getElementById('importModal');
+  const closeImportBtn = document.getElementById('closeImportBtn');
+  const cancelImportBtn = document.getElementById('cancelImportBtn');
+  const processImportBtn = document.getElementById('processImportBtn');
+  const csvTextarea = document.getElementById('csvTextarea');
+
+  if (!importModal) return;
+
+  const openModal = () => {
+    importModal.classList.add('active');
+  };
+
+  const closeModal = () => {
+    importModal.classList.remove('active');
+    if (csvTextarea) csvTextarea.value = '';
+  };
+
+  if (openImportBtn) openImportBtn.addEventListener('click', openModal);
+  if (closeImportBtn) closeImportBtn.addEventListener('click', closeModal);
+  if (cancelImportBtn) cancelImportBtn.addEventListener('click', closeModal);
+
+  if (processImportBtn && csvTextarea) {
+    processImportBtn.addEventListener('click', () => {
+      const csvText = csvTextarea.value;
+      if (!csvText.trim()) {
+        showToast('⚠️ CSV content cannot be empty.', true);
+        return;
+      }
+
+      try {
+        const lines = csvText.split('\n');
+        let txs = [];
+        const stored = localStorage.getItem('portfolio_transactions');
+        if (stored) {
+          try {
+            txs = JSON.parse(stored);
+          } catch (e) {
+            txs = [];
+          }
+        } else {
+          // Fallback default mock list if never initialized
+          txs = [
+            { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 480.00, date: '2026-06-03T10:15:00', comment: 'Momentum breakout buy after consolidation at $478.' },
+            { ticker: 'NVDA', assetType: 'stocks', action: 'SELL', shares: 10, price: 495.00, date: '2026-06-03T14:30:00', comment: 'Quick day trade scalp target hit. Captured +$15.00/share profit.' },
+            { ticker: 'PLTR', assetType: 'stocks', action: 'BUY', shares: 50, price: 21.00, date: '2026-06-03T09:45:00', comment: 'Support level bounce entry. Adding PLTR for core options setup.' },
+            { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 30, price: 170.00, date: '2026-05-30T11:00:00', comment: 'Adding to core Apple position on temporary market-wide pullback.' },
+            { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 20, price: 172.00, date: '2026-05-31T13:45:00', comment: 'Averaging up on clear hourly trend confirmation and high volume.' },
+            { ticker: 'AAPL', assetType: 'SELL', shares: 50, price: 178.00, date: '2026-06-01T15:30:00', comment: 'Closed full Apple swing trade. Locked in solid gains ahead of WWDC.' },
+            { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185.00, date: '2026-05-29T10:30:00', comment: 'Long setup near key support level. Stop loss set at $180.' },
+            { ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 3, price: 15.20, date: '2026-05-28T09:35:00', comment: 'Buy to open NVDA $490 Calls. Expecting momentum push towards $500.' },
+            { ticker: 'MSFT', assetType: 'stocks', action: 'BUY', shares: 40, price: 410.00, date: '2026-05-12T10:00:00', comment: 'AI integration catalyst play. Solid earnings growth expectations.' },
+            { ticker: 'MSFT', assetType: 'stocks', action: 'SELL', shares: 20, price: 425.00, date: '2026-05-18T14:15:00', comment: 'Trimming half position at target 1 resistance. Keeping remainder.' },
+            { ticker: 'COIN', assetType: 'stocks', action: 'BUY', shares: 25, price: 220.00, date: '2026-05-10T11:30:00', comment: 'Crypto breakout momentum entry above $218. High risk.' },
+            { ticker: 'COIN', assetType: 'stocks', action: 'SELL', shares: 25, price: 205.00, date: '2026-05-15T10:10:00', comment: 'Stop loss triggered on crypto volatility. Closed for a loss.' },
+            { ticker: 'AMZN', assetType: 'stocks', action: 'BUY', shares: 100, price: 160.00, date: '2026-01-15T14:00:00', comment: 'Post-Q4 earnings selloff dip buy. Solid long-term entry opportunity.' },
+            { ticker: 'AMZN', assetType: 'stocks', action: 'SELL', shares: 100, price: 185.00, date: '2026-02-20T11:45:00', comment: 'Completed swing trade at resistance. Locked in +$2,500 total profit.' },
+            { ticker: 'META', assetType: 'stocks', action: 'BUY', shares: 50, price: 450.00, date: '2025-10-05T10:15:00', comment: 'Ad revenue recovery play. Extremely cheap valuation relative to earnings.' },
+            { ticker: 'META', assetType: 'stocks', action: 'SELL', shares: 20, price: 480.00, date: '2025-12-12T14:50:00', comment: 'Trimmed partial position for year-end tax optimization. Remaining 30 shares.' }
+          ];
+        }
+
+        let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+        let importCount = 0;
+
+        // Ticker map of default hardcoded assets to filter them out of 'portfolio_market_prices' lookup key
+        const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
+
+        lines.forEach((line, index) => {
+          if (!line.trim()) return;
+          // Skip header if it is header row
+          if (index === 0 && line.toLowerCase().includes('symbol')) return;
+
+          const parts = line.split(',');
+          if (parts.length < 7) return;
+
+          const symbol = parts[0].trim().toUpperCase();
+          const name = parts[1].trim();
+          const shares = parseInt(parts[2].trim(), 10);
+          const costBasis = parseFloat(parts[3].trim());
+          const currentPrice = parseFloat(parts[4].trim());
+          const type = parts[5].trim().toLowerCase();
+          const icon = parts[6].trim();
+
+          if (!symbol || isNaN(shares) || isNaN(costBasis) || isNaN(currentPrice)) return;
+
+          // Push into the transaction ledger
+          const tx = {
+            ticker: symbol,
+            assetType: type,
+            action: 'BUY',
+            shares: shares,
+            price: costBasis,
+            date: new Date().toISOString().slice(0, 19),
+            comment: 'CSV Portfolio Import'
+          };
+          txs.push(tx);
+
+          // Lock custom metadata to 'portfolio_market_prices' dictionary only if not hardcoded asset
+          if (!defaultTickerKeys.includes(symbol)) {
+            marketPrices[symbol] = {
+              name: name,
+              currentPrice: currentPrice,
+              change24h: 0.0,
+              icon: icon || symbol.slice(0, 2).toUpperCase()
+            };
+          }
+          importCount++;
+        });
+
+        if (importCount === 0) {
+          showToast('⚠️ No valid rows found to import.', true);
+          return;
+        }
+
+        localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+        localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
+
+        closeModal();
+
+        // 4. AUTOMATIC RECALCULATION & DASHBOARD REBOOT
+        refreshPortfolioAssets();
+        updateBalanceMetrics();
+        renderAssetsTable('all');
+
+        showToast(`🟢 Successfully parsed & loaded ${importCount} assets!`);
+      } catch (err) {
+        console.error(err);
+        showToast('⚠️ Error parsing CSV spreadsheet data.', true);
+      }
+    });
+  }
+}
+
+function refreshPortfolioAssets() {
+  // Retrieve transactions from storage
+  let txs = [];
+  const stored = localStorage.getItem('portfolio_transactions');
+  if (stored) {
+    try {
+      txs = JSON.parse(stored);
+    } catch (e) {
+      txs = [];
+    }
+  } else {
+    // If not in storage yet, seed with initial list
+    txs = [
+      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 480.00, date: '2026-06-03T10:15:00', comment: 'Momentum breakout buy after consolidation at $478.' },
+      { ticker: 'NVDA', assetType: 'stocks', action: 'SELL', shares: 10, price: 495.00, date: '2026-06-03T14:30:00', comment: 'Quick day trade scalp target hit. Captured +$15.00/share profit.' },
+      { ticker: 'PLTR', assetType: 'stocks', action: 'BUY', shares: 50, price: 21.00, date: '2026-06-03T09:45:00', comment: 'Support level bounce entry. Adding PLTR for core options setup.' },
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 30, price: 170.00, date: '2026-05-30T11:00:00', comment: 'Adding to core Apple position on temporary market-wide pullback.' },
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 20, price: 172.00, date: '2026-05-31T13:45:00', comment: 'Averaging up on clear hourly trend confirmation and high volume.' },
+      { ticker: 'AAPL', assetType: 'SELL', shares: 50, price: 178.00, date: '2026-06-01T15:30:00', comment: 'Closed full Apple swing trade. Locked in solid gains ahead of WWDC.' },
+      { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185.00, date: '2026-05-29T10:30:00', comment: 'Long setup near key support level. Stop loss set at $180.' },
+      { ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 3, price: 15.20, date: '2026-05-28T09:35:00', comment: 'Buy to open NVDA $490 Calls. Expecting momentum push towards $500.' },
+      { ticker: 'MSFT', assetType: 'stocks', action: 'BUY', shares: 40, price: 410.00, date: '2026-05-12T10:00:00', comment: 'AI integration catalyst play. Solid earnings growth expectations.' },
+      { ticker: 'MSFT', assetType: 'stocks', action: 'SELL', shares: 20, price: 425.00, date: '2026-05-18T14:15:00', comment: 'Trimming half position at target 1 resistance. Keeping remainder.' },
+      { ticker: 'COIN', assetType: 'stocks', action: 'BUY', shares: 25, price: 220.00, date: '2026-05-10T11:30:00', comment: 'Crypto breakout momentum entry above $218. High risk.' },
+      { ticker: 'COIN', assetType: 'stocks', action: 'SELL', shares: 25, price: 205.00, date: '2026-05-15T10:10:00', comment: 'Stop loss triggered on crypto volatility. Closed for a loss.' },
+      { ticker: 'AMZN', assetType: 'stocks', action: 'BUY', shares: 100, price: 160.00, date: '2026-01-15T14:00:00', comment: 'Post-Q4 earnings selloff dip buy. Solid long-term entry opportunity.' },
+      { ticker: 'AMZN', assetType: 'stocks', action: 'SELL', shares: 100, price: 185.00, date: '2026-02-20T11:45:00', comment: 'Completed swing trade at resistance. Locked in +$2,500 total profit.' },
+      { ticker: 'META', assetType: 'stocks', action: 'BUY', shares: 50, price: 450.00, date: '2025-10-05T10:15:00', comment: 'Ad revenue recovery play. Extremely cheap valuation relative to earnings.' },
+      { ticker: 'META', assetType: 'stocks', action: 'SELL', shares: 20, price: 480.00, date: '2025-12-12T14:50:00', comment: 'Trimmed partial position for year-end tax optimization. Remaining 30 shares.' }
+    ];
+    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+  }
+
+  // Aggregate holdings
+  const groups = {};
+
+  txs.forEach(tx => {
+    if (!groups[tx.ticker]) {
+      groups[tx.ticker] = {
+        ticker: tx.ticker,
+        type: tx.assetType,
+        shares: 0,
+        avgCost: 0,
+        lastPrice: tx.price
+      };
+    }
+    const g = groups[tx.ticker];
+    g.lastPrice = tx.price;
+    if (tx.action === 'BUY') {
+      const newShares = g.shares + tx.shares;
+      if (newShares > 0) {
+        g.avgCost = (g.shares * g.avgCost + tx.shares * tx.price) / newShares;
+      }
+      g.shares = newShares;
+    } else if (tx.action === 'SELL') {
+      g.shares = Math.max(0, g.shares - tx.shares);
+    }
+  });
+
+  // Convert to assets array
+  portfolioAssets = [];
+  let customSLMap = {};
+  try {
+    customSLMap = JSON.parse(localStorage.getItem('portfolio_custom_sl') || '{}');
+  } catch (e) {
+    customSLMap = {};
+  }
+
+  for (const ticker in groups) {
+    const g = groups[ticker];
+    if (g.shares > 0) {
+      let assetDetails = defaultAssetData[ticker];
+      let customPrices = {};
+      try {
+        customPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+      } catch (e) {
+        customPrices = {};
+      }
+      const customDetails = customPrices[ticker] || {};
+
+      if (assetDetails) {
+        assetDetails = { ...assetDetails, ...customDetails };
+      } else {
+        assetDetails = customDetails;
+        if (!assetDetails || !assetDetails.name) {
+          assetDetails = {
+            name: ticker + ' Corporation',
+            currentPrice: g.lastPrice,
+            change24h: 0.0,
+            icon: ticker.slice(0, 2).toUpperCase()
+          };
+        }
+      }
+
+      let stopLossVal = 0;
+      if (customSLMap[ticker] !== undefined) {
+        stopLossVal = parseFloat(customSLMap[ticker]);
+      } else if (assetDetails && assetDetails.stopLoss) {
+        stopLossVal = assetDetails.stopLoss;
+      }
+
+      portfolioAssets.push({
+        ticker: g.ticker || '',
+        name: assetDetails.name || (g.ticker + ' Corporation'),
+        type: g.type || 'stocks',
+        shares: Number(g.shares) || 0,
+        avgCost: Number(g.avgCost) || 0,
+        currentPrice: Number(assetDetails.currentPrice) || Number(g.lastPrice) || 0,
+        stopLoss: Number(stopLossVal) || 0,
+        change24h: Number(assetDetails.change24h) || 0,
+        icon: assetDetails.icon || g.ticker.slice(0, 2).toUpperCase()
+      });
+    }
+  }
+}
 
 /**
  * Calculates and updates top portfolio balance card metrics dynamically
@@ -159,6 +550,16 @@ function updateBalanceMetrics() {
   if (activeOptionsEl) {
     activeOptionsEl.textContent = `${optionContractsCount} Contracts`;
   }
+
+  // Update Buying Power
+  const bpElement = document.getElementById('buying-power-value');
+  if (bpElement) {
+    let bpVal = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
+    bpElement.textContent = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(bpVal);
+  }
 }
 
 /**
@@ -201,11 +602,15 @@ function renderAssetsTable(filterMode) {
       currency: 'USD'
     }).format(holdingsValue);
     
-    // Formatting positive or negative 24h change percentage badges
+    // Formatting positive or negative 24h change value
     const isPositive = asset.change24h >= 0;
     const changeSign = isPositive ? 'positive' : 'negative';
     const arrowSymbol = isPositive ? '▲' : '▼';
-    const formattedPct = `${arrowSymbol}${Math.abs(asset.change24h).toFixed(2)}%`;
+    const changeUsd = holdingsValue * (asset.change24h / 100);
+    const formattedChange = `${arrowSymbol} ${new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(Math.abs(changeUsd))}`;
     
     // Quantity label depending on asset type
     const qtySuffix = asset.type === 'options' ? (asset.shares === 1 ? 'Cont.' : 'Conts.') : (asset.shares === 1 ? 'Share' : 'Shares');
@@ -220,6 +625,8 @@ function renderAssetsTable(filterMode) {
     const mainTicker = tickerParts[0];
     const subTicker = tickerParts.slice(1).join(' ');
     
+    const slDisplay = (asset.stopLoss && asset.stopLoss > 0) ? `$${asset.stopLoss.toFixed(2)}` : '—';
+
     const rowHTML = `
       <div class="asset-row" data-ticker="${asset.ticker}" role="button" tabindex="0">
         <!-- Column 1: Icon & Ticker -->
@@ -237,7 +644,12 @@ function renderAssetsTable(filterMode) {
           <span class="asset-avg-cost">@ $${asset.avgCost.toFixed(2)}</span>
         </div>
         
-        <!-- Column 3: Live value price -->
+        <!-- Column 3: Stop Loss (SL) -->
+        <div class="asset-col-sl">
+          <span class="sl-price-val">${slDisplay}</span>
+        </div>
+        
+        <!-- Column 4: Live value price -->
         <div class="asset-col-live-price">
           <span class="live-price-val">$${asset.currentPrice.toFixed(2)}</span>
         </div>
@@ -246,7 +658,7 @@ function renderAssetsTable(filterMode) {
         <div class="asset-col-total-graph">
           <div class="total-value-row">
             <span class="asset-total-val">${formattedVal}</span>
-            <span class="asset-row-perf ${changeSign}">${formattedPct}</span>
+            <span class="asset-row-perf ${changeSign}">${formattedChange}</span>
           </div>
           <div class="asset-mini-chart">
             <svg class="mini-chart" viewBox="0 0 90 24" preserveAspectRatio="none">
@@ -501,3 +913,58 @@ function initNotificationToggle() {
     }
   }
 }
+
+/**
+ * Renders a glassmorphic confirmation alert toast
+ */
+function showToast(message, isError) {
+  const existingToast = document.querySelector('.app-toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'app-toast';
+  toast.innerText = message;
+  
+  if (isError) {
+    toast.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+  }
+
+  Object.assign(toast.style, {
+    position: 'absolute',
+    bottom: '80px',
+    left: '50%',
+    transform: 'translateX(-50%) translateY(20px)',
+    background: 'rgba(15, 23, 42, 0.75)',
+    backdropFilter: 'blur(12px)',
+    webkitBackdropFilter: 'blur(12px)',
+    border: '1px solid ' + (isError ? 'rgba(239, 68, 68, 0.4)' : 'rgba(99, 102, 241, 0.35)'),
+    color: '#f8fafc',
+    padding: '12px 18px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '550',
+    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6)',
+    zIndex: '200',
+    pointerEvents: 'none',
+    opacity: '0',
+    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+    width: '85%',
+    textAlign: 'center'
+  });
+
+  document.getElementById('app-container').appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(-10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+

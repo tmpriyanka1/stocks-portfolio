@@ -1,5 +1,16 @@
-// Simulated local time target date
-const SIMULATED_TODAY = new Date('2026-06-03T23:59:59');
+const CLOUD_SPREADSHEET_CONFIG = {
+  endpointUrl: "https://sheetdb.io/api/v1/6q1u8mtg34ndo"
+};
+
+const defaultAssetData = {
+  'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
+  'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
+  'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
+  'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open', currentPrice: 18.50, stopLoss: 12.00, change24h: 20.31, icon: 'OC' },
+  'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
+};
+
+const SIMULATED_TODAY = new Date();
 
 // 1. MOCK TRANSACTIONS HISTORY DATABASE
 const portfolioTransactions = [
@@ -157,30 +168,65 @@ const portfolioTransactions = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Apply saved color theme
+  const savedAccent = localStorage.getItem('portfolio_accent_color');
+  if (savedAccent) {
+    applyAccentColor(savedAccent);
+  }
+
   initTimeFilters();
   initNavigationRedirects();
 
   // Render daily ledger by default
   renderLedger('daily');
+
+  // Background sync with SheetDB
+  pullCloudData();
 });
+
+function applyAccentColor(hexColor) {
+  document.documentElement.style.setProperty('--accent', hexColor);
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  document.documentElement.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.15)`);
+}
 
 /**
  * Filters the transaction list by selected time range pill relative to simulated date
  */
 function getFilteredTransactions(range) {
-  return portfolioTransactions.filter(tx => {
+  let txs = [];
+  const stored = localStorage.getItem('portfolio_transactions');
+  if (stored) {
+    try {
+      txs = JSON.parse(stored);
+    } catch (e) {
+      txs = portfolioTransactions;
+    }
+  } else {
+    txs = portfolioTransactions;
+    localStorage.setItem('portfolio_transactions', JSON.stringify(portfolioTransactions));
+  }
+
+  return txs.filter(tx => {
+    if (!tx || !tx.date) return false;
     const txDate = new Date(tx.date);
+    if (isNaN(txDate.getTime())) return false; // Skip malformed dates
+
     const diffTime = SIMULATED_TODAY - txDate;
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
     if (range === 'daily') {
-      return txDate.getFullYear() === 2026 && txDate.getMonth() === 5 && txDate.getDate() === 3;
+      return txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
+             txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
+             txDate.getDate() === SIMULATED_TODAY.getDate();
     } else if (range === 'weekly') {
-      return diffDays <= 7 && diffDays >= 0;
+      return diffDays <= 7 && diffDays >= -1;
     } else if (range === 'monthly') {
-      return diffDays <= 30 && diffDays >= 0;
+      return diffDays <= 30 && diffDays >= -1;
     } else if (range === 'yearly') {
-      return diffDays <= 365 && diffDays >= 0;
+      return diffDays <= 365 && diffDays >= -1;
     }
     return true;
   });
@@ -193,10 +239,15 @@ function groupTransactionsByTicker(transactions) {
   const groups = {};
 
   transactions.forEach(tx => {
-    if (!groups[tx.ticker]) {
-      groups[tx.ticker] = {
-        ticker: tx.ticker,
-        assetType: tx.assetType,
+    if (!tx || !tx.ticker) return; // Skip invalid or malformed transaction lines
+    
+    const ticker = tx.ticker;
+    const assetType = tx.assetType || 'stocks';
+
+    if (!groups[ticker]) {
+      groups[ticker] = {
+        ticker: ticker,
+        assetType: assetType,
         buyQty: 0,
         buyVal: 0,
         sellQty: 0,
@@ -205,15 +256,19 @@ function groupTransactionsByTicker(transactions) {
       };
     }
 
-    const g = groups[tx.ticker];
+    const g = groups[ticker];
     g.transactions.push(tx);
 
-    if (tx.action === 'BUY') {
-      g.buyQty += tx.shares;
-      g.buyVal += tx.shares * tx.price;
-    } else if (tx.action === 'SELL') {
-      g.sellQty += tx.shares;
-      g.sellVal += tx.shares * tx.price;
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const priceNum = parseFloat(tx.price) || 0;
+    const action = tx.action || 'BUY';
+
+    if (action === 'BUY') {
+      g.buyQty += sharesNum;
+      g.buyVal += sharesNum * priceNum;
+    } else if (action === 'SELL') {
+      g.sellQty += sharesNum;
+      g.sellVal += sharesNum * priceNum;
     }
   });
 
@@ -273,23 +328,36 @@ function createMasterCardHTML(cardData) {
 
   // Generate timeline nodes
   const timelineHTML = cardData.transactions.map(tx => {
-    const txDate = new Date(tx.date);
-    const isToday = txDate.getFullYear() === 2026 && txDate.getMonth() === 5 && txDate.getDate() === 3;
-    const formattedDate = isToday
-      ? txDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      : txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!tx) return '';
+    
+    const txDate = tx.date ? new Date(tx.date) : new Date();
+    const isToday = !isNaN(txDate.getTime()) &&
+                    txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
+                    txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
+                    txDate.getDate() === SIMULATED_TODAY.getDate();
+                    
+    const formattedDate = isNaN(txDate.getTime())
+      ? 'Unknown Date'
+      : (isToday
+        ? txDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        : txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
 
-    const actionClass = tx.action.toLowerCase();
-    const actionLabel = tx.action === 'BUY' ? 'Bought' : 'Sold';
+    const action = tx.action || 'BUY';
+    const actionClass = action.toLowerCase();
+    const actionLabel = action === 'SELL' ? 'Sold' : 'Bought';
+
+    const sharesVal = parseFloat(tx.shares) || 0;
+    const priceVal = parseFloat(tx.price) || 0;
+    const comment = tx.comment || '';
 
     return `
       <div class="timeline-item ${actionClass}">
         <div class="timeline-dot"></div>
         <div class="timeline-header">
-          <span class="timeline-action-text">${actionLabel} ${tx.shares} ${cardData.assetType === 'options' ? 'Contracts' : 'Shares'} @ $${tx.price.toFixed(2)}</span>
+          <span class="timeline-action-text">${actionLabel} ${sharesVal} ${cardData.assetType === 'options' ? 'Contracts' : 'Shares'} @ $${priceVal.toFixed(2)}</span>
           <span class="timeline-date">${formattedDate}</span>
         </div>
-        ${tx.comment ? `<div class="timeline-comment">${tx.comment}</div>` : ''}
+        ${comment ? `<div class="timeline-comment">${comment}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -445,4 +513,103 @@ function initNavigationRedirects() {
       }
     });
   });
+}
+
+async function pullCloudData() {
+  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  if (url.includes("YOUR_SHEETDB_API_ID")) {
+    return;
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Cloud spreadsheet endpoint returned error response.');
+    }
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
+      
+      let marketPrices = {};
+      try {
+        marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+      } catch (e) {
+        marketPrices = {};
+      }
+
+      let localTxs = [];
+      try {
+        localTxs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
+      } catch (e) {
+        localTxs = [];
+      }
+
+      const parsedTxs = data.map(tx => {
+        const ticker = (tx.Symbol || tx.Ticker || tx.ticker || '').trim();
+        const name = tx.Name || tx.name || '';
+        const shares = parseInt(tx.Shares || tx.shares || 0, 10);
+        const costBasis = parseFloat(tx.CostBasis || tx['Cost Basis'] || tx.costBasis || tx.price || tx.avgCost || 0);
+        const assetType = tx.Type || tx.assetType || tx.type || 'stocks';
+        
+        // Find matching local transaction to preserve Action, Date, and Comment
+        const match = localTxs.find(local => 
+          local.ticker === ticker && 
+          local.shares === shares && 
+          Math.abs(local.price - costBasis) < 0.01 &&
+          local.assetType === assetType
+        );
+
+        const action = tx.Action || tx.action || (match ? match.action : 'BUY');
+        const date = tx.Date || tx.date || (match ? match.date : new Date().toISOString());
+        const comment = tx['Trade Journal Note'] || tx.Comment || tx.comment || (match ? match.comment : '');
+        
+        let stopLoss = 0;
+        let slSpecified = false;
+        if (tx.SL !== undefined && tx.SL !== null) {
+          slSpecified = true;
+          stopLoss = tx.SL === '' ? 0 : (isNaN(parseFloat(tx.SL)) ? 0 : parseFloat(tx.SL));
+        } else if (tx.sl !== undefined && tx.sl !== null) {
+          slSpecified = true;
+          stopLoss = tx.sl === '' ? 0 : (isNaN(parseFloat(tx.sl)) ? 0 : parseFloat(tx.sl));
+        } else if (match && match.stopLoss !== undefined) {
+          stopLoss = match.stopLoss;
+          slSpecified = true;
+        }
+
+        if (ticker) {
+          const isDefault = defaultTickerKeys.includes(ticker);
+          const defaultData = defaultAssetData[ticker] || {};
+
+          marketPrices[ticker] = {
+            name: name || (marketPrices[ticker] ? marketPrices[ticker].name : (isDefault ? defaultData.name : ticker + ' Corporation')),
+            currentPrice: isDefault ? defaultData.currentPrice : ((tx.CurrentPrice || tx.currentPrice) ? parseFloat(tx.CurrentPrice || tx.currentPrice) : (marketPrices[ticker] ? marketPrices[ticker].currentPrice : costBasis)),
+            change24h: isDefault ? defaultData.change24h : ((tx.change24h || tx.change) ? parseFloat(tx.change24h || tx.change) : (marketPrices[ticker] ? marketPrices[ticker].change24h : 0.0)),
+            icon: tx.Icon || tx.icon || (marketPrices[ticker] ? marketPrices[ticker].icon : (isDefault ? defaultData.icon : ticker.slice(0, 2).toUpperCase())),
+            stopLoss: slSpecified ? stopLoss : (isDefault ? defaultData.stopLoss : 0.0)
+          };
+        }
+
+        return {
+          ticker: ticker,
+          assetType: assetType,
+          action: action,
+          shares: shares,
+          price: costBasis,
+          date: date,
+          comment: comment,
+          stopLoss: stopLoss
+        };
+      }).filter(tx => tx.ticker !== '');
+
+      localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
+      localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
+      
+      // Re-render the active ledger view
+      const activeBtn = document.querySelector('.pill-btn.active');
+      const activeRange = activeBtn ? activeBtn.getAttribute('data-range') : 'daily';
+      renderLedger(activeRange);
+    }
+  } catch (err) {
+    console.error('Background pull failed:', err);
+  }
 }

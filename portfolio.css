@@ -85,7 +85,8 @@
   box-shadow: 0 12px 32px var(--glass-shadow);
   overflow: hidden;
   backdrop-filter: blur(10px);
-  --chart-color: var(--accent); /* Default indicator */
+  --chart-color: var(--accent);
+  /* Default indicator */
 }
 
 .balance-card.profit {
@@ -136,6 +137,7 @@
 .balance-change.positive {
   color: var(--success);
 }
+
 .balance-change.negative {
   color: var(--danger);
 }
@@ -174,7 +176,8 @@
 /* BALANCE METRICS CARD CHART */
 .portfolio-chart-container {
   height: 55px;
-  margin: 8px -20px 8px -20px; /* Pull to card edges */
+  margin: 8px -20px 8px -20px;
+  /* Pull to card edges */
   position: relative;
   overflow: hidden;
 }
@@ -277,7 +280,7 @@
   font-weight: 700;
   font-size: 11.5px;
   color: var(--text-primary);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   flex-shrink: 0;
 }
 
@@ -291,7 +294,8 @@
 }
 
 .asset-ticker {
-  font-size: 11.5px; /* Slightly smaller to fit vertical stack layout beautifully */
+  font-size: 11.5px;
+  /* Slightly smaller to fit vertical stack layout beautifully */
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.1px;
@@ -588,5 +592,3 @@
 .import-action-btn.secondary:hover {
   background: rgba(255, 255, 255, 0.08);
 }
-
-

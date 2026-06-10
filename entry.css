@@ -152,3 +152,49 @@
   width: 85%;
   text-align: center;
 }
+
+/* Action Desk & Action Pills */
+.action-desk {
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 4px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.action-pill {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.action-pill:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.action-pill.active {
+  color: #fff !important;
+}
+
+.action-pill.active[data-action="BUY"] {
+  background: var(--success);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.action-pill.active[data-action="SELL"] {
+  background: var(--danger);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}

@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://sheetdb.io/api/v1/6q1u8mtg34ndo"
+  endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
 };
 
 const defaultAssetData = {
@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 3. Form Submit Validation & Toast Trigger
   initFormSubmit();
+
+  // 3b. Initialize Action Pills Toggle (BUY/SELL)
+  initActionPills();
 
   // 4. System notification quick toggle
   initNotificationToggle();
@@ -75,6 +78,24 @@ function initNavigation() {
       }
     });
   });
+}
+
+/**
+ * Setup action pills toggle selectors (BUY/SELL)
+ */
+function initActionPills() {
+  const pills = document.querySelectorAll('.action-pill');
+  const actionInput = document.getElementById('inputAction');
+  
+  if (pills.length && actionInput) {
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        pills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        actionInput.value = pill.getAttribute('data-action');
+      });
+    });
+  }
 }
 
 /**
@@ -200,6 +221,20 @@ function initFormSubmit() {
       document.getElementById('inputPrice').value = '';
       document.getElementById('inputSL').value = '';
       document.getElementById('inputComment').value = '';
+      
+      // Reset action pill selection
+      if (document.getElementById('inputAction')) {
+        document.getElementById('inputAction').value = 'BUY';
+      }
+      const pills = document.querySelectorAll('.action-pill');
+      pills.forEach(p => {
+        if (p.getAttribute('data-action') === 'BUY') {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+
       initDefaultDate();
     }
   });
@@ -207,141 +242,96 @@ function initFormSubmit() {
 
 async function pushTradeToCloud(tx) {
   const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
-  if (url.includes("YOUR_SHEETDB_API_ID")) {
-    console.error(new Error("SheetDB API ID is a placeholder."));
+  if (!url || url.includes("YOUR_API_URL")) {
     showToast("Trade saved locally (Offline Mode)", true);
     return;
   }
 
   const defaultNames = {
-    'NVDA': 'NVIDIA Corporation',
-    'AAPL': 'Apple Inc.',
-    'TSLA': 'Tesla Inc.',
-    'NVDA $490 Call': 'Exp 07/16/26 • Buy to Open',
-    'AAPL $180 Call': 'Exp 06/18/26 • Buy to Open'
+    'NVDA': 'NVIDIA Corporation', 'AAPL': 'Apple Inc.', 'TSLA': 'Tesla Inc.',
+    'NVDA $490 Call': 'Exp 07/16/26 • Buy to Open', 'AAPL $180 Call': 'Exp 06/18/26 • Buy to Open'
   };
-  const nameValue = defaultNames[tx.ticker] || (tx.ticker + ' Corporation');
 
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      redirect: 'follow',
       body: JSON.stringify({
         data: [
           {
             Symbol: tx.ticker,
-            Name: nameValue,
+            Name: defaultNames[tx.ticker] || (tx.ticker + ' Corporation'),
+            Date: tx.date,
+            "Asset Type": tx.assetType === 'options' ? 'Option' : 'Stock',
+            Action: tx.action,
             Shares: Number(tx.shares),
             CostBasis: Number(tx.price),
             CurrentPrice: Number(tx.price),
-            Type: tx.assetType,
+            SL: tx.stopLoss ? Number(tx.stopLoss) : 0,
             Icon: tx.ticker.substring(0, 2).toUpperCase(),
-            Action: tx.action,
-            Date: tx.date,
-            'Trade Journal Note': tx.comment,
-            SL: tx.stopLoss ? Number(tx.stopLoss) : ""
+            "Trade Journal Note": tx.comment
           }
         ]
       })
     });
-    if (!response.ok) {
-      throw new Error(`Cloud submission returned non-ok status: ${response.status}`);
-    }
     showToast("🟢 Trade Synced to Cloud Sheet!");
   } catch (err) {
-    console.error(err);
+    console.error('Cloud post failed:', err);
     showToast("Trade saved locally (Offline Mode)", true);
   }
 }
 
+
 async function pullCloudData() {
   const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
-  if (url.includes("YOUR_SHEETDB_API_ID")) {
-    return;
-  }
+  if (!url || url.includes("YOUR_API_URL")) return;
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('Cloud spreadsheet endpoint returned error response.');
-    }
+    const response = await fetch(url, { method: 'GET', redirect: 'follow' });
+    if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
+    
     if (Array.isArray(data)) {
       const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
+      let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
       
-      let marketPrices = {};
-      try {
-        marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-      } catch (e) {
-        marketPrices = {};
-      }
-
-      let localTxs = [];
-      try {
-        localTxs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
-      } catch (e) {
-        localTxs = [];
-      }
-
       const parsedTxs = data.map(tx => {
-        const ticker = (tx.Symbol || tx.Ticker || tx.ticker || '').trim();
-        const name = tx.Name || tx.name || '';
-        const shares = parseInt(tx.Shares || tx.shares || 0, 10);
-        const costBasis = parseFloat(tx.CostBasis || tx['Cost Basis'] || tx.costBasis || tx.price || tx.avgCost || 0);
-        const assetType = tx.Type || tx.assetType || tx.type || 'stocks';
+        const ticker = String(tx.Symbol || '').trim();
+        const name = String(tx.Name || '');
+        const action = String(tx.Action || 'BUY');
+        const shares = parseInt(tx.Shares || 0, 10);
+        const costBasis = parseFloat(tx.CostBasis || 0);
+        const currentPrice = parseFloat(tx.CurrentPrice || costBasis);
+        const date = String(tx.Date || new Date().toISOString());
+        const comment = String(tx['Trade Journal Note'] || '');
+        const stopLoss = parseFloat(tx.SL || 0);
         
-        // Find matching local transaction to preserve Action, Date, and Comment
-        const match = localTxs.find(local => 
-          local.ticker === ticker && 
-          local.shares === shares && 
-          Math.abs(local.price - costBasis) < 0.01 &&
-          local.assetType === assetType
-        );
-
-        const action = tx.Action || tx.action || (match ? match.action : 'BUY');
-        const date = tx.Date || tx.date || (match ? match.date : new Date().toISOString());
-        const comment = tx['Trade Journal Note'] || tx.Comment || tx.comment || (match ? match.comment : '');
-        
-        let stopLoss = 0;
-        let slSpecified = false;
-        if (tx.SL !== undefined && tx.SL !== null) {
-          slSpecified = true;
-          stopLoss = tx.SL === '' ? 0 : (isNaN(parseFloat(tx.SL)) ? 0 : parseFloat(tx.SL));
-        } else if (tx.sl !== undefined && tx.sl !== null) {
-          slSpecified = true;
-          stopLoss = tx.sl === '' ? 0 : (isNaN(parseFloat(tx.sl)) ? 0 : parseFloat(tx.sl));
-        } else if (match && match.stopLoss !== undefined) {
-          stopLoss = match.stopLoss;
-          slSpecified = true;
-        }
+        let rawType = String(tx['Asset Type'] || 'Stock');
+        let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
 
         if (ticker) {
-          const isDefault = defaultTickerKeys.includes(ticker);
-          const defaultData = defaultAssetData[ticker] || {};
-
           marketPrices[ticker] = {
-            name: name || (marketPrices[ticker] ? marketPrices[ticker].name : (isDefault ? defaultData.name : ticker + ' Corporation')),
-            currentPrice: isDefault ? defaultData.currentPrice : ((tx.CurrentPrice || tx.currentPrice) ? parseFloat(tx.CurrentPrice || tx.currentPrice) : (marketPrices[ticker] ? marketPrices[ticker].currentPrice : costBasis)),
-            change24h: isDefault ? defaultData.change24h : ((tx.change24h || tx.change) ? parseFloat(tx.change24h || tx.change) : (marketPrices[ticker] ? marketPrices[ticker].change24h : 0.0)),
-            icon: tx.Icon || tx.icon || (marketPrices[ticker] ? marketPrices[ticker].icon : (isDefault ? defaultData.icon : ticker.slice(0, 2).toUpperCase())),
-            stopLoss: slSpecified ? stopLoss : (isDefault ? defaultData.stopLoss : 0.0)
+            name: name,
+            currentPrice: currentPrice,
+            change24h: parseFloat(tx.change24h || 0),
+            icon: tx.Icon || ticker.slice(0, 2).toUpperCase(),
+            stopLoss: stopLoss
           };
         }
 
-        return {
-          ticker: ticker,
-          assetType: assetType,
-          action: action,
-          shares: shares,
-          price: costBasis,
-          date: date,
-          comment: comment,
-          stopLoss: stopLoss
-        };
+        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss };
       }).filter(tx => tx.ticker !== '');
 
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
+
+      if (typeof updateDashboardUI === 'function') updateDashboardUI();
+      if (typeof renderAssetLists === 'function') renderAssetLists();
+      if (typeof renderLedgerTable === 'function') renderLedgerTable();
+      if (typeof renderLedger === 'function') {
+        const activeBtn = document.querySelector('.pill-btn.active');
+        renderLedger(activeBtn ? activeBtn.getAttribute('data-range') : 'daily');
+      }
     }
   } catch (err) {
     console.error('Background pull failed:', err);

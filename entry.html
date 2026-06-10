@@ -55,11 +55,12 @@
             </div>
 
             <div class="form-group half-width">
-              <label for="inputAction">Action Type</label>
-              <select id="inputAction" required>
-                <option value="BUY">BUY</option>
-                <option value="SELL">SELL</option>
-              </select>
+              <label>Action Type</label>
+              <div class="action-desk">
+                <button type="button" class="action-pill active" data-action="BUY">BUY</button>
+                <button type="button" class="action-pill" data-action="SELL">SELL</button>
+              </div>
+              <input type="hidden" id="inputAction" value="BUY" required>
             </div>
           </div>
 
@@ -142,7 +143,7 @@
 
   </div>
 
-  <script src="entry.js?v=1.4"></script>
+  <script src="entry.js?v=2.0" defer></script>
 </body>
 
 </html>

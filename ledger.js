@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://sheetdb.io/api/v1/6q1u8mtg34ndo"
+  endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
 };
 
 const defaultAssetData = {
@@ -167,7 +167,7 @@ const portfolioTransactions = [
   }
 ];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Apply saved color theme
   const savedAccent = localStorage.getItem('portfolio_accent_color');
   if (savedAccent) {
@@ -177,11 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initTimeFilters();
   initNavigationRedirects();
 
-  // Render daily ledger by default
-  renderLedger('daily');
+  // Pull cloud data first, then render so we always show up-to-date trades
+  await pullCloudData();
 
-  // Background sync with SheetDB
-  pullCloudData();
+  // Render daily ledger by default (will use freshly synced data)
+  renderLedger('daily');
 });
 
 function applyAccentColor(hexColor) {
@@ -517,97 +517,54 @@ function initNavigationRedirects() {
 
 async function pullCloudData() {
   const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
-  if (url.includes("YOUR_SHEETDB_API_ID")) {
-    return;
-  }
+  if (!url || url.includes("YOUR_API_URL")) return;
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('Cloud spreadsheet endpoint returned error response.');
-    }
+    const response = await fetch(url, { method: 'GET', redirect: 'follow' });
+    if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
+    
     if (Array.isArray(data)) {
       const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
+      let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
       
-      let marketPrices = {};
-      try {
-        marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-      } catch (e) {
-        marketPrices = {};
-      }
-
-      let localTxs = [];
-      try {
-        localTxs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
-      } catch (e) {
-        localTxs = [];
-      }
-
       const parsedTxs = data.map(tx => {
-        const ticker = (tx.Symbol || tx.Ticker || tx.ticker || '').trim();
-        const name = tx.Name || tx.name || '';
-        const shares = parseInt(tx.Shares || tx.shares || 0, 10);
-        const costBasis = parseFloat(tx.CostBasis || tx['Cost Basis'] || tx.costBasis || tx.price || tx.avgCost || 0);
-        const assetType = tx.Type || tx.assetType || tx.type || 'stocks';
+        const ticker = String(tx.Symbol || '').trim();
+        const name = String(tx.Name || '');
+        const action = String(tx.Action || 'BUY');
+        const shares = parseInt(tx.Shares || 0, 10);
+        const costBasis = parseFloat(tx.CostBasis || 0);
+        const currentPrice = parseFloat(tx.CurrentPrice || costBasis);
+        const date = String(tx.Date || new Date().toISOString());
+        const comment = String(tx['Trade Journal Note'] || '');
+        const stopLoss = parseFloat(tx.SL || 0);
         
-        // Find matching local transaction to preserve Action, Date, and Comment
-        const match = localTxs.find(local => 
-          local.ticker === ticker && 
-          local.shares === shares && 
-          Math.abs(local.price - costBasis) < 0.01 &&
-          local.assetType === assetType
-        );
-
-        const action = tx.Action || tx.action || (match ? match.action : 'BUY');
-        const date = tx.Date || tx.date || (match ? match.date : new Date().toISOString());
-        const comment = tx['Trade Journal Note'] || tx.Comment || tx.comment || (match ? match.comment : '');
-        
-        let stopLoss = 0;
-        let slSpecified = false;
-        if (tx.SL !== undefined && tx.SL !== null) {
-          slSpecified = true;
-          stopLoss = tx.SL === '' ? 0 : (isNaN(parseFloat(tx.SL)) ? 0 : parseFloat(tx.SL));
-        } else if (tx.sl !== undefined && tx.sl !== null) {
-          slSpecified = true;
-          stopLoss = tx.sl === '' ? 0 : (isNaN(parseFloat(tx.sl)) ? 0 : parseFloat(tx.sl));
-        } else if (match && match.stopLoss !== undefined) {
-          stopLoss = match.stopLoss;
-          slSpecified = true;
-        }
+        let rawType = String(tx['Asset Type'] || 'Stock');
+        let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
 
         if (ticker) {
-          const isDefault = defaultTickerKeys.includes(ticker);
-          const defaultData = defaultAssetData[ticker] || {};
-
           marketPrices[ticker] = {
-            name: name || (marketPrices[ticker] ? marketPrices[ticker].name : (isDefault ? defaultData.name : ticker + ' Corporation')),
-            currentPrice: isDefault ? defaultData.currentPrice : ((tx.CurrentPrice || tx.currentPrice) ? parseFloat(tx.CurrentPrice || tx.currentPrice) : (marketPrices[ticker] ? marketPrices[ticker].currentPrice : costBasis)),
-            change24h: isDefault ? defaultData.change24h : ((tx.change24h || tx.change) ? parseFloat(tx.change24h || tx.change) : (marketPrices[ticker] ? marketPrices[ticker].change24h : 0.0)),
-            icon: tx.Icon || tx.icon || (marketPrices[ticker] ? marketPrices[ticker].icon : (isDefault ? defaultData.icon : ticker.slice(0, 2).toUpperCase())),
-            stopLoss: slSpecified ? stopLoss : (isDefault ? defaultData.stopLoss : 0.0)
+            name: name,
+            currentPrice: currentPrice,
+            change24h: parseFloat(tx.change24h || 0),
+            icon: tx.Icon || ticker.slice(0, 2).toUpperCase(),
+            stopLoss: stopLoss
           };
         }
 
-        return {
-          ticker: ticker,
-          assetType: assetType,
-          action: action,
-          shares: shares,
-          price: costBasis,
-          date: date,
-          comment: comment,
-          stopLoss: stopLoss
-        };
+        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss };
       }).filter(tx => tx.ticker !== '');
 
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
-      
-      // Re-render the active ledger view
-      const activeBtn = document.querySelector('.pill-btn.active');
-      const activeRange = activeBtn ? activeBtn.getAttribute('data-range') : 'daily';
-      renderLedger(activeRange);
+
+      if (typeof updateDashboardUI === 'function') updateDashboardUI();
+      if (typeof renderAssetLists === 'function') renderAssetLists();
+      if (typeof renderLedgerTable === 'function') renderLedgerTable();
+      if (typeof renderLedger === 'function') {
+        const activeBtn = document.querySelector('.pill-btn.active');
+        renderLedger(activeBtn ? activeBtn.getAttribute('data-range') : 'daily');
+      }
     }
   } catch (err) {
     console.error('Background pull failed:', err);

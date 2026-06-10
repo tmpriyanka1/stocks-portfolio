@@ -326,3 +326,60 @@
   border-radius: 0 4px 4px 0;
   margin-top: 2px;
 }
+
+/* ==========================================================================
+   OPTIONS CONTRACT BADGE SYSTEM (shared with portfolio)
+   ========================================================================== */
+
+.option-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.option-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  line-height: 16px;
+}
+
+.option-badge.call {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--success, #10b981);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.option-badge.put {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--danger, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.option-badge.strike {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.option-multiplier-hint {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 3px;
+  vertical-align: middle;
+  line-height: 14px;
+}
+

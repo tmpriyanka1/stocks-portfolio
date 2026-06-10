@@ -167,7 +167,7 @@ const portfolioTransactions = [
   }
 ];
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   // Apply saved color theme
   const savedAccent = localStorage.getItem('portfolio_accent_color');
   if (savedAccent) {
@@ -177,11 +177,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTimeFilters();
   initNavigationRedirects();
 
-  // Pull cloud data first, then render so we always show up-to-date trades
-  await pullCloudData();
-
-  // Render daily ledger by default (will use freshly synced data)
+  // INSTANT FIRST RENDER: use cached localStorage data to eliminate load latency
   renderLedger('daily');
+
+  // Background cloud pull — updates UI silently once fresh data arrives
+  pullCloudData();
 });
 
 function applyAccentColor(hexColor) {
@@ -309,22 +309,45 @@ function groupTransactionsByTicker(transactions) {
  */
 function createMasterCardHTML(cardData) {
   const isCompleted = cardData.netShares <= 0;
+  // Dual-source options detection: type field OR ticker pattern ($price + CALL/PUT)
+  const isOption = cardData.assetType === 'options'
+    || (/\$\d/.test(cardData.ticker) && /\b(call|put)\b/i.test(cardData.ticker));
+  // Options: apply standard 100-share leverage multiplier to P&L display
+  const multiplier = isOption ? 100 : 1;
+
 
   const buyAvgStr = cardData.buyAvg > 0 ? `$${cardData.buyAvg.toFixed(2)}` : '—';
   const sellAvgStr = cardData.sellAvg > 0 ? `$${cardData.sellAvg.toFixed(2)}` : '—';
 
   let pnlClass = 'neutral';
   let pnlSign = '';
-  if (cardData.realizedPL > 0) {
+  const realizedPLLeveraged = cardData.realizedPL * multiplier;
+  if (realizedPLLeveraged > 0) {
     pnlClass = 'positive';
     pnlSign = '+';
-  } else if (cardData.realizedPL < 0) {
+  } else if (realizedPLLeveraged < 0) {
     pnlClass = 'negative';
   }
-  const pnlStr = `$${Math.abs(cardData.realizedPL).toFixed(2)}`;
+  const pnlStr = `$${Math.abs(realizedPLLeveraged).toFixed(2)}`;
 
-  const assetTypeLabel = cardData.assetType === 'options' ? 'Option' : 'Stock';
-  const qtyLabel = cardData.assetType === 'options' ? 'Contracts' : 'Shares';
+  const assetTypeLabel = isOption ? 'Option' : 'Stock';
+  const qtyLabel = isOption ? 'Contracts' : 'Shares';
+
+  // OPTIONS CONTRACT SPECIFICATION PARSER
+  // Extracts strike price and Call/Put type from ticker like "NVDA $490 Call"
+  let optionBadgeHTML = '';
+  if (isOption) {
+    const strikeMatch = cardData.ticker.match(/\$(\d+(?:\.\d+)?)/);
+    const strikePrice = strikeMatch ? strikeMatch[1] : null;
+    const contractType = /\bCall\b/i.test(cardData.ticker) ? 'call'
+                       : /\bPut\b/i.test(cardData.ticker) ? 'put' : null;
+    if (strikePrice) {
+      optionBadgeHTML += `<span class="option-badge strike">\$${strikePrice} Strike</span>`;
+    }
+    if (contractType) {
+      optionBadgeHTML += `<span class="option-badge ${contractType}">${contractType.toUpperCase()}</span>`;
+    }
+  }
 
   // Generate timeline nodes
   const timelineHTML = cardData.transactions.map(tx => {
@@ -349,12 +372,14 @@ function createMasterCardHTML(cardData) {
     const sharesVal = parseFloat(tx.shares) || 0;
     const priceVal = parseFloat(tx.price) || 0;
     const comment = tx.comment || '';
+    // For options, show the leveraged contract value in the timeline
+    const txValue = isOption ? (sharesVal * priceVal * 100) : (sharesVal * priceVal);
 
     return `
       <div class="timeline-item ${actionClass}">
         <div class="timeline-dot"></div>
         <div class="timeline-header">
-          <span class="timeline-action-text">${actionLabel} ${sharesVal} ${cardData.assetType === 'options' ? 'Contracts' : 'Shares'} @ $${priceVal.toFixed(2)}</span>
+          <span class="timeline-action-text">${actionLabel} ${sharesVal} ${isOption ? 'Contracts' : 'Shares'} @ $${priceVal.toFixed(2)}${isOption ? ' <span class="option-multiplier-hint">×100 = $' + txValue.toFixed(2) + '</span>' : ''}</span>
           <span class="timeline-date">${formattedDate}</span>
         </div>
         ${comment ? `<div class="timeline-comment">${comment}</div>` : ''}
@@ -368,6 +393,7 @@ function createMasterCardHTML(cardData) {
         <div class="card-title-box">
           <span class="card-ticker">${cardData.ticker}</span>
           <span class="card-asset-type">${assetTypeLabel}</span>
+          ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
         </div>
         <div class="card-actions-area">
           <span class="card-pnl-badge ${pnlClass}">Realized P&L: ${pnlSign}${pnlStr}</span>
@@ -382,7 +408,7 @@ function createMasterCardHTML(cardData) {
       <div class="card-stats-row">
         <div class="stat-mini-item">
           <span class="stat-mini-label">Buy Average</span>
-          <span class="stat-mini-value">${buyAvgStr}</span>
+          <span class="stat-mini-value">${buyAvgStr}${isOption ? ' <span class="option-multiplier-hint">×100</span>' : ''}</span>
         </div>
         <div class="stat-mini-item" style="text-align: center;">
           <span class="stat-mini-label">Net Holdings</span>
@@ -392,7 +418,7 @@ function createMasterCardHTML(cardData) {
         </div>
         <div class="stat-mini-item">
           <span class="stat-mini-label">Sell Average</span>
-          <span class="stat-mini-value">${sellAvgStr}</span>
+          <span class="stat-mini-value">${sellAvgStr}${isOption ? ' <span class="option-multiplier-hint">×100</span>' : ''}</span>
         </div>
       </div>
       
@@ -525,7 +551,6 @@ async function pullCloudData() {
     const data = await response.json();
     
     if (Array.isArray(data)) {
-      const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
       
       const parsedTxs = data.map(tx => {
@@ -534,13 +559,19 @@ async function pullCloudData() {
         const action = String(tx.Action || 'BUY');
         const shares = parseInt(tx.Shares || 0, 10);
         const costBasis = parseFloat(tx.CostBasis || 0);
-        const currentPrice = parseFloat(tx.CurrentPrice || costBasis);
+        // Fallback: if CurrentPrice is missing or 0, use costBasis so balance never drops to $0
+        const rawCurrentPrice = parseFloat(tx.CurrentPrice || 0);
+        const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
         const date = String(tx.Date || new Date().toISOString());
         const comment = String(tx['Trade Journal Note'] || '');
         const stopLoss = parseFloat(tx.SL || 0);
         
         let rawType = String(tx['Asset Type'] || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
+        // Auto-detect options from symbol string (e.g. "SPY $723 CALL 6/11")
+        if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
+          assetType = 'options';
+        }
 
         if (ticker) {
           marketPrices[ticker] = {
@@ -558,13 +589,9 @@ async function pullCloudData() {
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
 
-      if (typeof updateDashboardUI === 'function') updateDashboardUI();
-      if (typeof renderAssetLists === 'function') renderAssetLists();
-      if (typeof renderLedgerTable === 'function') renderLedgerTable();
-      if (typeof renderLedger === 'function') {
-        const activeBtn = document.querySelector('.pill-btn.active');
-        renderLedger(activeBtn ? activeBtn.getAttribute('data-range') : 'daily');
-      }
+      // Re-render ledger with the current time-range filter
+      const activeBtn = document.querySelector('.pill-btn.active');
+      renderLedger(activeBtn ? activeBtn.getAttribute('data-range') : 'daily');
     }
   } catch (err) {
     console.error('Background pull failed:', err);

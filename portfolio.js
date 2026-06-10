@@ -2,6 +2,10 @@ const CLOUD_SPREADSHEET_CONFIG = {
   endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
 };
 
+// Tracks the currently-active filter pill ('all', 'stocks', 'options')
+// so background cloud pulls and refresh always re-render the correct view
+let activeFilterMode = 'all';
+
 const defaultAssetData = {
   'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
   'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
@@ -121,7 +125,6 @@ async function pullCloudData() {
     const data = await response.json();
     
     if (Array.isArray(data)) {
-      const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
       
       const parsedTxs = data.map(tx => {
@@ -130,13 +133,19 @@ async function pullCloudData() {
         const action = String(tx.Action || 'BUY');
         const shares = parseInt(tx.Shares || 0, 10);
         const costBasis = parseFloat(tx.CostBasis || 0);
-        const currentPrice = parseFloat(tx.CurrentPrice || costBasis);
+        // Fallback: if CurrentPrice is missing or 0, use costBasis so balance never drops to $0
+        const rawCurrentPrice = parseFloat(tx.CurrentPrice || 0);
+        const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
         const date = String(tx.Date || new Date().toISOString());
         const comment = String(tx['Trade Journal Note'] || '');
         const stopLoss = parseFloat(tx.SL || 0);
         
         let rawType = String(tx['Asset Type'] || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
+        // Also auto-detect options from the symbol itself (e.g. "SPY $723 CALL 6/11")
+        if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
+          assetType = 'options';
+        }
 
         if (ticker) {
           marketPrices[ticker] = {
@@ -154,13 +163,10 @@ async function pullCloudData() {
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
 
-      if (typeof updateDashboardUI === 'function') updateDashboardUI();
-      if (typeof renderAssetLists === 'function') renderAssetLists();
-      if (typeof renderLedgerTable === 'function') renderLedgerTable();
-      if (typeof renderLedger === 'function') {
-        const activeBtn = document.querySelector('.pill-btn.active');
-        renderLedger(activeBtn ? activeBtn.getAttribute('data-range') : 'daily');
-      }
+      // Re-render using the currently-active filter pill to preserve the user's view
+      refreshPortfolioAssets();
+      updateBalanceMetrics();
+      renderAssetsTable(activeFilterMode);
     }
   } catch (err) {
     console.error('Background pull failed:', err);
@@ -173,8 +179,10 @@ function rebootDashboard() {
   updateBalanceMetrics();
   initNavigation();
   initFilters();
+  initManualRefreshBtn();
 
-  // Render full portfolio instantly on load
+  // Render full portfolio instantly from local cache on load
+  activeFilterMode = 'all';
   renderAssetsTable('all');
   initNotificationToggle();
   initCSVImporter();
@@ -455,12 +463,16 @@ function updateBalanceMetrics() {
   let optionContractsCount = 0;
 
   portfolioAssets.forEach(asset => {
-    const value = asset.shares * asset.currentPrice;
+    // Dual-source options detection (type field OR ticker pattern)
+    const isOpt = asset.type === 'options'
+      || (/\$\d/.test(asset.ticker) && /\b(call|put)\b/i.test(asset.ticker));
+    const multiplier = isOpt ? 100 : 1;
+    const value = asset.shares * asset.currentPrice * multiplier;
     const prevValue = value / (1 + asset.change24h / 100);
     totalValue += value;
     totalPrevValue += prevValue;
 
-    if (asset.type === 'options') {
+    if (isOpt) {
       optionContractsCount += asset.shares;
     }
   });
@@ -555,15 +567,25 @@ function renderAssetsTable(filterMode) {
 
   // Map and dynamically render the assets rows
   filtered.forEach(asset => {
-    // Calculating and formatting total holdings value (shares * average price)
-    const holdingsValue = asset.shares * asset.avgCost;
+    // Dual-source options detection:
+    // 1. asset.type field set to 'options'
+    // 2. Ticker string contains a $ price + CALL/PUT keyword (e.g. "NVDA $490 Call", "SPY $723 CALL 6/11")
+    const isOption = asset.type === 'options'
+      || (/\$\d/.test(asset.ticker) && /\b(call|put)\b/i.test(asset.ticker));
+
+    // Options: apply standard 100-share leverage multiplier to all position math
+    const multiplier = isOption ? 100 : 1;
+
+    // VALUE = shares * avgCost (* 100 for options)
+    const holdingsValue = asset.shares * asset.avgCost * multiplier;
     const formattedVal = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(holdingsValue);
 
-    // Formatting positive or negative total trade P&L (shares * current price - shares * average price)
-    const changeUsd = (asset.shares * asset.currentPrice) - holdingsValue;
+    // TREND = (shares * livePrice * multiplier) - holdingsValue → P&L in dollars
+    const liveValue = asset.shares * asset.currentPrice * multiplier;
+    const changeUsd = liveValue - holdingsValue;
     const isPositive = changeUsd >= 0;
     const changeSign = isPositive ? 'positive' : 'negative';
     const arrowSymbol = isPositive ? '▲' : '▼';
@@ -573,17 +595,55 @@ function renderAssetsTable(filterMode) {
     }).format(Math.abs(changeUsd))}`;
 
     // Quantity label depending on asset type
-    const qtySuffix = asset.type === 'options' ? (asset.shares === 1 ? 'Cont.' : 'Conts.') : (asset.shares === 1 ? 'Share' : 'Shares');
+    const qtySuffix = isOption ? (asset.shares === 1 ? 'Cont.' : 'Conts.') : (asset.shares === 1 ? 'Share' : 'Shares');
 
     // Generate mini sparkline path coordinates dynamically
     const points = sparklineData[asset.ticker] || [asset.avgCost, asset.currentPrice];
     const sparklinePath = generateSparklinePath(points, 90, 24);
     const chartStrokeColor = isPositive ? 'var(--success)' : 'var(--danger)';
 
-    // Split ticker name for premium two-line display (e.g. NVDA $490 Call -> NVDA and $490 Call)
+    // Split ticker name: mainTicker = base symbol only (e.g. "SPY"), rest is contract detail
     const tickerParts = asset.ticker.split(' ');
     const mainTicker = tickerParts[0];
-    const subTicker = tickerParts.slice(1).join(' ');
+
+    // ── OPTIONS CONTRACT SPECIFICATION PARSER ──────────────────────────────
+    // Handles: "NVDA $490 Call", "SPY $723 CALL 6/11", "AAPL $180 Put"
+    let optionBadgeHTML = '';
+    let subTicker = '';
+
+    if (isOption) {
+      // Extract strike price — numeric value after "$"
+      const strikeMatch = asset.ticker.match(/\$(\d+(?:\.\d+)?)/);
+      const strikePrice = strikeMatch ? strikeMatch[1] : null;
+
+      // Detect CALL or PUT — case-insensitive, whole-word boundary
+      const contractType = /\bcall\b/i.test(asset.ticker) ? 'call'
+                         : /\bput\b/i.test(asset.ticker) ? 'put' : null;
+
+      // Extract expiry date token (e.g. "6/11" or "07/16/26")
+      const expiryMatch = asset.ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+      const expiry = expiryMatch ? expiryMatch[1] : null;
+
+      // Compact sub-line: show strike + optional expiry date
+      subTicker = strikePrice
+        ? `$${strikePrice}${expiry ? ' · ' + expiry : ''}`
+        : tickerParts.slice(1).join(' ');
+
+      // Build colored badge pills
+      if (strikePrice) {
+        optionBadgeHTML += `<span class="option-badge strike">\$${strikePrice}</span>`;
+      }
+      if (contractType) {
+        optionBadgeHTML += `<span class="option-badge ${contractType}">${contractType.toUpperCase()}</span>`;
+      }
+      if (expiry) {
+        optionBadgeHTML += `<span class="option-badge expiry">${expiry}</span>`;
+      }
+    } else {
+      // Standard stocks: sub-ticker is everything after first word (rare)
+      subTicker = tickerParts.slice(1).join(' ');
+    }
+
 
     const slDisplay = (asset.stopLoss && asset.stopLoss > 0) ? `$${asset.stopLoss.toFixed(2)}` : '—';
 
@@ -595,10 +655,11 @@ function renderAssetsTable(filterMode) {
           <div class="ticker-text-container">
             <span class="asset-ticker">${mainTicker}</span>
             ${subTicker ? `<span class="asset-sub-ticker">${subTicker}</span>` : ''}
+            ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
           </div>
         </div>
         
-        <!-- Column 2: Number of stocks @ avg value -->
+        <!-- Column 2: Number of contracts/shares @ avg cost -->
         <div class="asset-col-shares-avg">
           <span class="asset-shares-qty">${asset.shares} ${qtySuffix}</span>
           <span class="asset-avg-cost">@ $${asset.avgCost.toFixed(2)}</span>
@@ -609,12 +670,13 @@ function renderAssetsTable(filterMode) {
           <span class="sl-price-val">${slDisplay}</span>
         </div>
         
-        <!-- Column 4: Live value price -->
+        <!-- Column 4: Live price per contract -->
         <div class="asset-col-live-price">
           <span class="live-price-val">$${asset.currentPrice.toFixed(2)}</span>
+          ${isOption ? `<span class="option-multiplier-hint">×100</span>` : ''}
         </div>
         
-        <!-- Column 4: Total holding value and mini graph -->
+        <!-- Column 5: Total position value and mini graph -->
         <div class="asset-col-total-graph">
           <div class="total-value-row">
             <span class="asset-total-val">${formattedVal}</span>
@@ -673,6 +735,9 @@ function initFilters() {
     btn.addEventListener('click', () => {
       const filterType = btn.getAttribute('data-filter');
 
+      // Track the selected mode globally so cloud syncs always re-render correctly
+      activeFilterMode = filterType;
+
       // Toggle .active design class to emphasize the focused element
       filterBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -689,6 +754,29 @@ function initFilters() {
   window.addEventListener('resize', () => {
     const activeBtn = document.querySelector('.pill-btn.active');
     updateSlider(activeBtn);
+  });
+}
+
+/**
+ * MANUAL REFRESH BUTTON:
+ * Wires up the glassmorphic #manualRefreshBtn in the header.
+ * Spins the icon, fetches fresh cloud data, then shows a success toast.
+ */
+function initManualRefreshBtn() {
+  const btn = document.getElementById('manualRefreshBtn');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    if (btn.classList.contains('spinning')) return; // Prevent double-tap
+    btn.classList.add('spinning');
+    try {
+      await pullCloudData();
+      showToast('🔄 Portfolio Valuation Refreshed!');
+    } catch (e) {
+      showToast('⚠️ Cloud sync failed. Check connection.', true);
+    } finally {
+      btn.classList.remove('spinning');
+    }
   });
 }
 
@@ -961,44 +1049,49 @@ async function updateLivePrices() {
     const ticker = asset.ticker;
     if (!ticker) continue;
 
-    // Filter out options or other derivatives where API data is hard to query
     const isOption = asset.type === 'options' || ticker.includes('$') || ticker.includes('Call') || ticker.includes('Put');
-    
+
+    // For options, strip to base symbol (e.g. "NVDA $490 Call" → "NVDA")
+    // so we can fetch the real live underlying price from Yahoo Finance.
+    const queryTicker = isOption ? ticker.split(' ')[0] : ticker;
+
     let price = asset.currentPrice;
     let change24h = asset.change24h;
     let success = false;
 
-    if (!isOption) {
-      try {
-        // Attempt to fetch actual stock/crypto quote from Yahoo Finance API via CORS proxy
-        const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}`;
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-        const res = await fetch(proxyUrl);
-        if (res.ok) {
-          const wrapper = await res.json();
-          if (wrapper && wrapper.contents) {
-            const json = JSON.parse(wrapper.contents);
-            if (json && json.chart && json.chart.result && json.chart.result[0]) {
-              const meta = json.chart.result[0].meta;
-              if (meta && meta.regularMarketPrice !== undefined) {
-                price = meta.regularMarketPrice;
-                const prevClose = meta.chartPreviousClose || price;
-                change24h = ((price - prevClose) / prevClose) * 100;
-                success = true;
+    try {
+      // Fetch real market quote for both stocks AND options (using underlying for options)
+      const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${queryTicker}`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+      const res = await fetch(proxyUrl);
+      if (res.ok) {
+        const wrapper = await res.json();
+        if (wrapper && wrapper.contents) {
+          const json = JSON.parse(wrapper.contents);
+          if (json && json.chart && json.chart.result && json.chart.result[0]) {
+            const meta = json.chart.result[0].meta;
+            if (meta && meta.regularMarketPrice !== undefined) {
+              price = meta.regularMarketPrice;
+              const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+              change24h = ((price - prevClose) / prevClose) * 100;
+              success = true;
+              if (isOption) {
+                console.log(`[Options] Fetched underlying ${queryTicker} = $${price.toFixed(2)} for contract "${ticker}"`);
               }
             }
           }
         }
-      } catch (e) {
-        console.warn(`Yahoo Finance API proxy fetch failed for ${ticker}, using local simulator fallback.`, e);
       }
+    } catch (e) {
+      console.warn(`Yahoo Finance API fetch failed for ${queryTicker} (${ticker}), using local fallback.`, e);
     }
 
-    // Local simulator fallback: add realistic small random market fluctuations (+/- 0.05% to 0.25%)
+    // Fallback: apply a tiny ±0.05% micro-drift so the UI stays animated
+    // but doesn't diverge far from the last known real price
     if (!success) {
-      const pct = (Math.random() - 0.5) * 0.3; // +/- 0.15% fluctuation
+      const pct = (Math.random() - 0.5) * 0.1; // ±0.05% only
       price = price * (1 + pct / 100);
-      change24h = change24h + pct;
+      // Do NOT drift change24h — keep it anchored to last real reading
       success = true;
     }
 
@@ -1017,7 +1110,7 @@ async function updateLivePrices() {
     }
     updatedAny = true;
 
-    // Sync the updated live price back to SheetDB spreadsheet (throttled)
+    // Sync the updated live price back to the Google Sheet (throttled)
     if (shouldSyncCloud) {
       syncPriceToCloud(ticker, price);
     }
@@ -1036,6 +1129,7 @@ async function updateLivePrices() {
     }
   }
 }
+
 
 async function syncPriceToCloud(ticker, price) {
   const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;

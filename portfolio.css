@@ -592,3 +592,92 @@
 .import-action-btn.secondary:hover {
   background: rgba(255, 255, 255, 0.08);
 }
+
+/* ==========================================================================
+   OPTIONS CONTRACT BADGE SYSTEM
+   ========================================================================== */
+
+/* Row container for option badges under ticker name */
+.option-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+/* Base badge pill */
+.option-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  line-height: 16px;
+}
+
+/* CALL badge — green accent */
+.option-badge.call {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--success, #10b981);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* PUT badge — red accent */
+.option-badge.put {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--danger, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* Strike price badge — neutral purple tint */
+.option-badge.strike {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+/* ×100 multiplier hint inline label in Live Price column and timelines */
+.option-multiplier-hint {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 3px;
+  vertical-align: middle;
+  line-height: 14px;
+}
+
+/* Expiry date badge — slate/indigo tint */
+.option-badge.expiry {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+/* ==========================================================================
+   MANUAL REFRESH BUTTON — SPIN ANIMATION
+   ========================================================================== */
+
+@keyframes spin-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Applied programmatically while cloud fetch is in-flight */
+#manualRefreshBtn.spinning .refresh-icon {
+  animation: spin-cw 0.8s linear infinite;
+  transform-origin: center;
+}
+
+/* Subtle accent tint while spinning */
+#manualRefreshBtn.spinning {
+  border-color: rgba(99, 102, 241, 0.4);
+  color: var(--accent);
+}

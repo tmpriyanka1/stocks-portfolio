@@ -1,0 +1,28 @@
+{
+  "name": "portfolio-app",
+  "version": "1.0.0",
+  "description": "Stock & options portfolio tracker",
+  "main": "entry.js",
+  "scripts": {
+    "test": "node node_modules/.bin/jest --coverage",
+    "test:watch": "node node_modules/.bin/jest --watch",
+    "test:coverage": "node node_modules/.bin/jest --coverage --coverageReporters=text --coverageReporters=lcov"
+  },
+  "jest": {
+    "testEnvironment": "jest-environment-jsdom",
+    "testMatch": ["**/tests/**/*.test.js"],
+    "coverageReporters": ["text", "lcov", "html"],
+    "coverageDirectory": "coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tmpriyanka1/stocks-portfolio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1"
+  }
+}

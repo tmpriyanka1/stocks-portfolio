@@ -47,6 +47,8 @@ html,
 body {
   width: 100vw;
   height: 100vh;
+  height: -webkit-fill-available;
+  height: 100dvh;
   background-color: var(--bg-primary);
   font-family: var(--font-main);
   color: var(--text-primary);
@@ -108,7 +110,11 @@ body {
   width: 100%;
   max-width: 480px;
   height: 100vh;
+  height: -webkit-fill-available;
+  height: 100dvh;
   max-height: 100vh;
+  max-height: -webkit-fill-available;
+  max-height: 100dvh;
   overflow: hidden;
   background: rgba(10, 12, 22, 0.7);
   backdrop-filter: blur(var(--backdrop-blur-val));
@@ -137,8 +143,8 @@ body {
   /* Hide completely by default */
   width: 100%;
   height: 100%;
-  padding-bottom: 60px;
-  /* Leave height space exactly for bottom-tab-bar */
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  /* Leave height space exactly for bottom-tab-bar including safe area */
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
@@ -156,7 +162,7 @@ body {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
   min-height: 60px;
   background: rgba(8, 10, 19, 0.85);
   backdrop-filter: blur(20px);
@@ -168,6 +174,7 @@ body {
   z-index: 100;
   box-sizing: border-box;
   padding: 0 10px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .tab-btn {

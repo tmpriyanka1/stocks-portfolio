@@ -350,7 +350,7 @@ describe('buildCloudPayload — Google Sheets field mapping', () => {
     expect(buildCloudPayload(optionTx).Name).toBe('Exp 07/16/26 • Buy to Open');
   });
 
-  test('Name fallback for unknown ticker appends " Corporation"', () => {
+  test('Name fallback for unknown ticker', () => {
     const unknownTx = { ...stockTx, ticker: 'COIN' };
     expect(buildCloudPayload(unknownTx).Name).toBe('COIN Corporation');
   });

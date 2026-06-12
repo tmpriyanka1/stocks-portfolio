@@ -10,6 +10,8 @@ const defaultAssetData = {
   'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
   'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
   'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
+  'SPY': { name: 'SPDR S&P 500 ETF Trust', currentPrice: 512.42, stopLoss: 490.00, change24h: 0.45, icon: 'SP' },
+  'SPX': { name: 'S&P 500 Index', currentPrice: 5120.30, stopLoss: 5000.00, change24h: 0.52, icon: 'SX' },
   'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open', currentPrice: 18.50, stopLoss: 12.00, change24h: 20.31, icon: 'OC' },
   'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
 };
@@ -162,6 +164,26 @@ async function pullCloudData() {
 
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
+
+      // ── BUYING POWER BASELINE: derive from BUY/SELL flows in cloud schema ─
+      // Start from a fixed initial cash amount then deduct BUY outflows
+      // and add back SELL proceeds so the displayed cash is always live.
+      const INITIAL_CASH = 50000.00;
+      let cashFlow = INITIAL_CASH;
+      parsedTxs.forEach(tx => {
+        const cost = Number(tx.shares) * parseFloat(tx.price || 0);
+        if (tx.action === 'BUY') {
+          cashFlow -= cost;
+        } else if (tx.action === 'SELL') {
+          cashFlow += cost;
+        }
+      });
+      // Floor at zero — buying power is never shown negative
+      const buyingPowerBaseline = Math.max(0, cashFlow);
+      if (localStorage.getItem('portfolio_buying_power_user_set') !== 'true') {
+        localStorage.setItem('portfolio_buying_power', buyingPowerBaseline.toFixed(2));
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       // Re-render using the currently-active filter pill to preserve the user's view
       refreshPortfolioAssets();
@@ -402,7 +424,7 @@ function refreshPortfolioAssets() {
   for (const ticker in groups) {
     const g = groups[ticker];
     if (g.shares > 0) {
-      let assetDetails = defaultAssetData[ticker];
+      const isOpt = g.type === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
       let customPrices = {};
       try {
         customPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
@@ -411,16 +433,28 @@ function refreshPortfolioAssets() {
       }
       const customDetails = customPrices[ticker] || {};
 
+      let assetDetails = defaultAssetData[ticker];
       if (assetDetails) {
         assetDetails = { ...assetDetails, ...customDetails };
       } else {
         assetDetails = customDetails;
         if (!assetDetails || !assetDetails.name) {
+          let fallbackName = ticker + ' Corporation';
+          if (isOpt) {
+            const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
+            if (underlyingMatch) {
+              const underlyingTicker = underlyingMatch[1].toUpperCase();
+              if (defaultAssetData[underlyingTicker]) {
+                fallbackName = defaultAssetData[underlyingTicker].name;
+              }
+            }
+          }
           assetDetails = {
-            name: ticker + ' Corporation',
+            name: fallbackName,
             currentPrice: g.lastPrice,
             change24h: 0.0,
-            icon: ticker.slice(0, 2).toUpperCase()
+            icon: ticker.slice(0, 2).toUpperCase(),
+            ...customDetails
           };
         }
       }
@@ -448,7 +482,15 @@ function refreshPortfolioAssets() {
 }
 
 /**
- * Calculates and updates top portfolio balance card metrics dynamically
+ * Calculates and updates top portfolio balance card metrics dynamically.
+ *
+ * EQUITY ENGINE — uses raw transactions from localStorage plus live prices
+ * from portfolio_market_prices so the ×100 options multiplier is always
+ * applied on the correct cost-basis, not the pre-aggregated portfolioAssets.
+ *
+ * Portfolio Value  = Σ (shares × livePrice × multiplier)   per open position
+ * Net Total        = buyingPowerBaseline (cash) + totalAssetEquity
+ * Buying Power     = cash portion stored in portfolio_buying_power
  */
 function updateBalanceMetrics() {
   const balanceCard = document.querySelector('.balance-card');
@@ -458,49 +500,96 @@ function updateBalanceMetrics() {
 
   if (!balanceAmountEl || !balanceChangeEl) return;
 
-  let totalValue = 0;
-  let totalPrevValue = 0;
-  let optionContractsCount = 0;
+  // ── 1. LOAD RAW DATA SOURCES ─────────────────────────────────────────────
+  let localTransactions = [];
+  try {
+    localTransactions = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
+  } catch (e) {
+    localTransactions = [];
+  }
 
-  portfolioAssets.forEach(asset => {
-    // Dual-source options detection (type field OR ticker pattern)
-    const isOpt = asset.type === 'options'
-      || (/\$\d/.test(asset.ticker) && /\b(call|put)\b/i.test(asset.ticker));
-    const multiplier = isOpt ? 100 : 1;
-    const value = asset.shares * asset.currentPrice * multiplier;
-    const prevValue = value / (1 + asset.change24h / 100);
-    totalValue += value;
-    totalPrevValue += prevValue;
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) {
+    marketPrices = {};
+  }
 
-    if (isOpt) {
-      optionContractsCount += asset.shares;
+  // ── 2. AGGREGATE OPEN POSITIONS (BUY-net shares per ticker) ──────────────
+  const openPositions = {}; // ticker → { shares, assetType, avgCost }
+  localTransactions.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (!openPositions[tx.ticker]) {
+      openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0 };
+    }
+    const pos = openPositions[tx.ticker];
+    const sharesNum = Number(tx.shares) || 0;
+    const priceNum  = parseFloat(tx.price) || 0;
+    if (tx.action === 'BUY') {
+      const newShares = pos.shares + sharesNum;
+      if (newShares > 0) {
+        pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
+      }
+      pos.shares = newShares;
+    } else if (tx.action === 'SELL') {
+      pos.shares = Math.max(0, pos.shares - sharesNum);
     }
   });
 
-  const totalChange = totalValue - totalPrevValue;
-  const totalChangePct = (totalChange / totalPrevValue) * 100;
+  // ── 3. COMPUTE TOTAL ASSET EQUITY (options ×100, stocks ×1) ──────────────
+  let totalAssetEquity = 0;
+  let totalPrevEquity  = 0;
+  let optionContractsCount = 0;
 
-  // Format total balance
+  for (const ticker in openPositions) {
+    const pos = openPositions[ticker];
+    if (pos.shares <= 0) continue;
+
+    // Resolve live price: cloud marketPrices → defaultAssetData → avgCost fallback
+    const marketEntry = marketPrices[ticker] || defaultAssetData[ticker] || {};
+    const currentPrice = parseFloat(marketEntry.currentPrice) || pos.avgCost || 0;
+    const change24h    = parseFloat(marketEntry.change24h) || 0;
+
+    // Dual-source options detection: explicit assetType field OR ticker pattern
+    const isOpt = pos.assetType === 'options'
+      || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
+    const multiplier = isOpt ? 100 : 1;
+
+    const assetValue = Number(pos.shares) * parseFloat(currentPrice) * multiplier;
+    // Previous-day estimate for today's change display
+    const prevValue  = assetValue / (1 + change24h / 100);
+
+    totalAssetEquity += assetValue;
+    totalPrevEquity  += prevValue;
+
+    if (isOpt) optionContractsCount += pos.shares;
+  }
+
+  // ── 4. NET PORTFOLIO VALUE = CASH (buying power) + OPEN POSITION EQUITY ──
+  const buyingPowerBaseline = parseFloat(
+    localStorage.getItem('portfolio_buying_power') || '12342.90'
+  );
+  // If the user has manually overridden the display value in Settings, use it.
+  const portfolioValueOverride = localStorage.getItem('portfolio_value_override');
+  const netPortfolioValue = portfolioValueOverride !== null
+    ? parseFloat(portfolioValueOverride)
+    : buyingPowerBaseline + totalAssetEquity;
+
+  // ── 5. RENDER BALANCE CARD ────────────────────────────────────────────────
   balanceAmountEl.textContent = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD'
-  }).format(totalValue);
+  }).format(netPortfolioValue);
 
-  // Format daily change percentage and dollar change
-  const isPositive = totalChange >= 0;
-  const changeClass = isPositive ? 'positive' : 'negative';
+  const totalChange    = totalAssetEquity - totalPrevEquity;
+  const totalChangePct = totalPrevEquity > 0 ? (totalChange / totalPrevEquity) * 100 : 0;
+  const isPositive     = totalChange >= 0;
 
-  balanceChangeEl.className = `balance-change ${changeClass}`;
+  balanceChangeEl.className = `balance-change ${isPositive ? 'positive' : 'negative'}`;
 
-  // Add profit/loss class to balance card to update main chart colors dynamically
   if (balanceCard) {
-    if (isPositive) {
-      balanceCard.classList.remove('loss');
-      balanceCard.classList.add('profit');
-    } else {
-      balanceCard.classList.remove('profit');
-      balanceCard.classList.add('loss');
-    }
+    balanceCard.classList.toggle('profit', isPositive);
+    balanceCard.classList.toggle('loss',   !isPositive);
   }
 
   const formattedChangeStr = new Intl.NumberFormat('en-US', {
@@ -518,20 +607,54 @@ function updateBalanceMetrics() {
     <span>${formattedChangeStr} (${isPositive ? '+' : ''}${totalChangePct.toFixed(2)}%) Today</span>
   `;
 
-  // Update active options contracts
+  // Active options contract badge
   if (activeOptionsEl) {
     activeOptionsEl.textContent = `${optionContractsCount} Contracts`;
   }
 
-  // Update Buying Power
+  // ── 6. BUYING POWER (cash balance) ───────────────────────────────────────
   const bpElement = document.getElementById('buying-power-value');
   if (bpElement) {
-    let bpVal = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
     bpElement.textContent = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(bpVal);
+    }).format(buyingPowerBaseline);
   }
+}
+
+function cleanAssetName(name) {
+  if (!name) return '';
+  // If the name is just a raw options contract ticker (e.g. contains $ strike and Call/Put),
+  // we replace it with the underlying stock name to keep the layout clean and remove clutter.
+  const isOptionName = /\$\d/.test(name) && /\b(call|put)\b/i.test(name);
+  if (isOptionName) {
+    const rootMatch = name.match(/^([A-Za-z]+)/);
+    if (rootMatch) {
+      const root = rootMatch[1].toUpperCase();
+      if (defaultAssetData[root] && defaultAssetData[root].name) {
+        return defaultAssetData[root].name
+          .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+          .trim();
+      }
+      return root;
+    }
+  }
+  return name
+    .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+    .trim();
+}
+
+function formatOptionTicker(ticker) {
+  const strikeMatch = ticker.match(/\$(\d+(?:\.\d+)?)/);
+  const strikePrice = strikeMatch ? strikeMatch[1] : null;
+  const expiryMatch = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+  const expiry = expiryMatch ? expiryMatch[1] : null;
+  const rootMatch = ticker.match(/^([A-Za-z]+)/);
+  const root = rootMatch ? rootMatch[1].toUpperCase() : ticker.split(' ')[0].toUpperCase();
+  if (strikePrice) {
+    return `${root} [$${strikePrice}]${expiry ? ' ' + expiry : ''}`;
+  }
+  return ticker;
 }
 
 /**
@@ -549,6 +672,13 @@ function renderAssetsTable(filterMode) {
 
   if (!tableBody) return;
   tableBody.innerHTML = '';
+
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) {
+    marketPrices = {};
+  }
 
   // Filter portfolio assets down to specific asset class
   const filtered = portfolioAssets.filter(asset => {
@@ -609,51 +739,35 @@ function renderAssetsTable(filterMode) {
     // ── OPTIONS CONTRACT SPECIFICATION PARSER ──────────────────────────────
     // Handles: "NVDA $490 Call", "SPY $723 CALL 6/11", "AAPL $180 Put"
     let optionBadgeHTML = '';
-    let subTicker = '';
+    const displayTicker = isOption ? formatOptionTicker(asset.ticker) : mainTicker;
 
     if (isOption) {
-      // Extract strike price — numeric value after "$"
-      const strikeMatch = asset.ticker.match(/\$(\d+(?:\.\d+)?)/);
-      const strikePrice = strikeMatch ? strikeMatch[1] : null;
-
       // Detect CALL or PUT — case-insensitive, whole-word boundary
       const contractType = /\bcall\b/i.test(asset.ticker) ? 'call'
                          : /\bput\b/i.test(asset.ticker) ? 'put' : null;
 
-      // Extract expiry date token (e.g. "6/11" or "07/16/26")
-      const expiryMatch = asset.ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
-      const expiry = expiryMatch ? expiryMatch[1] : null;
-
-      // Compact sub-line: show strike + optional expiry date
-      subTicker = strikePrice
-        ? `$${strikePrice}${expiry ? ' · ' + expiry : ''}`
-        : tickerParts.slice(1).join(' ');
-
-      // Build colored badge pills
-      if (strikePrice) {
-        optionBadgeHTML += `<span class="option-badge strike">\$${strikePrice}</span>`;
-      }
+      // Build colored badge pills (only keep CALL/PUT to prevent clutter)
       if (contractType) {
         optionBadgeHTML += `<span class="option-badge ${contractType}">${contractType.toUpperCase()}</span>`;
       }
-      if (expiry) {
-        optionBadgeHTML += `<span class="option-badge expiry">${expiry}</span>`;
-      }
-    } else {
-      // Standard stocks: sub-ticker is everything after first word (rare)
-      subTicker = tickerParts.slice(1).join(' ');
     }
 
+    const subTicker = cleanAssetName(asset.name);
+
+    // Resolve underlying asset price
+    const underlyingMatch = asset.ticker.match(/^([A-Za-z]+)/);
+    const underlyingTicker = underlyingMatch ? underlyingMatch[1].toUpperCase() : mainTicker;
+    const underlyingEntry = marketPrices[underlyingTicker] || defaultAssetData[underlyingTicker] || {};
+    const underlyingPrice = parseFloat(underlyingEntry.currentPrice) || parseFloat(underlyingEntry.price) || (underlyingTicker === 'SPX' ? 5120.30 : (underlyingTicker === 'SPY' ? 512.42 : 100.00));
 
     const slDisplay = (asset.stopLoss && asset.stopLoss > 0) ? `$${asset.stopLoss.toFixed(2)}` : '—';
 
     const rowHTML = `
       <div class="asset-row" data-ticker="${asset.ticker}" role="button" tabindex="0">
-        <!-- Column 1: Icon & Ticker -->
+        <!-- Column 1: Ticker & Name (No Icon Box) -->
         <div class="asset-col-ticker">
-          <div class="asset-icon-box">${asset.icon}</div>
-          <div class="ticker-text-container">
-            <span class="asset-ticker">${mainTicker}</span>
+          <div class="ticker-text-container" style="align-items: flex-start;">
+            <span class="asset-ticker">${displayTicker}</span>
             ${subTicker ? `<span class="asset-sub-ticker">${subTicker}</span>` : ''}
             ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
           </div>
@@ -673,7 +787,8 @@ function renderAssetsTable(filterMode) {
         <!-- Column 4: Live price per contract -->
         <div class="asset-col-live-price">
           <span class="live-price-val">$${asset.currentPrice.toFixed(2)}</span>
-          ${isOption ? `<span class="option-multiplier-hint">×100</span>` : ''}
+          ${isOption ? `<span class="option-multiplier-hint-text">×100</span>` : ''}
+          ${isOption ? `<div class="underlying-price-pill" title="Underlying Asset Price">${underlyingTicker}: $${underlyingPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
         </div>
         
         <!-- Column 5: Total position value and mini graph -->
@@ -1071,12 +1186,30 @@ async function updateLivePrices() {
           if (json && json.chart && json.chart.result && json.chart.result[0]) {
             const meta = json.chart.result[0].meta;
             if (meta && meta.regularMarketPrice !== undefined) {
-              price = meta.regularMarketPrice;
-              const prevClose = meta.chartPreviousClose || meta.previousClose || price;
-              change24h = ((price - prevClose) / prevClose) * 100;
-              success = true;
+              const fetchedPrice = meta.regularMarketPrice;
+              const prevClose = meta.chartPreviousClose || meta.previousClose || fetchedPrice;
+              const fetchedChange = ((fetchedPrice - prevClose) / prevClose) * 100;
+              
               if (isOption) {
-                console.log(`[Options] Fetched underlying ${queryTicker} = $${price.toFixed(2)} for contract "${ticker}"`);
+                // Save underlying stock price separately so underlying price pills are accurate
+                if (!marketPrices[queryTicker]) {
+                  marketPrices[queryTicker] = {
+                    name: queryTicker + ' Corporation',
+                    icon: queryTicker.slice(0, 2).toUpperCase()
+                  };
+                }
+                marketPrices[queryTicker].currentPrice = fetchedPrice;
+                marketPrices[queryTicker].change24h = fetchedChange;
+                
+                // Do NOT overwrite the option contract's premium price with the stock price
+                // Let the option contract price drift slightly around its current premium price
+                const pct = (Math.random() - 0.5) * 0.1; // ±0.05%
+                price = price * (1 + pct / 100);
+                success = true;
+              } else {
+                price = fetchedPrice;
+                change24h = fetchedChange;
+                success = true;
               }
             }
           }
@@ -1091,7 +1224,6 @@ async function updateLivePrices() {
     if (!success) {
       const pct = (Math.random() - 0.5) * 0.1; // ±0.05% only
       price = price * (1 + pct / 100);
-      // Do NOT drift change24h — keep it anchored to last real reading
       success = true;
     }
 

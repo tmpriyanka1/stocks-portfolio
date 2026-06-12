@@ -4,14 +4,22 @@
   "description": "Stock & options portfolio tracker",
   "main": "entry.js",
   "scripts": {
-    "test": "node node_modules/.bin/jest --coverage",
-    "test:watch": "node node_modules/.bin/jest --watch",
-    "test:coverage": "node node_modules/.bin/jest --coverage --coverageReporters=text --coverageReporters=lcov"
+    "test": "/Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest --coverage --testPathIgnorePatterns=visual",
+    "test:watch": "/Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest --watch --testPathIgnorePatterns=visual",
+    "test:coverage": "/Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest --coverage --coverageReporters=text --coverageReporters=lcov --testPathIgnorePatterns=visual",
+    "test:visual": "UPDATE_SCREENSHOTS=false /Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest tests/visual.test.js",
+    "test:visual:update": "UPDATE_SCREENSHOTS=true /Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest tests/visual.test.js"
   },
   "jest": {
     "testEnvironment": "jest-environment-jsdom",
-    "testMatch": ["**/tests/**/*.test.js"],
-    "coverageReporters": ["text", "lcov", "html"],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
     "coverageDirectory": "coverage"
   },
   "repository": {
@@ -23,6 +31,9 @@
   "license": "ISC",
   "devDependencies": {
     "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1"
+    "jest-environment-jsdom": "^30.4.1",
+    "pixelmatch": "^5.3.0",
+    "playwright": "^1.60.0",
+    "pngjs": "^7.0.0"
   }
 }

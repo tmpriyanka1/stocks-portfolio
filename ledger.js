@@ -6,6 +6,8 @@ const defaultAssetData = {
   'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
   'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
   'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
+  'SPY': { name: 'SPDR S&P 500 ETF Trust', currentPrice: 512.42, stopLoss: 490.00, change24h: 0.45, icon: 'SP' },
+  'SPX': { name: 'S&P 500 Index', currentPrice: 5120.30, stopLoss: 5000.00, change24h: 0.52, icon: 'SX' },
   'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open', currentPrice: 18.50, stopLoss: 12.00, change24h: 20.31, icon: 'OC' },
   'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
 };
@@ -304,6 +306,70 @@ function groupTransactionsByTicker(transactions) {
   return results;
 }
 
+function cleanAssetName(name) {
+  if (!name) return '';
+  // If the name is just a raw options contract ticker (e.g. contains $ strike and Call/Put),
+  // we replace it with the underlying stock name to keep the layout clean and remove clutter.
+  const isOptionName = /\$\d/.test(name) && /\b(call|put)\b/i.test(name);
+  if (isOptionName) {
+    const rootMatch = name.match(/^([A-Za-z]+)/);
+    if (rootMatch) {
+      const root = rootMatch[1].toUpperCase();
+      if (defaultAssetData[root] && defaultAssetData[root].name) {
+        return defaultAssetData[root].name
+          .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+          .trim();
+      }
+      return root;
+    }
+  }
+  return name
+    .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+    .trim();
+}
+
+function getAssetName(ticker) {
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) {
+    marketPrices = {};
+  }
+
+  if (marketPrices[ticker] && marketPrices[ticker].name) {
+    return marketPrices[ticker].name;
+  }
+  if (defaultAssetData[ticker] && defaultAssetData[ticker].name) {
+    return defaultAssetData[ticker].name;
+  }
+
+  const rootMatch = ticker.match(/^([A-Za-z]+)/);
+  if (rootMatch) {
+    const root = rootMatch[1].toUpperCase();
+    if (marketPrices[root] && marketPrices[root].name) {
+      return marketPrices[root].name;
+    }
+    if (defaultAssetData[root] && defaultAssetData[root].name) {
+      return defaultAssetData[root].name;
+    }
+  }
+
+  return ticker + ' Corporation';
+}
+
+function formatOptionTicker(ticker) {
+  const strikeMatch = ticker.match(/\$(\d+(?:\.\d+)?)/);
+  const strikePrice = strikeMatch ? strikeMatch[1] : null;
+  const expiryMatch = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+  const expiry = expiryMatch ? expiryMatch[1] : null;
+  const rootMatch = ticker.match(/^([A-Za-z]+)/);
+  const root = rootMatch ? rootMatch[1].toUpperCase() : ticker.split(' ')[0].toUpperCase();
+  if (strikePrice) {
+    return `${root} [$${strikePrice}]${expiry ? ' ' + expiry : ''}`;
+  }
+  return ticker;
+}
+
 /**
  * Builds HTML code dynamically for a grouped Position Master Card
  */
@@ -337,17 +403,16 @@ function createMasterCardHTML(cardData) {
   // Extracts strike price and Call/Put type from ticker like "NVDA $490 Call"
   let optionBadgeHTML = '';
   if (isOption) {
-    const strikeMatch = cardData.ticker.match(/\$(\d+(?:\.\d+)?)/);
-    const strikePrice = strikeMatch ? strikeMatch[1] : null;
     const contractType = /\bCall\b/i.test(cardData.ticker) ? 'call'
                        : /\bPut\b/i.test(cardData.ticker) ? 'put' : null;
-    if (strikePrice) {
-      optionBadgeHTML += `<span class="option-badge strike">\$${strikePrice} Strike</span>`;
-    }
     if (contractType) {
       optionBadgeHTML += `<span class="option-badge ${contractType}">${contractType.toUpperCase()}</span>`;
     }
   }
+
+  const displayTicker = isOption ? formatOptionTicker(cardData.ticker) : cardData.ticker;
+  const rawAssetName = getAssetName(cardData.ticker);
+  const cleanName = cleanAssetName(rawAssetName);
 
   // Generate timeline nodes
   const timelineHTML = cardData.transactions.map(tx => {
@@ -391,7 +456,10 @@ function createMasterCardHTML(cardData) {
     <div class="master-card" data-ticker="${cardData.ticker}">
       <div class="card-header-row">
         <div class="card-title-box">
-          <span class="card-ticker">${cardData.ticker}</span>
+          <div class="ticker-text-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+            <span class="card-ticker">${displayTicker}</span>
+            <span class="card-asset-name">${cleanName}</span>
+          </div>
           <span class="card-asset-type">${assetTypeLabel}</span>
           ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
         </div>

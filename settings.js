@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initProfileForm();
   initThemeAccordion();
   initPreferences();
+  initPortfolioOverrides();
   initNavigation();
 });
 
@@ -51,10 +52,16 @@ function initProfileForm() {
 
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
-      if (usernameInput) localStorage.setItem('portfolio_username', usernameInput.value);
-      if (emailInput) localStorage.setItem('portfolio_email', emailInput.value);
-      if (apiKeyInput) localStorage.setItem('portfolio_api_key', apiKeyInput.value);
-      showToast('💾 Profile configurations saved!');
+      showConfirmModal({
+        icon: '👤',
+        title: 'Save Profile Settings?',
+        message: 'Are you sure you want to save your username, email, and API key settings?'
+      }, () => {
+        if (usernameInput) localStorage.setItem('portfolio_username', usernameInput.value);
+        if (emailInput) localStorage.setItem('portfolio_email', emailInput.value);
+        if (apiKeyInput) localStorage.setItem('portfolio_api_key', apiKeyInput.value);
+        showToast('💾 Profile configurations saved!');
+      });
     });
   }
 }
@@ -63,18 +70,20 @@ function initProfileForm() {
  * Handles theme accordion expanding/collapsing and accent color dot selection
  */
 function initThemeAccordion() {
-  const accordion = document.getElementById('themeAccordion');
-  const header = accordion ? accordion.querySelector('.accordion-header') : null;
   const dots = document.querySelectorAll('.accent-dot');
   const activeColorPreview = document.getElementById('activeColorPreview');
   const themeNameText = document.getElementById('currentThemeName');
 
-  // Accordion Toggle
-  if (header && accordion) {
-    header.addEventListener('click', () => {
-      accordion.classList.toggle('expanded');
-    });
-  }
+  // Generic Accordion Toggle for all accordion cards
+  const accordions = document.querySelectorAll('.accordion-card');
+  accordions.forEach(acc => {
+    const header = acc.querySelector('.accordion-header');
+    if (header) {
+      header.addEventListener('click', () => {
+        acc.classList.toggle('expanded');
+      });
+    }
+  });
 
   // Load Initial Dot Active State
   const activeColor = localStorage.getItem('portfolio_accent_color') || '#6366f1';
@@ -172,16 +181,136 @@ function initPreferences() {
 
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      const confirmReset = confirm('Are you sure you want to reset your local ledger? This will clear all logged trades.');
-      if (confirmReset) {
+      showConfirmModal({
+        icon: '🗑️',
+        title: 'Reset Local Ledger?',
+        message: 'Are you sure you want to wipe all local trades, overrides, and cash balances? This action is permanent.'
+      }, () => {
         localStorage.removeItem('portfolio_transactions');
         localStorage.removeItem('portfolio_buying_power');
+        localStorage.removeItem('portfolio_buying_power_user_set');
+        localStorage.removeItem('portfolio_value_override');
         localStorage.removeItem('portfolio_custom_sl');
         showToast('🗑️ Ledger successfully reset!');
         setTimeout(() => {
           window.location.reload();
         }, 1000);
+      });
+    });
+  }
+}
+
+/**
+ * Portfolio Overrides — lets the user manually set Buying Power (cash)
+ * and a Total Portfolio Value override from the Settings screen.
+ */
+function initPortfolioOverrides() {
+  const bpInput  = document.getElementById('buyingPowerInput');
+  const pvInput  = document.getElementById('portfolioValueInput');
+  const bpPreview = document.getElementById('buyingPowerPreview');
+  const pvPreview = document.getElementById('portfolioValuePreview');
+  const saveBtn  = document.getElementById('saveOverridesBtn');
+
+  const fmt = v => new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD'
+  }).format(v);
+
+  // ── Load current saved values into inputs ──────────────────────────────────
+  const savedBP = localStorage.getItem('portfolio_buying_power');
+  if (savedBP !== null && bpInput) {
+    bpInput.value = parseFloat(savedBP).toFixed(2);
+    if (bpPreview) bpPreview.textContent = 'Current: ' + fmt(parseFloat(savedBP));
+  }
+
+  const savedPV = localStorage.getItem('portfolio_value_override');
+  if (savedPV !== null && pvInput) {
+    pvInput.value = parseFloat(savedPV).toFixed(2);
+    if (pvPreview) pvPreview.textContent = 'Override active: ' + fmt(parseFloat(savedPV));
+  } else if (pvPreview) {
+    pvPreview.textContent = 'Live calculation active';
+  }
+
+  // ── Live formatted previews while typing ──────────────────────────────────
+  if (bpInput) {
+    bpInput.addEventListener('input', () => {
+      const val = parseFloat(bpInput.value);
+      if (!isNaN(val) && bpPreview) {
+        bpPreview.textContent = fmt(val);
+        bpPreview.classList.add('active');
+      } else if (bpPreview) {
+        bpPreview.textContent = '';
+        bpPreview.classList.remove('active');
       }
+    });
+  }
+
+  if (pvInput) {
+    pvInput.addEventListener('input', () => {
+      const val = parseFloat(pvInput.value);
+      if (!isNaN(val) && pvPreview) {
+        pvPreview.textContent = 'Override: ' + fmt(val);
+        pvPreview.classList.add('active');
+      } else if (pvPreview) {
+        pvPreview.textContent = 'Will restore live calculation';
+        pvPreview.classList.remove('active');
+      }
+    });
+  }
+
+  // ── Save handler ──────────────────────────────────────────────────────────
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      showConfirmModal({
+        icon: '💾',
+        title: 'Save Overrides?',
+        message: 'Are you sure you want to save these custom cash and portfolio overrides?'
+      }, () => {
+        let saved = false;
+
+        // Buying Power override
+        if (bpInput) {
+          const bpVal = parseFloat(bpInput.value);
+          if (!isNaN(bpVal) && bpVal >= 0) {
+            localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
+            localStorage.setItem('portfolio_buying_power_user_set', 'true');
+            if (bpPreview) {
+              bpPreview.textContent = 'Saved: ' + fmt(bpVal);
+              bpPreview.classList.add('active');
+            }
+            saved = true;
+          } else if (bpInput.value.trim() === '') {
+            // Clear — will fall back to default in portfolio.js
+            localStorage.removeItem('portfolio_buying_power');
+            localStorage.removeItem('portfolio_buying_power_user_set');
+            if (bpPreview) bpPreview.textContent = 'Reset to default';
+            saved = true;
+          }
+        }
+
+        // Portfolio Value override
+        if (pvInput) {
+          const pvVal = parseFloat(pvInput.value);
+          if (!isNaN(pvVal) && pvVal >= 0) {
+            localStorage.setItem('portfolio_value_override', pvVal.toFixed(2));
+            if (pvPreview) {
+              pvPreview.textContent = 'Override active: ' + fmt(pvVal);
+              pvPreview.classList.add('active');
+            }
+            saved = true;
+          } else if (pvInput.value.trim() === '') {
+            // Clear override → restore live calculation
+            localStorage.removeItem('portfolio_value_override');
+            if (pvPreview) pvPreview.textContent = 'Live calculation restored';
+            saved = true;
+          }
+        }
+
+        if (saved) {
+          showToast('✅ Portfolio overrides saved! Refresh the Portfolio tab to see the updated values.');
+        } else {
+          showToast('⚠️ Please enter valid positive numbers.', true);
+        }
+      });
     });
   }
 }
@@ -259,3 +388,47 @@ function showToast(message, isError) {
     setTimeout(() => toast.remove(), 300);
   }, 3000);
 }
+
+/**
+ * Custom Confirmation Modal helper
+ */
+function showConfirmModal(options, onConfirm) {
+  const modal = document.getElementById('confirmModal');
+  const iconEl = document.getElementById('confirmModalIcon');
+  const titleEl = document.getElementById('confirmModalTitle');
+  const msgEl = document.getElementById('confirmModalMessage');
+  const cancelBtn = document.getElementById('confirmModalCancel');
+  const confirmBtn = document.getElementById('confirmModalConfirm');
+
+  if (!modal || !confirmBtn || !cancelBtn) {
+    if (confirm(options.message)) {
+      onConfirm();
+    }
+    return;
+  }
+
+  iconEl.textContent = options.icon || '⚠️';
+  titleEl.textContent = options.title || 'Are you sure?';
+  msgEl.textContent = options.message || 'Please confirm this action.';
+
+  modal.classList.add('active');
+
+  const cleanup = () => {
+    modal.classList.remove('active');
+    confirmBtn.removeEventListener('click', handleConfirm);
+    cancelBtn.removeEventListener('click', handleCancel);
+  };
+
+  function handleConfirm() {
+    cleanup();
+    onConfirm();
+  }
+
+  function handleCancel() {
+    cleanup();
+  }
+
+  confirmBtn.addEventListener('click', handleConfirm);
+  cancelBtn.addEventListener('click', handleCancel);
+}
+

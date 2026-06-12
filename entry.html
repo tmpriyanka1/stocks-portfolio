@@ -4,15 +4,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Log Execution - Portfolio Tracker</title>
+  <title>Vanai - Log Execution</title>
   <!-- Modern Font from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Core Styles -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.2">
   <!-- Screen-specific Styles -->
-  <link rel="stylesheet" href="entry.css">
+  <link rel="stylesheet" href="entry.css?v=2.2">
 </head>
 
 <body>
@@ -26,12 +26,14 @@
   <!-- Master App Container (constrained viewport) -->
   <div class="app-container" id="app-container">
 
-    <!-- Screen 3: Data Entry View -->
+    <!-- Screen 3: Add Trade View -->
     <main class="screen-view active" id="entry-screen" aria-label="Add Trade Screen">
       <!-- Header -->
       <header class="app-header">
         <div class="profile-section">
+          <div class="avatar logo-vr">VR</div>
           <div class="greeting-info">
+            <span class="sub-title">Trade Logger</span>
             <h1 class="user-title">Log Execution</h1>
           </div>
         </div>
@@ -118,7 +120,7 @@
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
           <polyline points="17 6 23 6 23 12"></polyline>
         </svg>
-        <span class="tab-label">Ledger</span>
+        <span class="tab-label">Reports</span>
       </button>
       <button class="tab-btn active" data-target="screen-entry">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -143,7 +145,7 @@
 
   </div>
 
-  <script src="entry.js?v=2.0" defer></script>
+  <script src="entry.js?v=2.2" defer></script>
 </body>
 
 </html>

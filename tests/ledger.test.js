@@ -563,3 +563,94 @@ describe('Ledger master card rendering logic', () => {
     expect(txValue).toBeCloseTo(16000, 2);
   });
 });
+
+describe('formatOptionTicker — ledger option name formatter', () => {
+  function formatOptionTicker(ticker) {
+    const strikeMatch = ticker.match(/\$(\d+(?:\.\d+)?)/);
+    const strikePrice = strikeMatch ? strikeMatch[1] : null;
+    const expiryMatch = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+    const expiry = expiryMatch ? expiryMatch[1] : null;
+    const root = ticker.split(' ')[0].toUpperCase();
+    if (strikePrice) {
+      return `${root} [$${strikePrice}]${expiry ? ' ' + expiry : ''}`;
+    }
+    return ticker;
+  }
+
+  test('formats standard CALL ticker correctly', () => {
+    expect(formatOptionTicker('SPY $723 CALL 6/11')).toBe('SPY [$723] 6/11');
+  });
+
+  test('formats standard PUT ticker correctly', () => {
+    expect(formatOptionTicker('AAPL $180 Put')).toBe('AAPL [$180]');
+  });
+
+  test('returns original ticker if no strike price', () => {
+    expect(formatOptionTicker('NVDA Call')).toBe('NVDA Call');
+  });
+
+  test('handles decimals in strike price', () => {
+    expect(formatOptionTicker('QQQ $450.50 Put 06/19')).toBe('QQQ [$450.50] 06/19');
+  });
+});
+
+describe('getAssetName & cleanAssetName — ledger name resolution and cleaning', () => {
+  const defaultAssetData = {
+    'SPY': { name: 'SPDR S&P 500 ETF Trust' },
+    'AAPL': { name: 'Apple Inc.' }
+  };
+
+  function cleanAssetName(name) {
+    if (!name) return '';
+    const isOptionName = /\$\d/.test(name) && /\b(call|put)\b/i.test(name);
+    if (isOptionName) {
+      const rootMatch = name.match(/^([A-Za-z]+)/);
+      if (rootMatch) {
+        const root = rootMatch[1].toUpperCase();
+        if (defaultAssetData[root] && defaultAssetData[root].name) {
+          return defaultAssetData[root].name
+            .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+            .trim();
+        }
+        return root;
+      }
+    }
+    return name
+      .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+      .trim();
+  }
+
+  function getAssetName(ticker) {
+    if (defaultAssetData[ticker] && defaultAssetData[ticker].name) {
+      return defaultAssetData[ticker].name;
+    }
+    const rootMatch = ticker.match(/^([A-Za-z]+)/);
+    if (rootMatch) {
+      const root = rootMatch[1].toUpperCase();
+      if (defaultAssetData[root] && defaultAssetData[root].name) {
+        return defaultAssetData[root].name;
+      }
+    }
+    return ticker + ' Corporation';
+  }
+
+  test('resolves and cleans stock tickers', () => {
+    const rawName = getAssetName('AAPL');
+    expect(rawName).toBe('Apple Inc.');
+    expect(cleanAssetName(rawName)).toBe('Apple');
+  });
+
+  test('resolves and cleans options tickers to underlying name', () => {
+    const rawName = getAssetName('SPY $723 CALL 6/11');
+    expect(rawName).toBe('SPDR S&P 500 ETF Trust');
+    expect(cleanAssetName(rawName)).toBe('SPDR S&P 500 ETF Trust');
+  });
+
+  test('falls back to ticker Corporation if not found', () => {
+    const rawName = getAssetName('XYZ');
+    expect(rawName).toBe('XYZ Corporation');
+    expect(cleanAssetName(rawName)).toBe('XYZ');
+  });
+});
+
+

@@ -788,3 +788,391 @@ describe('Buying power deduction logic', () => {
     expect(result).toBeLessThan(0);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SOURCE: updateBalanceMetrics() — raw-transaction equity engine (new version)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Re-implementation of the raw-transaction aggregation that the new
+ * updateBalanceMetrics() uses internally so we can unit-test the math.
+ */
+function computeEquityEngine(transactions, marketPricesMap, defaultAssets) {
+  // Step 1: aggregate open positions
+  const openPositions = {};
+  transactions.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (!openPositions[tx.ticker]) {
+      openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0 };
+    }
+    const pos = openPositions[tx.ticker];
+    const sharesNum = Number(tx.shares) || 0;
+    const priceNum  = parseFloat(tx.price) || 0;
+    if (tx.action === 'BUY') {
+      const newShares = pos.shares + sharesNum;
+      if (newShares > 0) {
+        pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
+      }
+      pos.shares = newShares;
+    } else if (tx.action === 'SELL') {
+      pos.shares = Math.max(0, pos.shares - sharesNum);
+    }
+  });
+
+  // Step 2: compute total equity
+  let totalAssetEquity = 0;
+  let optionContractsCount = 0;
+  for (const ticker in openPositions) {
+    const pos = openPositions[ticker];
+    if (pos.shares <= 0) continue;
+    const marketEntry = marketPricesMap[ticker] || (defaultAssets && defaultAssets[ticker]) || {};
+    const currentPrice = parseFloat(marketEntry.currentPrice) || pos.avgCost || 0;
+    const isOpt = pos.assetType === 'options'
+      || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
+    const multiplier = isOpt ? 100 : 1;
+    totalAssetEquity += Number(pos.shares) * parseFloat(currentPrice) * multiplier;
+    if (isOpt) optionContractsCount += pos.shares;
+  }
+
+  return { totalAssetEquity, optionContractsCount, openPositions };
+}
+
+/** Net portfolio value: cash + equity (mirrors updateBalanceMetrics step 4) */
+function calcNetPortfolioValue(buyingPowerBaseline, totalAssetEquity) {
+  const portfolioValueOverride = localStorage.getItem('portfolio_value_override');
+  return portfolioValueOverride !== null
+    ? parseFloat(portfolioValueOverride)
+    : buyingPowerBaseline + totalAssetEquity;
+}
+
+describe('updateBalanceMetrics — raw-transaction equity engine', () => {
+  const defaultAssets = {
+    'NVDA': { currentPrice: 485, change24h: 3.25 },
+    'AAPL': { currentPrice: 175.50, change24h: 1.92 },
+    'NVDA $490 Call': { currentPrice: 18.50, change24h: 20.31 }
+  };
+
+  beforeEach(() => { localStorage.clear(); });
+
+  test('single stock BUY: equity = shares * currentPrice', () => {
+    const txs = [{ ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 40, price: 400 }];
+    const { totalAssetEquity } = computeEquityEngine(txs, {}, defaultAssets);
+    // 40 * 485 = 19400
+    expect(totalAssetEquity).toBeCloseTo(19400, 2);
+  });
+
+  test('options BUY: equity includes ×100 multiplier', () => {
+    const txs = [{ ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 3, price: 15.20 }];
+    const { totalAssetEquity } = computeEquityEngine(txs, {}, defaultAssets);
+    // 3 * 18.50 * 100 = 5550
+    expect(totalAssetEquity).toBeCloseTo(5550, 2);
+  });
+
+  test('SELL reduces share count before equity is computed', () => {
+    const txs = [
+      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 40, price: 400 },
+      { ticker: 'NVDA', assetType: 'stocks', action: 'SELL', shares: 40, price: 495 },
+    ];
+    const { totalAssetEquity } = computeEquityEngine(txs, {}, defaultAssets);
+    // Net shares = 0 → equity = 0
+    expect(totalAssetEquity).toBe(0);
+  });
+
+  test('mixed stocks + options: equity combined correctly', () => {
+    const txs = [
+      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 40, price: 400 },
+      { ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 3, price: 15.20 },
+    ];
+    const { totalAssetEquity } = computeEquityEngine(txs, {}, defaultAssets);
+    // 40*485 + 3*18.50*100 = 19400 + 5550 = 24950
+    expect(totalAssetEquity).toBeCloseTo(24950, 2);
+  });
+
+  test('marketPrices map overrides defaultAssets price', () => {
+    const txs = [{ ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 480 }];
+    const prices = { 'NVDA': { currentPrice: 500 } }; // live price differs from default 485
+    const { totalAssetEquity } = computeEquityEngine(txs, prices, defaultAssets);
+    expect(totalAssetEquity).toBeCloseTo(5000, 2);
+  });
+
+  test('price falls back to avgCost when no market data available', () => {
+    const txs = [{ ticker: 'PLTR', assetType: 'stocks', action: 'BUY', shares: 50, price: 21 }];
+    const { totalAssetEquity } = computeEquityEngine(txs, {}, {});
+    // No price in marketPrices or defaultAssets → uses avgCost=21
+    expect(totalAssetEquity).toBeCloseTo(50 * 21, 2);
+  });
+
+  test('ticker-pattern options detection applies ×100 even when assetType is "stocks"', () => {
+    const txs = [{ ticker: 'SPY $723 CALL 6/11', assetType: 'stocks', action: 'BUY', shares: 2, price: 5 }];
+    const prices = { 'SPY $723 CALL 6/11': { currentPrice: 6.0 } };
+    const { totalAssetEquity } = computeEquityEngine(txs, prices, {});
+    // isOpt detected from ticker pattern → 2 * 6.0 * 100 = 1200
+    expect(totalAssetEquity).toBeCloseTo(1200, 2);
+  });
+
+  test('optionContractsCount tracks open option contracts only', () => {
+    const txs = [
+      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 40, price: 400 },
+      { ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 3, price: 15.20 },
+    ];
+    const { optionContractsCount } = computeEquityEngine(txs, {}, defaultAssets);
+    expect(optionContractsCount).toBe(3);
+  });
+
+  test('optionContractsCount is 0 for all-stock portfolio', () => {
+    const txs = [{ ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 40, price: 400 }];
+    const { optionContractsCount } = computeEquityEngine(txs, {}, defaultAssets);
+    expect(optionContractsCount).toBe(0);
+  });
+
+  test('empty transactions list gives zero equity', () => {
+    const { totalAssetEquity } = computeEquityEngine([], {}, {});
+    expect(totalAssetEquity).toBe(0);
+  });
+
+  test('netPortfolioValue = buyingPowerBaseline + totalAssetEquity', () => {
+    const txs = [{ ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 40, price: 400 }];
+    const { totalAssetEquity } = computeEquityEngine(txs, {}, defaultAssets);
+    const bp = 12342.90;
+    const net = calcNetPortfolioValue(bp, totalAssetEquity);
+    // 12342.90 + 40*485 = 12342.90 + 19400 = 31742.90
+    expect(net).toBeCloseTo(31742.90, 2);
+  });
+
+  test('netPortfolioValue with zero equity equals full buying power', () => {
+    expect(calcNetPortfolioValue(12342.90, 0)).toBeCloseTo(12342.90, 2);
+  });
+
+  test('null/undefined transactions are skipped gracefully', () => {
+    const txs = [null, undefined, { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 480 }];
+    const { totalAssetEquity } = computeEquityEngine(txs, {}, defaultAssets);
+    expect(totalAssetEquity).toBeCloseTo(10 * 485, 2);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SOURCE: pullCloudData() — buying power baseline calculator
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Pure re-implementation of the buying power baseline logic
+ * added to pullCloudData().
+ */
+function calcBuyingPowerBaseline(parsedTxs, INITIAL_CASH) {
+  let cashFlow = INITIAL_CASH;
+  parsedTxs.forEach(tx => {
+    const cost = Number(tx.shares) * parseFloat(tx.price || 0);
+    if (tx.action === 'BUY') {
+      cashFlow -= cost;
+    } else if (tx.action === 'SELL') {
+      cashFlow += cost;
+    }
+  });
+  return Math.max(0, cashFlow);
+}
+
+describe('pullCloudData — buying power baseline calculator', () => {
+  const INITIAL = 50000;
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('no transactions: baseline equals initial cash', () => {
+    expect(calcBuyingPowerBaseline([], INITIAL)).toBe(50000);
+  });
+
+  test('single BUY: deducts cost from initial cash', () => {
+    const txs = [{ action: 'BUY', shares: 10, price: 480 }];
+    // 50000 - 10*480 = 50000 - 4800 = 45200
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBeCloseTo(45200, 2);
+  });
+
+  test('single SELL: adds proceeds to initial cash', () => {
+    const txs = [{ action: 'SELL', shares: 10, price: 495 }];
+    // 50000 + 10*495 = 54950
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBeCloseTo(54950, 2);
+  });
+
+  test('BUY then SELL: net is initial + profit', () => {
+    const txs = [
+      { action: 'BUY',  shares: 10, price: 480 },
+      { action: 'SELL', shares: 10, price: 495 },
+    ];
+    // 50000 - 4800 + 4950 = 50150
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBeCloseTo(50150, 2);
+  });
+
+  test('BUY then SELL at a loss: net is initial - loss', () => {
+    const txs = [
+      { action: 'BUY',  shares: 25, price: 220 },
+      { action: 'SELL', shares: 25, price: 205 },
+    ];
+    // 50000 - 5500 + 5125 = 49625
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBeCloseTo(49625, 2);
+  });
+
+  test('multiple BUYs: each deducted from cash — large spend floors at zero', () => {
+    const txs = [
+      { action: 'BUY', shares: 40, price: 400 },   // -16000
+      { action: 'BUY', shares: 250, price: 165 },  // -41250
+      { action: 'BUY', shares: 3,   price: 15.20 },// -45.60
+    ];
+    // 50000 - 16000 - 41250 - 45.60 = -7295.60 → floored to 0
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBe(0);
+  });
+
+  test('multiple BUYs within budget: correct deduction', () => {
+    const txs = [
+      { action: 'BUY', shares: 10, price: 480 },  // -4800
+      { action: 'BUY', shares: 5,  price: 100 },  // -500
+    ];
+    // 50000 - 4800 - 500 = 44700
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBeCloseTo(44700, 2);
+  });
+
+  test('floor at zero: massive overspend never goes negative', () => {
+    const txs = [{ action: 'BUY', shares: 1000, price: 500 }];
+    // 50000 - 500000 = -450000 → floored to 0
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBe(0);
+  });
+
+  test('options BUY: deducts premium cost (shares * price), not leveraged', () => {
+    // Premium outflow is shares * premium, NOT * 100
+    const txs = [{ action: 'BUY', shares: 3, price: 15.20 }];
+    const expected = 50000 - 3 * 15.20; // = 49954.40
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBeCloseTo(49954.40, 2);
+  });
+
+  test('unknown action (e.g. "OPEN") is ignored', () => {
+    const txs = [{ action: 'OPEN', shares: 10, price: 480 }];
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBe(50000);
+  });
+
+  test('missing price treated as 0 (no cash change)', () => {
+    const txs = [{ action: 'BUY', shares: 10, price: undefined }];
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBe(50000);
+  });
+
+  test('missing shares (null) treated as 0 (no cash change)', () => {
+    // Number(null) === 0, so cost = 0 * 480 = 0 → no cash change
+    const txs = [{ action: 'BUY', shares: null, price: 480 }];
+    expect(calcBuyingPowerBaseline(txs, INITIAL)).toBe(50000);
+  });
+
+  test('baseline persisted to localStorage after calculation', () => {
+    const txs = [{ action: 'BUY', shares: 10, price: 480 }];
+    const baseline = calcBuyingPowerBaseline(txs, INITIAL);
+    localStorage.setItem('portfolio_buying_power', baseline.toFixed(2));
+    expect(localStorage.getItem('portfolio_buying_power')).toBe('45200.00');
+  });
+
+  test('realistic portfolio: multiple BUY and SELL transactions', () => {
+    // Mirrors the seed data in the app
+    const txs = [
+      { action: 'BUY',  shares: 10,  price: 480.00  }, // NVDA buy
+      { action: 'SELL', shares: 10,  price: 495.00  }, // NVDA sell
+      { action: 'BUY',  shares: 50,  price: 21.00   }, // PLTR
+      { action: 'BUY',  shares: 30,  price: 170.00  }, // AAPL
+      { action: 'BUY',  shares: 20,  price: 172.00  }, // AAPL
+      { action: 'SELL', shares: 50,  price: 178.00  }, // AAPL sell
+      { action: 'BUY',  shares: 15,  price: 185.00  }, // TSLA
+      { action: 'BUY',  shares: 3,   price: 15.20   }, // NVDA Call
+      { action: 'BUY',  shares: 40,  price: 410.00  }, // MSFT
+      { action: 'SELL', shares: 20,  price: 425.00  }, // MSFT trim
+    ];
+    const baseline = calcBuyingPowerBaseline(txs, INITIAL);
+    // Should be a positive number given INITIAL=50000 and these flows
+    expect(baseline).toBeGreaterThan(0);
+    // Sanity check: can afford more trades
+    expect(baseline).toBeLessThan(INITIAL);
+  });
+
+  test('does not overwrite buying power in pullCloudData if user_set flag is true', () => {
+    localStorage.setItem('portfolio_buying_power', '25000.00');
+    localStorage.setItem('portfolio_buying_power_user_set', 'true');
+    const txs = [{ action: 'BUY', shares: 10, price: 480 }];
+    const baseline = calcBuyingPowerBaseline(txs, INITIAL);
+    if (localStorage.getItem('portfolio_buying_power_user_set') !== 'true') {
+      localStorage.setItem('portfolio_buying_power', baseline.toFixed(2));
+    }
+    expect(localStorage.getItem('portfolio_buying_power')).toBe('25000.00');
+  });
+
+  test('overwrites buying power in pullCloudData if user_set flag is not true', () => {
+    localStorage.setItem('portfolio_buying_power', '25000.00');
+    const txs = [{ action: 'BUY', shares: 10, price: 480 }];
+    const baseline = calcBuyingPowerBaseline(txs, INITIAL);
+    if (localStorage.getItem('portfolio_buying_power_user_set') !== 'true') {
+      localStorage.setItem('portfolio_buying_power', baseline.toFixed(2));
+    }
+    expect(localStorage.getItem('portfolio_buying_power')).toBe('45200.00');
+  });
+});
+
+describe('calcNetPortfolioValue — portfolio_value_override behavior', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('returns sum of buying power and asset equity if no override is set', () => {
+    const val = calcNetPortfolioValue(10000, 5000);
+    expect(val).toBe(15000);
+  });
+
+  test('returns override value if set', () => {
+    localStorage.setItem('portfolio_value_override', '75000.00');
+    const val = calcNetPortfolioValue(10000, 5000);
+    expect(val).toBe(75000.00);
+  });
+});
+
+describe('cleanAssetName — asset name cleaning', () => {
+  const defaultAssetData = {
+    'SPY': { name: 'SPDR S&P 500 ETF Trust' },
+    'AAPL': { name: 'Apple Inc.' }
+  };
+
+  function cleanAssetName(name) {
+    if (!name) return '';
+    const isOptionName = /\$\d/.test(name) && /\b(call|put)\b/i.test(name);
+    if (isOptionName) {
+      const rootMatch = name.match(/^([A-Za-z]+)/);
+      if (rootMatch) {
+        const root = rootMatch[1].toUpperCase();
+        if (defaultAssetData[root] && defaultAssetData[root].name) {
+          return defaultAssetData[root].name
+            .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+            .trim();
+        }
+        return root;
+      }
+    }
+    return name
+      .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
+      .trim();
+  }
+
+  test('cleans standard stock name legal suffixes', () => {
+    expect(cleanAssetName('Apple Inc.')).toBe('Apple');
+    expect(cleanAssetName('NVIDIA Corporation')).toBe('NVIDIA');
+  });
+
+  test('cleans option name and falls back to underlying stock name', () => {
+    expect(cleanAssetName('SPY$723 CALL 6/11')).toBe('SPDR S&P 500 ETF Trust');
+    expect(cleanAssetName('AAPL $180 Put')).toBe('Apple');
+  });
+
+  test('returns root if no default asset name is defined for option', () => {
+    expect(cleanAssetName('XYZ$100 CALL')).toBe('XYZ');
+  });
+
+  test('returns original cleaned name if not option format', () => {
+    expect(cleanAssetName('My Custom Stock LLC')).toBe('My Custom Stock');
+  });
+});
+

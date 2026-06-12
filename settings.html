@@ -4,15 +4,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Settings - Portfolio Tracker</title>
+  <title>Vanai - Settings</title>
   <!-- Modern Font from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Core Styles -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.2">
   <!-- Screen-specific Styles -->
-  <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="settings.css?v=2.2">
 </head>
 
 <body>
@@ -31,10 +31,10 @@
       <!-- Header -->
       <header class="app-header">
         <div class="profile-section">
-          <!-- <div class="avatar" id="avatarPreview">M</div> -->
+          <div class="avatar logo-vr">VR</div>
           <div class="greeting-info">
-            <span class="title">Settings</span>
-            <!-- <h1 class="user-title" id="titleUsername">Vanai</h1> -->
+            <span class="sub-title">System</span>
+            <h1 class="user-title">Settings</h1>
           </div>
         </div>
         <!-- <button class="notification-btn" aria-label="Notifications" id="notification-bell">
@@ -96,41 +96,55 @@
           </div>
         </div>
 
-        <!-- App Preferences Switches -->
-        <div class="settings-card">
-          <h2 class="settings-title">Preferences</h2>
-
-          <div class="pref-row">
-            <div class="pref-info">
-              <span class="pref-label">System Push Notifications</span>
-              <span class="pref-desc">Show native system alerts on trade logs</span>
+        <!-- App Preferences Switches (Collapsible Accordion) -->
+        <div class="settings-card accordion-card" id="preferencesAccordion">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">Preferences</span>
+              <span class="pref-desc">Notifications, email digests, and blur effects</span>
             </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggleNotifications">
-              <span class="slider"></span>
-            </label>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
           </div>
-
-          <div class="pref-row">
-            <div class="pref-info">
-              <span class="pref-label">Daily Email Alerts</span>
-              <span class="pref-desc">Receive portfolio digest on market close</span>
+          <div class="accordion-content">
+            <div class="pref-row">
+              <div class="pref-info">
+                <span class="pref-label">System Push Notifications</span>
+                <span class="pref-desc">Show native system alerts on trade logs</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleNotifications">
+                <span class="slider"></span>
+              </label>
             </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggleEmails" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
 
-          <div class="pref-row">
-            <div class="pref-info">
-              <span class="pref-label">Glassmorphic Blur Effects</span>
-              <span class="pref-desc">Enable premium frosted layout blur styles</span>
+            <div class="pref-row">
+              <div class="pref-info">
+                <span class="pref-label">Daily Email Alerts</span>
+                <span class="pref-desc">Receive portfolio digest on market close</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleEmails" checked>
+                <span class="slider"></span>
+              </label>
             </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggleBlur" checked>
-              <span class="slider"></span>
-            </label>
+
+            <div class="pref-row">
+              <div class="pref-info">
+                <span class="pref-label">Glassmorphic Blur Effects</span>
+                <span class="pref-desc">Enable premium frosted layout blur styles</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleBlur" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -144,11 +158,76 @@
           </div>
         </div>
 
-        <!-- Actions Panel -->
-        <div class="settings-card danger-zone">
-          <h2 class="settings-title">System Actions</h2>
-          <button type="button" class="action-btn save-btn" id="saveProfileBtn">Save Profile Settings</button>
-          <button type="button" class="action-btn reset-btn" id="resetLedgerBtn">🗑️ Reset Local Ledger</button>
+        <!-- Portfolio Overrides Panel (Collapsible Accordion) -->
+        <div class="settings-card accordion-card" id="portfolioOverridesCard">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">Portfolio Overrides</span>
+              <span class="pref-desc">Manually configure cash and portfolio equity</span>
+            </div>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div class="accordion-content">
+            <p class="settings-section-desc">Manually set your initial cash balance and override the portfolio equity display. Changes take effect immediately on the Portfolio screen.</p>
+
+            <div class="form-group override-group">
+              <label for="buyingPowerInput">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;opacity:.7"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Buying Power (Cash Balance)
+              </label>
+              <div class="input-with-preview">
+                <span class="currency-prefix">$</span>
+                <input type="number" id="buyingPowerInput" min="0" step="0.01"
+                  placeholder="e.g. 12342.90" autocomplete="off">
+              </div>
+              <span class="override-preview" id="buyingPowerPreview"></span>
+            </div>
+
+            <div class="form-group override-group">
+              <label for="portfolioValueInput">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;opacity:.7"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                Total Portfolio Value Override
+              </label>
+              <div class="input-with-preview">
+                <span class="currency-prefix">$</span>
+                <input type="number" id="portfolioValueInput" min="0" step="0.01"
+                  placeholder="Leave blank to use live calculation" autocomplete="off">
+              </div>
+              <span class="override-preview" id="portfolioValuePreview"></span>
+              <span class="override-hint">⚠️ When set, this overrides the calculated equity total on the Portfolio screen. Clear the field to restore live math.</span>
+            </div>
+
+            <button type="button" class="action-btn save-btn" id="saveOverridesBtn">💾 Save Portfolio Overrides</button>
+          </div>
+        </div>
+
+        <!-- System Actions (Collapsible Accordion) -->
+        <div class="settings-card accordion-card danger-zone" id="systemActionsCard">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">System Actions</span>
+              <span class="pref-desc">Save profile configuration or clear local storage</span>
+            </div>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div class="accordion-content">
+            <button type="button" class="action-btn save-btn" id="saveProfileBtn">Save Profile Settings</button>
+            <button type="button" class="action-btn reset-btn" id="resetLedgerBtn">🗑️ Reset Local Ledger</button>
+          </div>
         </div>
       </div>
     </main>
@@ -171,7 +250,7 @@
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
           <polyline points="17 6 23 6 23 12"></polyline>
         </svg>
-        <span class="tab-label">Ledger</span>
+        <span class="tab-label">Reports</span>
       </button>
       <button class="tab-btn" data-target="screen-entry">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -194,9 +273,22 @@
       </button>
     </nav>
 
+    <!-- Custom Glassmorphic Confirmation Modal Dialog -->
+    <div class="confirm-modal-overlay" id="confirmModal">
+      <div class="confirm-modal-box">
+        <div class="confirm-modal-icon" id="confirmModalIcon">⚠️</div>
+        <h3 class="confirm-modal-title" id="confirmModalTitle">Are you sure?</h3>
+        <p class="confirm-modal-message" id="confirmModalMessage">Do you really want to proceed with this action?</p>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-modal-btn btn-cancel" id="confirmModalCancel">Cancel</button>
+          <button type="button" class="confirm-modal-btn btn-confirm" id="confirmModalConfirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script src="settings.js"></script>
+  <script src="settings.js?v=2.2"></script>
 </body>
 
 </html>

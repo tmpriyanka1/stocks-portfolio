@@ -86,6 +86,8 @@ function showToast(message, isError) {
 function resetLedger() {
   localStorage.removeItem('portfolio_transactions');
   localStorage.removeItem('portfolio_buying_power');
+  localStorage.removeItem('portfolio_buying_power_user_set');
+  localStorage.removeItem('portfolio_value_override');
   localStorage.removeItem('portfolio_custom_sl');
 }
 
@@ -480,3 +482,175 @@ describe('showToast — settings.js DOM toast rendering', () => {
     expect(document.querySelector('.app-toast').innerText).toContain('reset');
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('Portfolio Overrides Logic — settings.js', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  // Pure logic re-implementation for testing
+  function savePortfolioOverrides(bpValStr, pvValStr) {
+    let saved = false;
+    if (bpValStr !== undefined) {
+      const bpVal = parseFloat(bpValStr);
+      if (!isNaN(bpVal) && bpVal >= 0) {
+        localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
+        localStorage.setItem('portfolio_buying_power_user_set', 'true');
+        saved = true;
+      } else if (bpValStr.trim() === '') {
+        localStorage.removeItem('portfolio_buying_power');
+        localStorage.removeItem('portfolio_buying_power_user_set');
+        saved = true;
+      }
+    }
+    if (pvValStr !== undefined) {
+      const pvVal = parseFloat(pvValStr);
+      if (!isNaN(pvVal) && pvVal >= 0) {
+        localStorage.setItem('portfolio_value_override', pvVal.toFixed(2));
+        saved = true;
+      } else if (pvValStr.trim() === '') {
+        localStorage.removeItem('portfolio_value_override');
+        saved = true;
+      }
+    }
+    return saved;
+  }
+
+  test('saves valid buying power and sets user_set flag', () => {
+    const success = savePortfolioOverrides('25000.50', undefined);
+    expect(success).toBe(true);
+    expect(localStorage.getItem('portfolio_buying_power')).toBe('25000.50');
+    expect(localStorage.getItem('portfolio_buying_power_user_set')).toBe('true');
+  });
+
+  test('clears buying power and removes user_set flag', () => {
+    localStorage.setItem('portfolio_buying_power', '25000.50');
+    localStorage.setItem('portfolio_buying_power_user_set', 'true');
+    const success = savePortfolioOverrides('', undefined);
+    expect(success).toBe(true);
+    expect(localStorage.getItem('portfolio_buying_power')).toBeNull();
+    expect(localStorage.getItem('portfolio_buying_power_user_set')).toBeNull();
+  });
+
+  test('ignores negative buying power', () => {
+    const success = savePortfolioOverrides('-100.00', undefined);
+    expect(success).toBe(false);
+    expect(localStorage.getItem('portfolio_buying_power')).toBeNull();
+  });
+
+  test('saves valid portfolio value override', () => {
+    const success = savePortfolioOverrides(undefined, '150000.00');
+    expect(success).toBe(true);
+    expect(localStorage.getItem('portfolio_value_override')).toBe('150000.00');
+  });
+
+  test('clears portfolio value override', () => {
+    localStorage.setItem('portfolio_value_override', '150000.00');
+    const success = savePortfolioOverrides(undefined, '');
+    expect(success).toBe(true);
+    expect(localStorage.getItem('portfolio_value_override')).toBeNull();
+  });
+
+  test('reset ledger removes override keys', () => {
+    localStorage.setItem('portfolio_buying_power', '5000.00');
+    localStorage.setItem('portfolio_buying_power_user_set', 'true');
+    localStorage.setItem('portfolio_value_override', '150000.00');
+    resetLedger();
+    expect(localStorage.getItem('portfolio_buying_power')).toBeNull();
+    expect(localStorage.getItem('portfolio_buying_power_user_set')).toBeNull();
+    expect(localStorage.getItem('portfolio_value_override')).toBeNull();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('showConfirmModal — confirmation dialog popup UI', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div id="confirmModal">
+        <div id="confirmModalIcon"></div>
+        <div id="confirmModalTitle"></div>
+        <div id="confirmModalMessage"></div>
+        <button id="confirmModalCancel"></button>
+        <button id="confirmModalConfirm"></button>
+      </div>
+    `;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  // Pure logic mock definition
+  function showConfirmModal(options, onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    const iconEl = document.getElementById('confirmModalIcon');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const msgEl = document.getElementById('confirmModalMessage');
+    const cancelBtn = document.getElementById('confirmModalCancel');
+    const confirmBtn = document.getElementById('confirmModalConfirm');
+
+    if (!modal || !confirmBtn || !cancelBtn) {
+      return;
+    }
+
+    iconEl.textContent = options.icon || '⚠️';
+    titleEl.textContent = options.title || 'Are you sure?';
+    msgEl.textContent = options.message || 'Please confirm this action.';
+
+    modal.classList.add('active');
+
+    const cleanup = () => {
+      modal.classList.remove('active');
+      confirmBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+    };
+
+    function handleConfirm() {
+      cleanup();
+      onConfirm();
+    }
+
+    function handleCancel() {
+      cleanup();
+    }
+
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+  }
+
+  test('sets options correctly and activates modal', () => {
+    showConfirmModal({
+      icon: '🗑️',
+      title: 'Reset Ledger?',
+      message: 'This will wipe data.'
+    }, () => {});
+
+    expect(document.getElementById('confirmModalIcon').textContent).toBe('🗑️');
+    expect(document.getElementById('confirmModalTitle').textContent).toBe('Reset Ledger?');
+    expect(document.getElementById('confirmModalMessage').textContent).toBe('This will wipe data.');
+    expect(document.getElementById('confirmModal').classList.contains('active')).toBe(true);
+  });
+
+  test('calls onConfirm and deactivates modal on confirm click', () => {
+    let confirmed = false;
+    showConfirmModal({}, () => { confirmed = true; });
+
+    document.getElementById('confirmModalConfirm').click();
+    expect(confirmed).toBe(true);
+    expect(document.getElementById('confirmModal').classList.contains('active')).toBe(false);
+  });
+
+  test('does not call onConfirm and deactivates modal on cancel click', () => {
+    let confirmed = false;
+    showConfirmModal({}, () => { confirmed = true; });
+
+    document.getElementById('confirmModalCancel').click();
+    expect(confirmed).toBe(false);
+    expect(document.getElementById('confirmModal').classList.contains('active')).toBe(false);
+  });
+});
+
+

@@ -4,15 +4,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Grouped Position Reports</title>
+  <title>Vanai - Grouped Position Reports</title>
   <!-- Modern Font from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Core Styles -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.2">
   <!-- Screen-specific Styles -->
-  <link rel="stylesheet" href="ledger.css">
+  <link rel="stylesheet" href="ledger.css?v=2.2">
 </head>
 
 <body>
@@ -30,9 +30,12 @@
     <main class="screen-view active" id="screen-ledger-view" aria-label="Ledger Screen">
       <!-- Header -->
       <header class="app-header">
-        <div class="header-title-area">
-          <span class="sub-title">History & Transactions</span>
-          <h1 class="user-title">Reports</h1>
+        <div class="profile-section">
+          <div class="avatar logo-vr">VR</div>
+          <div class="greeting-info">
+            <span class="sub-title">History & Transactions</span>
+            <h1 class="user-title">Reports</h1>
+          </div>
         </div>
       </header>
 
@@ -120,7 +123,7 @@
 
   </div>
 
-  <script src="ledger.js?v=2.0" defer></script>
+  <script src="ledger.js?v=2.2" defer></script>
 </body>
 
 </html>

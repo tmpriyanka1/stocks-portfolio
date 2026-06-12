@@ -381,3 +381,84 @@ body {
   background: rgba(255, 255, 255, 0.06);
   animation: pulse-opacity 1.5s ease-in-out infinite;
 }
+
+/* Shared Header Typography & Profile Sections */
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Designed logo with V and R */
+.avatar.logo-vr {
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  transform: rotate(-3deg);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.avatar.logo-vr:hover {
+  transform: rotate(0deg) scale(1.08);
+  box-shadow: 0 0 25px rgba(124, 58, 237, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+}
+
+.greeting-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sub-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Underlying Asset Price Pill (below live price of contract) */
+.underlying-price-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 5px;
+  padding: 3px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Global Font Resets for Form Elements & Interactive Controls */
+input, select, textarea, button {
+  font-family: var(--font-main) !important;
+}

@@ -122,6 +122,21 @@
   letter-spacing: -0.3px;
 }
 
+.card-asset-name {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  text-align: left;
+  max-width: 170px;
+}
+
 .card-asset-type {
   font-size: 9px;
   font-weight: 600;

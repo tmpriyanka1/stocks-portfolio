@@ -12,6 +12,67 @@ const defaultAssetData = {
   'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
 };
 
+let tickersDb = {};
+async function loadTickersDb() {
+  if (Object.keys(tickersDb).length > 0) return;
+  try {
+    const res = await fetch('tickers.json');
+    if (res.ok) {
+      tickersDb = await res.json();
+    }
+  } catch (e) {
+    console.warn('Failed to load tickers.json:', e);
+  }
+}
+
+function getVal(obj, key) {
+  if (!obj) return undefined;
+  if (obj[key] !== undefined) return obj[key];
+  const lowerKey = key.toLowerCase();
+  for (const k in obj) {
+    if (k.toLowerCase() === lowerKey) {
+      return obj[k];
+    }
+  }
+  return undefined;
+}
+
+function resolveAssetName(ticker) {
+  const capitalized = ticker.trim().toUpperCase();
+  if (defaultAssetData[capitalized] && defaultAssetData[capitalized].name) {
+    return defaultAssetData[capitalized].name;
+  }
+  if (tickersDb && tickersDb[capitalized]) {
+    return tickersDb[capitalized];
+  }
+  
+  // Try matching option underlying ticker
+  const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
+  if (isOption) {
+    const underlying = ticker.split(' ')[0].toUpperCase();
+    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
+      return defaultAssetData[underlying].name;
+    }
+    if (tickersDb && tickersDb[underlying]) {
+      return tickersDb[underlying];
+    }
+  }
+  
+  // Fallback to extraction from regex
+  const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
+  if (underlyingMatch) {
+    const underlying = underlyingMatch[1].toUpperCase();
+    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
+      return defaultAssetData[underlying].name;
+    }
+    if (tickersDb && tickersDb[underlying]) {
+      return tickersDb[underlying];
+    }
+  }
+  
+  return capitalized;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Apply saved color theme
   const savedAccent = localStorage.getItem('portfolio_accent_color');
@@ -33,6 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 4. System notification quick toggle
   initNotificationToggle();
+
+  // Capitalize ticker input live
+  const inputTicker = document.getElementById('inputTicker');
+  if (inputTicker) {
+    inputTicker.addEventListener('input', () => {
+      inputTicker.value = inputTicker.value.toUpperCase();
+    });
+  }
 
   // Background sync with SheetDB
   pullCloudData();
@@ -140,11 +209,61 @@ function saveTransactionLocally(tx) {
 /**
  * Handle form submission validation and show verified visual alerts
  */
+/**
+ * Asynchronously fetches the asset's full name from local mock data or Yahoo Finance Search API
+ */
+async function fetchAssetName(ticker) {
+  const localName = resolveAssetName(ticker);
+  if (localName !== ticker.trim().toUpperCase()) {
+    return localName;
+  }
+  
+  if (!tickersDb || Object.keys(tickersDb).length === 0) {
+    await loadTickersDb();
+    const afterFetch = resolveAssetName(ticker);
+    if (afterFetch !== ticker.trim().toUpperCase()) {
+      return afterFetch;
+    }
+  }
+  
+  const capitalized = ticker.trim().toUpperCase();
+  const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
+  let queryTicker = isOption ? ticker.split(' ')[0].toUpperCase() : capitalized;
+  
+  try {
+    const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${queryTicker}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      const wrapper = await res.json();
+      if (wrapper && wrapper.contents) {
+        const json = JSON.parse(wrapper.contents);
+        if (json && json.quotes && json.quotes.length > 0) {
+          const match = json.quotes.find(q => q.symbol === queryTicker) || json.quotes[0];
+          let name = match.longname || match.shortname || queryTicker;
+          name = name.replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co|Class\s+[A-Z]|Common\s+Stock|Ordinary\s+Shares|PLC)\b\.?/gi, '').trim();
+          name = name.replace(/[,.\-\s]+$/, '').trim();
+          // Title case it
+          name = name.toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+          return name;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch name from Yahoo search API:', e);
+  }
+  
+  return queryTicker;
+}
+
+/**
+ * Handle form submission validation and show verified visual alerts
+ */
 function initFormSubmit() {
   const tradeForm = document.getElementById('tradeForm');
   if (!tradeForm) return;
 
-  tradeForm.addEventListener('submit', (e) => {
+  tradeForm.addEventListener('submit', async (e) => {
     e.preventDefault(); // Stop default form navigation
 
     const ticker = document.getElementById('inputTicker').value.trim().toUpperCase();
@@ -187,8 +306,31 @@ function initFormSubmit() {
     const actionColor = action === 'BUY' ? 'Bought' : 'Sold';
     const typeName = type === 'options' ? 'Contracts' : 'Shares';
 
-    // 1. Immediately append the new trade to the local array so the app updates instantly.
+    // 1. Fetch resolved asset name first
+    let resolvedName = ticker;
+    try {
+      resolvedName = await fetchAssetName(ticker);
+    } catch (err) {
+      console.warn('Failed to resolve asset name:', err);
+    }
+
+    // 2. Immediately append the new trade to the local array so the app updates instantly.
     saveTransactionLocally(tx);
+
+    // Save resolved name to marketPrices in local storage immediately so it shows up in the app
+    let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+    if (!marketPrices[ticker]) {
+      marketPrices[ticker] = {
+        name: resolvedName,
+        currentPrice: priceFloat,
+        change24h: 0.0,
+        icon: ticker.slice(0, 2).toUpperCase(),
+        stopLoss: slValue
+      };
+    } else {
+      marketPrices[ticker].name = resolvedName;
+    }
+    localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
 
     // Deduct buying power
     if (action === 'BUY') {
@@ -200,8 +342,8 @@ function initFormSubmit() {
     // Reset fields and notification immediately
     resetFormAndNotifications();
 
-    // 2. In the background, execute asynchronous POST request
-    pushTradeToCloud(tx);
+    // 3. In the background, execute asynchronous POST request
+    pushTradeToCloud(tx, resolvedName);
 
     function resetFormAndNotifications() {
       // Send native system push notification if enabled
@@ -242,17 +384,12 @@ function initFormSubmit() {
   });
 }
 
-async function pushTradeToCloud(tx) {
+async function pushTradeToCloud(tx, resolvedName) {
   const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL")) {
     showToast("Trade saved locally (Offline Mode)", true);
     return;
   }
-
-  const defaultNames = {
-    'NVDA': 'NVIDIA Corporation', 'AAPL': 'Apple Inc.', 'TSLA': 'Tesla Inc.',
-    'NVDA $490 Call': 'Exp 07/16/26 • Buy to Open', 'AAPL $180 Call': 'Exp 06/18/26 • Buy to Open'
-  };
 
   try {
     const response = await fetch(url, {
@@ -262,12 +399,13 @@ async function pushTradeToCloud(tx) {
         data: [
           {
             Symbol: tx.ticker,
-            Name: defaultNames[tx.ticker] || (tx.ticker + ' Corporation'),
+            Name: resolvedName,
             Date: tx.date,
             "Asset Type": tx.assetType === 'options' ? 'Option' : 'Stock',
             Action: tx.action,
             Shares: Number(tx.shares),
             CostBasis: Number(tx.price),
+            "Avg Price": Number(tx.price),
             CurrentPrice: Number(tx.price),
             SL: tx.stopLoss ? Number(tx.stopLoss) : 0,
             Icon: tx.ticker.substring(0, 2).toUpperCase(),
@@ -289,6 +427,7 @@ async function pullCloudData() {
   if (!url || url.includes("YOUR_API_URL")) return;
 
   try {
+    await loadTickersDb();
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
@@ -298,17 +437,20 @@ async function pullCloudData() {
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
       
       const parsedTxs = data.map(tx => {
-        const ticker = String(tx.Symbol || '').trim();
-        const name = String(tx.Name || '');
-        const action = String(tx.Action || 'BUY');
-        const shares = parseInt(tx.Shares || 0, 10);
-        const costBasis = parseFloat(tx.CostBasis || 0);
-        const currentPrice = parseFloat(tx.CurrentPrice || costBasis);
-        const date = String(tx.Date || new Date().toISOString());
-        const comment = String(tx['Trade Journal Note'] || '');
-        const stopLoss = parseFloat(tx.SL || 0);
+        const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
+        let name = String(getVal(tx, 'Name') || '').trim();
+        if (!name) {
+          name = resolveAssetName(ticker);
+        }
+        const action = String(getVal(tx, 'Action') || 'BUY');
+        const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
+        const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+        const currentPrice = parseFloat(getVal(tx, 'CurrentPrice') || costBasis);
+        const date = String(getVal(tx, 'Date') || new Date().toISOString());
+        const comment = String(getVal(tx, 'Trade Journal Note') || '');
+        const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
         
-        let rawType = String(tx['Asset Type'] || 'Stock');
+        let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
 
         if (ticker) {
@@ -316,7 +458,7 @@ async function pullCloudData() {
             name: name,
             currentPrice: currentPrice,
             change24h: parseFloat(tx.change24h || 0),
-            icon: tx.Icon || ticker.slice(0, 2).toUpperCase(),
+            icon: getVal(tx, 'Icon') || ticker.slice(0, 2).toUpperCase(),
             stopLoss: stopLoss
           };
         }

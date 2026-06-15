@@ -103,18 +103,33 @@ function parseOptionSpec(ticker) {
   return { strikePrice, contractType, expiry };
 }
 
+function getVal(obj, key) {
+  if (!obj) return undefined;
+  if (obj[key] !== undefined) return obj[key];
+  const lowerKey = key.toLowerCase();
+  for (const k in obj) {
+    if (k.toLowerCase() === lowerKey) {
+      return obj[k];
+    }
+  }
+  return undefined;
+}
+
 // SOURCE: pullCloudData row parser (ledger.js version)
 function parseCloudRow(tx) {
-  const ticker = String(tx.Symbol || '').trim();
-  const costBasis = parseFloat(tx.CostBasis || 0);
-  const rawCurrentPrice = parseFloat(tx.CurrentPrice || 0);
+  const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
+  const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+  const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
   const currentPrice = rawCurrentPrice && rawCurrentPrice > 0 ? rawCurrentPrice : costBasis;
-  let rawType = String(tx['Asset Type'] || 'Stock');
+  let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
   let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
   if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
     assetType = 'options';
   }
-  return { ticker, assetType, price: costBasis, currentPrice };
+  const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
+  const action = String(getVal(tx, 'Action') || 'BUY');
+  const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
+  return { ticker, assetType, action, shares, price: costBasis, currentPrice, stopLoss };
 }
 
 // SOURCE: applyAccentColor (ledger.js)
@@ -631,7 +646,7 @@ describe('getAssetName & cleanAssetName — ledger name resolution and cleaning'
         return defaultAssetData[root].name;
       }
     }
-    return ticker + ' Corporation';
+    return ticker;
   }
 
   test('resolves and cleans stock tickers', () => {
@@ -646,9 +661,9 @@ describe('getAssetName & cleanAssetName — ledger name resolution and cleaning'
     expect(cleanAssetName(rawName)).toBe('SPDR S&P 500 ETF Trust');
   });
 
-  test('falls back to ticker Corporation if not found', () => {
+  test('falls back to ticker if not found', () => {
     const rawName = getAssetName('XYZ');
-    expect(rawName).toBe('XYZ Corporation');
+    expect(rawName).toBe('XYZ');
     expect(cleanAssetName(rawName)).toBe('XYZ');
   });
 });

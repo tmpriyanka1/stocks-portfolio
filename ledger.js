@@ -12,6 +12,67 @@ const defaultAssetData = {
   'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
 };
 
+let tickersDb = {};
+async function loadTickersDb() {
+  if (Object.keys(tickersDb).length > 0) return;
+  try {
+    const res = await fetch('tickers.json');
+    if (res.ok) {
+      tickersDb = await res.json();
+    }
+  } catch (e) {
+    console.warn('Failed to load tickers.json:', e);
+  }
+}
+
+function getVal(obj, key) {
+  if (!obj) return undefined;
+  if (obj[key] !== undefined) return obj[key];
+  const lowerKey = key.toLowerCase();
+  for (const k in obj) {
+    if (k.toLowerCase() === lowerKey) {
+      return obj[k];
+    }
+  }
+  return undefined;
+}
+
+function resolveAssetName(ticker) {
+  const capitalized = ticker.trim().toUpperCase();
+  if (defaultAssetData[capitalized] && defaultAssetData[capitalized].name) {
+    return defaultAssetData[capitalized].name;
+  }
+  if (tickersDb && tickersDb[capitalized]) {
+    return tickersDb[capitalized];
+  }
+  
+  // Try matching option underlying ticker
+  const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
+  if (isOption) {
+    const underlying = ticker.split(' ')[0].toUpperCase();
+    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
+      return defaultAssetData[underlying].name;
+    }
+    if (tickersDb && tickersDb[underlying]) {
+      return tickersDb[underlying];
+    }
+  }
+  
+  // Fallback to extraction from regex
+  const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
+  if (underlyingMatch) {
+    const underlying = underlyingMatch[1].toUpperCase();
+    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
+      return defaultAssetData[underlying].name;
+    }
+    if (tickersDb && tickersDb[underlying]) {
+      return tickersDb[underlying];
+    }
+  }
+  
+  return capitalized;
+}
+
 const SIMULATED_TODAY = new Date();
 
 // 1. MOCK TRANSACTIONS HISTORY DATABASE
@@ -179,8 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initTimeFilters();
   initNavigationRedirects();
 
-  // INSTANT FIRST RENDER: use cached localStorage data to eliminate load latency
-  renderLedger('daily');
+  // Load tickers DB, then render ledger from cache
+  loadTickersDb().then(() => {
+    renderLedger('daily');
+  });
 
   // Background cloud pull — updates UI silently once fresh data arrives
   pullCloudData();
@@ -339,22 +402,8 @@ function getAssetName(ticker) {
   if (marketPrices[ticker] && marketPrices[ticker].name) {
     return marketPrices[ticker].name;
   }
-  if (defaultAssetData[ticker] && defaultAssetData[ticker].name) {
-    return defaultAssetData[ticker].name;
-  }
-
-  const rootMatch = ticker.match(/^([A-Za-z]+)/);
-  if (rootMatch) {
-    const root = rootMatch[1].toUpperCase();
-    if (marketPrices[root] && marketPrices[root].name) {
-      return marketPrices[root].name;
-    }
-    if (defaultAssetData[root] && defaultAssetData[root].name) {
-      return defaultAssetData[root].name;
-    }
-  }
-
-  return ticker + ' Corporation';
+  
+  return resolveAssetName(ticker);
 }
 
 function formatOptionTicker(ticker) {
@@ -614,6 +663,7 @@ async function pullCloudData() {
   if (!url || url.includes("YOUR_API_URL")) return;
 
   try {
+    await loadTickersDb();
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
@@ -622,19 +672,22 @@ async function pullCloudData() {
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
       
       const parsedTxs = data.map(tx => {
-        const ticker = String(tx.Symbol || '').trim();
-        const name = String(tx.Name || '');
-        const action = String(tx.Action || 'BUY');
-        const shares = parseInt(tx.Shares || 0, 10);
-        const costBasis = parseFloat(tx.CostBasis || 0);
+        const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
+        let name = String(getVal(tx, 'Name') || '').trim();
+        if (!name) {
+          name = resolveAssetName(ticker);
+        }
+        const action = String(getVal(tx, 'Action') || 'BUY');
+        const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
+        const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
         // Fallback: if CurrentPrice is missing or 0, use costBasis so balance never drops to $0
-        const rawCurrentPrice = parseFloat(tx.CurrentPrice || 0);
+        const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
         const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
-        const date = String(tx.Date || new Date().toISOString());
-        const comment = String(tx['Trade Journal Note'] || '');
-        const stopLoss = parseFloat(tx.SL || 0);
+        const date = String(getVal(tx, 'Date') || new Date().toISOString());
+        const comment = String(getVal(tx, 'Trade Journal Note') || '');
+        const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
         
-        let rawType = String(tx['Asset Type'] || 'Stock');
+        let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
         // Auto-detect options from symbol string (e.g. "SPY $723 CALL 6/11")
         if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
@@ -645,8 +698,8 @@ async function pullCloudData() {
           marketPrices[ticker] = {
             name: name,
             currentPrice: currentPrice,
-            change24h: parseFloat(tx.change24h || 0),
-            icon: tx.Icon || ticker.slice(0, 2).toUpperCase(),
+            change24h: parseFloat(getVal(tx, 'change24h') || 0),
+            icon: getVal(tx, 'Icon') || ticker.slice(0, 2).toUpperCase(),
             stopLoss: stopLoss
           };
         }

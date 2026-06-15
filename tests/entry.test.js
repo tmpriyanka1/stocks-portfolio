@@ -54,21 +54,33 @@ function buildTransaction({ ticker, type, action, shares, price, date, slInput, 
 
 // SOURCE: buildCloudPayload — the object sent to Google Sheets
 function buildCloudPayload(tx) {
-  const defaultNames = {
-    'NVDA': 'NVIDIA Corporation',
-    'AAPL': 'Apple Inc.',
-    'TSLA': 'Tesla Inc.',
-    'NVDA $490 Call': 'Exp 07/16/26 • Buy to Open',
-    'AAPL $180 Call': 'Exp 06/18/26 • Buy to Open'
+  const defaultAssetData = {
+    'NVDA': { name: 'NVIDIA Corporation' },
+    'AAPL': { name: 'Apple Inc.' },
+    'TSLA': { name: 'Tesla Inc.' },
+    'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open' },
+    'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open' }
   };
+  let resolvedName = tx.ticker;
+  if (defaultAssetData[tx.ticker] && defaultAssetData[tx.ticker].name) {
+    resolvedName = defaultAssetData[tx.ticker].name;
+  } else {
+    const underlyingMatch = tx.ticker.match(/^([A-Za-z]+)/);
+    if (underlyingMatch) {
+      const underlyingTicker = underlyingMatch[1].toUpperCase();
+      if (defaultAssetData[underlyingTicker] && defaultAssetData[underlyingTicker].name) {
+        resolvedName = defaultAssetData[underlyingTicker].name;
+      }
+    }
+  }
   return {
     Symbol: tx.ticker,
-    Name: defaultNames[tx.ticker] || (tx.ticker + ' Corporation'),
+    Name: resolvedName,
     Date: tx.date,
     'Asset Type': tx.assetType === 'options' ? 'Option' : 'Stock',
     Action: tx.action,
     Shares: Number(tx.shares),
-    CostBasis: Number(tx.price),
+    'Avg Price': Number(tx.price),
     CurrentPrice: Number(tx.price),
     SL: tx.stopLoss ? Number(tx.stopLoss) : 0,
     Icon: tx.ticker.substring(0, 2).toUpperCase(),
@@ -108,21 +120,33 @@ function showToast(message, isError) {
   return toast;
 }
 
+function getVal(obj, key) {
+  if (!obj) return undefined;
+  if (obj[key] !== undefined) return obj[key];
+  const lowerKey = key.toLowerCase();
+  for (const k in obj) {
+    if (k.toLowerCase() === lowerKey) {
+      return obj[k];
+    }
+  }
+  return undefined;
+}
+
 // SOURCE: pullCloudData row parser (entry.js version)
 function parseCloudRow(tx) {
-  const ticker = String(tx.Symbol || '').trim();
-  const costBasis = parseFloat(tx.CostBasis || 0);
-  const rawCurrentPrice = parseFloat(tx.CurrentPrice || 0);
+  const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
+  const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+  const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
   const currentPrice = rawCurrentPrice && rawCurrentPrice > 0 ? rawCurrentPrice : costBasis;
-  let rawType = String(tx['Asset Type'] || 'Stock');
+  let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
   let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
   if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
     assetType = 'options';
   }
-  const shares = parseInt(tx.Shares || 0, 10);
-  const action = String(tx.Action || 'BUY');
-  const comment = String(tx['Trade Journal Note'] || '');
-  const stopLoss = parseFloat(tx.SL || 0);
+  const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
+  const action = String(getVal(tx, 'Action') || 'BUY');
+  const comment = String(getVal(tx, 'Trade Journal Note') || '');
+  const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
   return { ticker, assetType, action, shares, price: costBasis, currentPrice, comment, stopLoss };
 }
 
@@ -302,8 +326,8 @@ describe('buildCloudPayload — Google Sheets field mapping', () => {
     expect(buildCloudPayload(stockTx).Shares).toBe(10);
   });
 
-  test('CostBasis maps to tx.price as Number', () => {
-    expect(buildCloudPayload(stockTx).CostBasis).toBe(480);
+  test('"Avg Price" maps to tx.price as Number', () => {
+    expect(buildCloudPayload(stockTx)["Avg Price"]).toBe(480);
   });
 
   test('CurrentPrice equals CostBasis (entry price snapshot)', () => {
@@ -352,7 +376,7 @@ describe('buildCloudPayload — Google Sheets field mapping', () => {
 
   test('Name fallback for unknown ticker', () => {
     const unknownTx = { ...stockTx, ticker: 'COIN' };
-    expect(buildCloudPayload(unknownTx).Name).toBe('COIN Corporation');
+    expect(buildCloudPayload(unknownTx).Name).toBe('COIN');
   });
 
   test('Date maps to tx.date', () => {

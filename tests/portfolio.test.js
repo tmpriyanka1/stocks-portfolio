@@ -101,19 +101,31 @@ function aggregatePositions(txs) {
 // ══════════════════════════════════════════════════════════════════════════════
 // SOURCE: pullCloudData row parser (currentPrice fallback + type auto-detect)
 // ══════════════════════════════════════════════════════════════════════════════
+function getVal(obj, key) {
+  if (!obj) return undefined;
+  if (obj[key] !== undefined) return obj[key];
+  const lowerKey = key.toLowerCase();
+  for (const k in obj) {
+    if (k.toLowerCase() === lowerKey) {
+      return obj[k];
+    }
+  }
+  return undefined;
+}
+
 function parseCloudRow(tx) {
-  const ticker = String(tx.Symbol || '').trim();
-  const costBasis = parseFloat(tx.CostBasis || 0);
-  const rawCurrentPrice = parseFloat(tx.CurrentPrice || 0);
+  const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
+  const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+  const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
   const currentPrice = rawCurrentPrice && rawCurrentPrice > 0 ? rawCurrentPrice : costBasis;
-  let rawType = String(tx['Asset Type'] || 'Stock');
+  let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
   let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
   if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
     assetType = 'options';
   }
-  const shares = parseInt(tx.Shares || 0, 10);
-  const action = String(tx.Action || 'BUY');
-  const stopLoss = parseFloat(tx.SL || 0);
+  const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
+  const action = String(getVal(tx, 'Action') || 'BUY');
+  const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
   return { ticker, assetType, action, shares, price: costBasis, currentPrice, stopLoss };
 }
 

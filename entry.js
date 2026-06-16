@@ -304,7 +304,7 @@ function initFormSubmit() {
     };
 
     const actionColor = action === 'BUY' ? 'Bought' : 'Sold';
-    const typeName = type === 'options' ? 'Contracts' : 'Shares';
+    const typeName = type === 'options' ? 'CON' : 'SHR';
 
     // 1. Fetch resolved asset name first
     let resolvedName = ticker;

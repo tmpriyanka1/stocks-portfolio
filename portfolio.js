@@ -883,7 +883,7 @@ function renderAssetsTable(filterMode) {
     }).format(Math.abs(changeUsd))}`;
 
     // Quantity label depending on asset type
-    const qtySuffix = isOption ? (asset.shares === 1 ? 'Cont.' : 'Conts.') : (asset.shares === 1 ? 'Share' : 'Shares');
+    const qtySuffix = isOption ? 'CON' : 'SHR';
 
     // Generate mini sparkline path coordinates dynamically
     const points = sparklineData[asset.ticker] || [asset.avgCost, asset.currentPrice];

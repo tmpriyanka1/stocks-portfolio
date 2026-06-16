@@ -180,6 +180,11 @@
 
 /* HOLDINGS TABLE COLUMN HEADER ROW */
 .holdings-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #0a0c16;
+  border: 1px solid transparent;
   display: grid;
   grid-template-columns: 2.3fr 1.6fr 1.1fr 1.5fr 1.9fr;
   align-items: center;

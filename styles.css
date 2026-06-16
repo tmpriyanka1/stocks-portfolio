@@ -298,7 +298,7 @@ body {
   position: relative;
 }
 
-.pill-btn {
+.pill-btn, .filter-btn {
   background: transparent;
   border: none;
   flex: 1;
@@ -317,11 +317,11 @@ body {
   z-index: 2;
 }
 
-.pill-btn:hover {
+.pill-btn:hover, .filter-btn:hover {
   color: var(--text-primary);
 }
 
-.pill-btn.active {
+.pill-btn.active, .filter-btn.active {
   color: #fff;
 }
 

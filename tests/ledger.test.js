@@ -24,6 +24,10 @@ function isTxInRange(tx, range) {
   const txDate = new Date(tx.date);
   if (isNaN(txDate.getTime())) return false; // Skip malformed dates
 
+  if (range === 'all') {
+    return true; // Bypass date boundaries completely to parse every single transaction record row
+  }
+
   const diffTime = SIMULATED_TODAY - txDate;
   const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
@@ -108,7 +112,7 @@ function groupTransactionsByTicker(transactions, range) {
       }
     });
 
-    if (inRangeTransactions.length > 0 || runningShares > 0) {
+    if (inRangeTransactions.length > 0) {
       const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : runningAvgBuy;
       const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : 0;
       results.push({
@@ -385,15 +389,12 @@ describe('groupTransactionsByTicker — position aggregation', () => {
     expect(groupTransactionsByTicker([])).toHaveLength(0);
   });
 
-  test('active position with no transactions in the daily range is included in daily view', () => {
+  test('active position with no transactions in the daily range is NOT included in daily view', () => {
     const txs = [
       { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185, date: daysAgoISO(10) + 'T10:00:00' },
     ];
     const result = groupTransactionsByTicker(txs, 'daily');
-    expect(result).toHaveLength(1);
-    expect(result[0].ticker).toBe('TSLA');
-    expect(result[0].netShares).toBe(15);
-    expect(result[0].transactions).toHaveLength(0);
+    expect(result).toHaveLength(0);
   });
 });
 
@@ -578,16 +579,16 @@ describe('Ledger master card rendering logic', () => {
     expect(card.netShares <= 0).toBe(false);
   });
 
-  test('qtyLabel is "Contracts" for options', () => {
+  test('qtyLabel is "CON" for options', () => {
     const isOption = true;
-    const qtyLabel = isOption ? 'Contracts' : 'Shares';
-    expect(qtyLabel).toBe('Contracts');
+    const qtyLabel = isOption ? 'CON' : 'SHR';
+    expect(qtyLabel).toBe('CON');
   });
 
-  test('qtyLabel is "Shares" for stocks', () => {
+  test('qtyLabel is "SHR" for stocks', () => {
     const isOption = false;
-    const qtyLabel = isOption ? 'Contracts' : 'Shares';
-    expect(qtyLabel).toBe('Shares');
+    const qtyLabel = isOption ? 'CON' : 'SHR';
+    expect(qtyLabel).toBe('SHR');
   });
 
   test('assetTypeLabel is "Option" for options', () => {
@@ -726,6 +727,310 @@ describe('getAssetName & cleanAssetName — ledger name resolution and cleaning'
     const rawName = getAssetName('XYZ');
     expect(rawName).toBe('XYZ');
     expect(cleanAssetName(rawName)).toBe('XYZ');
+  });
+});
+
+// SOURCE: isTxBeforeRange (from ledger.js)
+function isTxBeforeRange(tx, range) {
+  if (!tx || !tx.date) return false;
+  const txDate = new Date(tx.date);
+  if (isNaN(txDate.getTime())) return false;
+
+  if (range === 'all') return false;
+
+  const diffTime = SIMULATED_TODAY - txDate;
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+  if (range === 'daily') {
+    const todayStart = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate());
+    return txDate < todayStart;
+  } else if (range === 'weekly') {
+    return diffDays > 7;
+  } else if (range === 'monthly') {
+    return diffDays > 30;
+  } else if (range === 'yearly') {
+    return diffDays > 365;
+  }
+  return false;
+}
+
+// SOURCE: getAllTransactions (from ledger.js)
+function getAllTransactions() {
+  const stored = localStorage.getItem('portfolio_transactions');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
+// SOURCE: calculateSection1Metrics (from ledger.js)
+function calculateSection1Metrics(filteredTransactions, range) {
+  const allTxs = getAllTransactions().filter(tx => tx.ticker !== 'CASH' && tx.assetType !== 'CASH');
+
+  // Define interval times based on range
+  const intervalTimes = [];
+  if (range === 'daily') {
+    const start = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate(), 0, 0, 0);
+    for (let h = 0; h <= 24; h++) {
+      intervalTimes.push(new Date(start.getTime() + h * 60 * 60 * 1000));
+    }
+  } else if (range === 'weekly') {
+    const start = new Date(SIMULATED_TODAY.getTime() - 7 * 24 * 60 * 60 * 1000);
+    for (let d = 0; d <= 7; d++) {
+      intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
+    }
+  } else if (range === 'monthly') {
+    const start = new Date(SIMULATED_TODAY.getTime() - 30 * 24 * 60 * 60 * 1000);
+    for (let d = 0; d <= 30; d++) {
+      intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
+    }
+  } else if (range === 'yearly') {
+    for (let m = 12; m >= 0; m--) {
+      intervalTimes.push(new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth() - m, SIMULATED_TODAY.getDate(), 12, 0, 0));
+    }
+  } else {
+    // 'all'
+    const dates = allTxs.map(tx => new Date(tx.date).getTime());
+    const oldestTime = dates.length > 0 ? Math.min(...dates) : SIMULATED_TODAY.getTime() - 365 * 24 * 60 * 60 * 1000;
+    const start = new Date(oldestTime);
+    const end = SIMULATED_TODAY;
+    const step = (end.getTime() - start.getTime()) / 12;
+    for (let i = 0; i <= 12; i++) {
+      intervalTimes.push(new Date(start.getTime() + i * step));
+    }
+  }
+
+  // Calculate valuation at each interval boundary
+  const rollingValuations = intervalTimes.map(t => {
+    let val = 0;
+    allTxs.forEach(tx => {
+      if (new Date(tx.date) <= t) {
+        const isOption = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+        const multiplier = isOption ? 100 : 1;
+        const txVal = (parseFloat(tx.shares) || 0) * (parseFloat(tx.price) || 0) * multiplier;
+        if (tx.action === 'BUY') {
+          val += txVal;
+        } else if (tx.action === 'SELL') {
+          val -= txVal;
+        }
+      }
+    });
+    return val;
+  });
+
+  const periodOpenCost = rollingValuations[0];
+  const periodCurrentValue = rollingValuations[rollingValuations.length - 1];
+  const netPnL = periodCurrentValue - periodOpenCost;
+
+  // DOM elements updates
+  const startValEl = document.getElementById('snap-start-value');
+  const currentValEl = document.getElementById('snap-current-value');
+  const pnlEl = document.getElementById('snap-pnl-value');
+
+  if (startValEl) startValEl.textContent = "$" + periodOpenCost.toFixed(2);
+  if (currentValEl) currentValEl.textContent = "$" + periodCurrentValue.toFixed(2);
+
+  if (pnlEl) {
+    pnlEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral');
+    if (netPnL > 0) {
+      pnlEl.textContent = `+$${netPnL.toFixed(2)}`;
+      pnlEl.classList.add('pnl-up');
+    } else if (netPnL < 0) {
+      pnlEl.textContent = `-$${Math.abs(netPnL).toFixed(2)}`;
+      pnlEl.classList.add('pnl-down');
+    } else {
+      pnlEl.textContent = `$0.00`;
+      pnlEl.classList.add('pnl-neutral');
+    }
+  }
+
+  // Draw SVG sparkline
+  const width = 300;
+  const height = 60;
+  const padding = 5;
+  const points = [];
+
+  const minVal = Math.min(...rollingValuations);
+  const maxVal = Math.max(...rollingValuations);
+  const valRange = maxVal - minVal;
+
+  if (rollingValuations.length === 1) {
+    points.push({ x: 0, y: height / 2 });
+    points.push({ x: width, y: height / 2 });
+  } else {
+    rollingValuations.forEach((val, index) => {
+      const x = (index / (rollingValuations.length - 1)) * width;
+      let y = height / 2;
+      if (valRange > 0) {
+        y = (height - 2 * padding) - ((val - minVal) / valRange) * (height - 2 * padding) + padding;
+      }
+      points.push({ x, y });
+    });
+  }
+
+  const lineD = points.map((p, idx) => (idx === 0 ? 'M' : 'L') + ` ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const areaD = lineD + ` L ${points[points.length - 1].x.toFixed(1)} ${height} L ${points[0].x.toFixed(1)} ${height} Z`;
+
+  const trendPath = document.getElementById('snap-trend-path');
+  const graphArea = document.getElementById('snap-graph-area');
+  const dotsGroup = document.getElementById('snap-graph-dots');
+
+  if (trendPath) {
+    trendPath.setAttribute('d', lineD);
+    if (netPnL > 0) {
+      trendPath.setAttribute('stroke', 'var(--success, #10b981)');
+    } else if (netPnL < 0) {
+      trendPath.setAttribute('stroke', 'var(--danger, #ef4444)');
+    } else {
+      trendPath.setAttribute('stroke', 'var(--text-muted)');
+    }
+  }
+  if (graphArea) {
+    graphArea.setAttribute('d', areaD);
+  }
+
+  if (dotsGroup) {
+    dotsGroup.innerHTML = '';
+    points.forEach(p => {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', p.x.toFixed(1));
+      circle.setAttribute('cy', p.y.toFixed(1));
+      circle.setAttribute('r', '3');
+      circle.setAttribute('fill', netPnL > 0 ? 'var(--success, #10b981)' : netPnL < 0 ? 'var(--danger, #ef4444)' : 'var(--text-muted)');
+      circle.setAttribute('stroke', 'var(--bg-primary, #06070c)');
+      circle.setAttribute('stroke-width', '1');
+      circle.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+      circle.style.cursor = 'pointer';
+      
+      circle.addEventListener('mouseover', () => {
+        circle.setAttribute('r', '5.5');
+        circle.setAttribute('stroke-width', '1.5');
+      });
+      circle.addEventListener('mouseout', () => {
+        circle.setAttribute('r', '3');
+        circle.setAttribute('stroke-width', '1');
+      });
+      
+      dotsGroup.appendChild(circle);
+    });
+  }
+}
+
+describe('isTxBeforeRange & calculateSection1Metrics', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.body.innerHTML = `
+      <span id="snap-start-value"></span>
+      <span id="snap-current-value"></span>
+      <span id="snap-pnl-value"></span>
+      <svg>
+        <path id="snap-trend-path" d="" />
+        <path id="snap-graph-area" d="" />
+        <g id="snap-graph-dots"></g>
+      </svg>
+    `;
+  });
+
+  test('isTxBeforeRange identifies older transactions correctly', () => {
+    const tx = { ticker: 'AAPL', date: daysAgoISO(15) + 'T10:00:00' };
+    expect(isTxBeforeRange(tx, 'weekly')).toBe(true);
+    expect(isTxBeforeRange(tx, 'monthly')).toBe(false);
+    expect(isTxBeforeRange(tx, 'all')).toBe(false);
+  });
+
+  test('calculateSection1Metrics computes correct open cost, current value, and P&L', () => {
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 10, price: 150, date: daysAgoISO(15) + 'T10:00:00' }, // Open cost: 1500
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 5, price: 160, date: daysAgoISO(3) + 'T10:00:00' },   // In range (weekly)
+      { ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 1, price: 10, date: daysAgoISO(2) + 'T10:00:00' } // In range (weekly, leveraged = 1000)
+    ];
+    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+    const weeklyTxs = getFilteredTransactions(txs, 'weekly');
+    calculateSection1Metrics(weeklyTxs, 'weekly');
+
+    expect(document.getElementById('snap-start-value').textContent).toBe('$1500.00');
+    expect(document.getElementById('snap-current-value').textContent).toBe('$3300.00'); // 1500 + 800 + 1000
+    expect(document.getElementById('snap-pnl-value').textContent).toBe('+$1800.00');
+    expect(document.getElementById('snap-pnl-value').classList.contains('pnl-up')).toBe(true);
+  });
+
+  test('calculateSection1Metrics skips CASH transactions', () => {
+    const txs = [
+      { ticker: 'CASH', assetType: 'CASH', action: 'BUY', shares: 500, price: 1, date: daysAgoISO(15) + 'T10:00:00' },
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 10, price: 150, date: daysAgoISO(3) + 'T10:00:00' }
+    ];
+    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+    const weeklyTxs = getFilteredTransactions(txs, 'weekly');
+    calculateSection1Metrics(weeklyTxs, 'weekly');
+
+    expect(document.getElementById('snap-start-value').textContent).toBe('$0.00');
+    expect(document.getElementById('snap-current-value').textContent).toBe('$1500.00');
+    expect(document.getElementById('snap-pnl-value').textContent).toBe('+$1500.00');
+  });
+
+  test('calculateSection1Metrics renders the coordinate dots correctly in SVG group', () => {
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 10, price: 150, date: daysAgoISO(3) + 'T10:00:00' }
+    ];
+    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+    const weeklyTxs = getFilteredTransactions(txs, 'weekly');
+    calculateSection1Metrics(weeklyTxs, 'weekly');
+
+    const dotsGroup = document.getElementById('snap-graph-dots');
+    expect(dotsGroup).toBeTruthy();
+    const circles = dotsGroup.getElementsByTagName('circle');
+    expect(circles.length).toBe(8); // 8 weekly points (T0 to T7)
+    expect(parseFloat(circles[0].getAttribute('cx'))).toBe(0);
+    expect(parseFloat(circles[7].getAttribute('cx'))).toBe(300);
+  });
+
+  test('calculateSection1Metrics dot counts for daily, monthly, yearly, and all ranges', () => {
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 10, price: 150, date: daysAgoISO(10) + 'T10:00:00' }
+    ];
+    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+    // Daily: 24h + 1 = 25 points
+    calculateSection1Metrics(getFilteredTransactions(txs, 'daily'), 'daily');
+    let circles = document.getElementById('snap-graph-dots').getElementsByTagName('circle');
+    expect(circles.length).toBe(25);
+
+    // Monthly: 30d + 1 = 31 points
+    calculateSection1Metrics(getFilteredTransactions(txs, 'monthly'), 'monthly');
+    circles = document.getElementById('snap-graph-dots').getElementsByTagName('circle');
+    expect(circles.length).toBe(31);
+
+    // Yearly: 12 months + 1 = 13 points
+    calculateSection1Metrics(getFilteredTransactions(txs, 'yearly'), 'yearly');
+    circles = document.getElementById('snap-graph-dots').getElementsByTagName('circle');
+    expect(circles.length).toBe(13);
+
+    // All: 12 intervals + 1 = 13 points
+    calculateSection1Metrics(getFilteredTransactions(txs, 'all'), 'all');
+    circles = document.getElementById('snap-graph-dots').getElementsByTagName('circle');
+    expect(circles.length).toBe(13);
+  });
+
+  test('calculateSection1Metrics computes correct metrics for all time range', () => {
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 10, price: 150, date: daysAgoISO(500) + 'T10:00:00' }, // 500 days ago
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 5, price: 160, date: daysAgoISO(3) + 'T10:00:00' }
+    ];
+    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+    const allTxs = getFilteredTransactions(txs, 'all');
+    calculateSection1Metrics(allTxs, 'all');
+
+    expect(document.getElementById('snap-start-value').textContent).toBe('$1500.00'); // oldest value
+    expect(document.getElementById('snap-current-value').textContent).toBe('$2300.00'); // current cumulative value
+    expect(document.getElementById('snap-pnl-value').textContent).toBe('+$800.00');
   });
 });
 

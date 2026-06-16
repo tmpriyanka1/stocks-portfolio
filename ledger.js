@@ -265,6 +265,10 @@ function isTxInRange(tx, range) {
   const txDate = new Date(tx.date);
   if (isNaN(txDate.getTime())) return false; // Skip malformed dates
 
+  if (range === 'all') {
+    return true; // Bypass date boundaries completely to parse every single transaction record row
+  }
+
   const diffTime = SIMULATED_TODAY - txDate;
   const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
@@ -385,7 +389,7 @@ function groupTransactionsByTicker(transactions, range) {
       }
     });
 
-    if (inRangeTransactions.length > 0 || runningShares > 0) {
+    if (inRangeTransactions.length > 0) {
       const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : runningAvgBuy;
       const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : 0;
       const netShares = runningShares; // the net shares remaining after ALL transactions
@@ -510,7 +514,7 @@ function createMasterCardHTML(cardData) {
   }
 
   const assetTypeLabel = isOption ? 'Option' : 'Stock';
-  const qtyLabel = isOption ? 'Contracts' : 'Shares';
+  const qtyLabel = isOption ? 'CON' : 'SHR';
 
   // OPTIONS CONTRACT SPECIFICATION PARSER
   // Extracts strike price and Call/Put type from ticker like "NVDA $490 Call"
@@ -559,7 +563,7 @@ function createMasterCardHTML(cardData) {
           <div class="timeline-item ${actionClass}">
             <div class="timeline-dot"></div>
             <div class="timeline-header">
-              <span class="timeline-action-text">${actionLabel} ${sharesVal} ${isOption ? 'Contracts' : 'Shares'} @ $${priceVal.toFixed(2)}${isOption ? ' <span class="option-multiplier-hint">×100 = $' + txValue.toFixed(2) + '</span>' : ''}</span>
+              <span class="timeline-action-text">${actionLabel} ${sharesVal} ${isOption ? 'CON' : 'SHR'} @ $${priceVal.toFixed(2)}${isOption ? ' <span class="option-multiplier-hint">×100 = $' + txValue.toFixed(2) + '</span>' : ''}</span>
               <span class="timeline-date">${formattedDate}</span>
             </div>
             ${comment ? `<div class="timeline-comment">${comment}</div>` : ''}
@@ -575,7 +579,7 @@ function createMasterCardHTML(cardData) {
             <span class="card-ticker">${displayTicker}</span>
             <span class="card-asset-name">${cleanName}</span>
           </div>
-          <span class="card-asset-type">${assetTypeLabel}</span>
+          ${assetTypeLabel === 'Stock' ? '' : `<span class="card-asset-type">${assetTypeLabel}</span>`}
           ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
         </div>
         <div class="card-actions-area">
@@ -597,7 +601,7 @@ function createMasterCardHTML(cardData) {
         <div class="stat-mini-item" style="text-align: center;">
           <span class="stat-mini-label">Net Holdings</span>
           <span class="stat-mini-value" style="color: ${isCompleted ? 'var(--text-muted)' : 'var(--success)'}">
-            ${isCompleted ? 'Completed' : `${cardData.netShares} ${qtyLabel}`}
+            ${isCompleted ? 'Closed' : `${cardData.netShares} ${qtyLabel}`}
           </span>
         </div>
         <div class="stat-mini-item">
@@ -638,12 +642,15 @@ function renderLedger(range) {
     activeList.innerHTML = activeCards.map(createMasterCardHTML).join('');
   }
 
-  // Render ⚪ Completed Positions
+  // Render ⚪ Closed Positions
   if (completedCards.length === 0) {
-    completedList.innerHTML = `<div class="ledger-empty">No completed positions in this period.</div>`;
+    completedList.innerHTML = `<div class="ledger-empty">No closed positions in this period.</div>`;
   } else {
     completedList.innerHTML = completedCards.map(createMasterCardHTML).join('');
   }
+
+  // Calculate and update Section 1 metrics
+  calculateSection1Metrics(getFilteredTransactions(range), range);
 
   // Attach expanding interaction event listeners
   const cards = document.querySelectorAll('.master-card');
@@ -662,7 +669,7 @@ function renderLedger(range) {
  * Initial setup for top sliding filter pills row
  */
 function initTimeFilters() {
-  const filterBtns = document.querySelectorAll('.pill-btn');
+  const filterBtns = document.querySelectorAll('.pill-btn, .filter-btn');
   const slider = document.getElementById('ledger-slider');
 
   function updateSlider(btn) {
@@ -672,7 +679,7 @@ function initTimeFilters() {
     }
   }
 
-  const initialActive = document.querySelector('.pill-btn.active');
+  const initialActive = document.querySelector('.pill-btn.active, .filter-btn.active');
   if (initialActive) {
     requestAnimationFrame(() => {
       updateSlider(initialActive);
@@ -691,7 +698,7 @@ function initTimeFilters() {
   });
 
   window.addEventListener('resize', () => {
-    const activeBtn = document.querySelector('.pill-btn.active');
+    const activeBtn = document.querySelector('.pill-btn.active, .filter-btn.active');
     updateSlider(activeBtn);
   });
 }
@@ -783,10 +790,191 @@ async function pullCloudData() {
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
 
       // Re-render ledger with the current time-range filter
-      const activeBtn = document.querySelector('.pill-btn.active');
+      const activeBtn = document.querySelector('.pill-btn.active, .filter-btn.active');
       renderLedger(activeBtn ? activeBtn.getAttribute('data-range') : 'daily');
     }
   } catch (err) {
     console.error('Background pull failed:', err);
+  }
+}
+
+/**
+ * Checks if a transaction occurred before the specified time range start
+ */
+function isTxBeforeRange(tx, range) {
+  if (!tx || !tx.date) return false;
+  const txDate = new Date(tx.date);
+  if (isNaN(txDate.getTime())) return false;
+
+  if (range === 'all') return false;
+
+  const diffTime = SIMULATED_TODAY - txDate;
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+  if (range === 'daily') {
+    const todayStart = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate());
+    return txDate < todayStart;
+  } else if (range === 'weekly') {
+    return diffDays > 7;
+  } else if (range === 'monthly') {
+    return diffDays > 30;
+  } else if (range === 'yearly') {
+    return diffDays > 365;
+  }
+  return false;
+}
+
+/**
+ * Calculates Section 1 metrics and updates DOM snapshot card plus sparkline
+ */
+function calculateSection1Metrics(filteredTransactions, range) {
+  const allTxs = getAllTransactions().filter(tx => tx.ticker !== 'CASH' && tx.assetType !== 'CASH');
+
+  // Define interval times based on range
+  const intervalTimes = [];
+  if (range === 'daily') {
+    const start = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate(), 0, 0, 0);
+    for (let h = 0; h <= 24; h++) {
+      intervalTimes.push(new Date(start.getTime() + h * 60 * 60 * 1000));
+    }
+  } else if (range === 'weekly') {
+    const start = new Date(SIMULATED_TODAY.getTime() - 7 * 24 * 60 * 60 * 1000);
+    for (let d = 0; d <= 7; d++) {
+      intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
+    }
+  } else if (range === 'monthly') {
+    const start = new Date(SIMULATED_TODAY.getTime() - 30 * 24 * 60 * 60 * 1000);
+    for (let d = 0; d <= 30; d++) {
+      intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
+    }
+  } else if (range === 'yearly') {
+    for (let m = 12; m >= 0; m--) {
+      intervalTimes.push(new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth() - m, SIMULATED_TODAY.getDate(), 12, 0, 0));
+    }
+  } else {
+    // 'all'
+    const dates = allTxs.map(tx => new Date(tx.date).getTime());
+    const oldestTime = dates.length > 0 ? Math.min(...dates) : SIMULATED_TODAY.getTime() - 365 * 24 * 60 * 60 * 1000;
+    const start = new Date(oldestTime);
+    const end = SIMULATED_TODAY;
+    const step = (end.getTime() - start.getTime()) / 12;
+    for (let i = 0; i <= 12; i++) {
+      intervalTimes.push(new Date(start.getTime() + i * step));
+    }
+  }
+
+  // Calculate valuation at each interval boundary
+  const rollingValuations = intervalTimes.map(t => {
+    let val = 0;
+    allTxs.forEach(tx => {
+      if (new Date(tx.date) <= t) {
+        const isOption = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+        const multiplier = isOption ? 100 : 1;
+        const txVal = (parseFloat(tx.shares) || 0) * (parseFloat(tx.price) || 0) * multiplier;
+        if (tx.action === 'BUY') {
+          val += txVal;
+        } else if (tx.action === 'SELL') {
+          val -= txVal;
+        }
+      }
+    });
+    return val;
+  });
+
+  const periodOpenCost = rollingValuations[0];
+  const periodCurrentValue = rollingValuations[rollingValuations.length - 1];
+  const netPnL = periodCurrentValue - periodOpenCost;
+
+  // DOM elements updates
+  const startValEl = document.getElementById('snap-start-value');
+  const currentValEl = document.getElementById('snap-current-value');
+  const pnlEl = document.getElementById('snap-pnl-value');
+
+  if (startValEl) startValEl.textContent = "$" + periodOpenCost.toFixed(2);
+  if (currentValEl) currentValEl.textContent = "$" + periodCurrentValue.toFixed(2);
+
+  if (pnlEl) {
+    pnlEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral');
+    if (netPnL > 0) {
+      pnlEl.textContent = `+$${netPnL.toFixed(2)}`;
+      pnlEl.classList.add('pnl-up');
+    } else if (netPnL < 0) {
+      pnlEl.textContent = `-$${Math.abs(netPnL).toFixed(2)}`;
+      pnlEl.classList.add('pnl-down');
+    } else {
+      pnlEl.textContent = `$0.00`;
+      pnlEl.classList.add('pnl-neutral');
+    }
+  }
+
+  // Draw SVG sparkline
+  const width = 300;
+  const height = 60;
+  const padding = 5;
+  const points = [];
+
+  const minVal = Math.min(...rollingValuations);
+  const maxVal = Math.max(...rollingValuations);
+  const valRange = maxVal - minVal;
+
+  if (rollingValuations.length === 1) {
+    points.push({ x: 0, y: height / 2 });
+    points.push({ x: width, y: height / 2 });
+  } else {
+    rollingValuations.forEach((val, index) => {
+      const x = (index / (rollingValuations.length - 1)) * width;
+      let y = height / 2;
+      if (valRange > 0) {
+        y = (height - 2 * padding) - ((val - minVal) / valRange) * (height - 2 * padding) + padding;
+      }
+      points.push({ x, y });
+    });
+  }
+
+  const lineD = points.map((p, idx) => (idx === 0 ? 'M' : 'L') + ` ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const areaD = lineD + ` L ${points[points.length - 1].x.toFixed(1)} ${height} L ${points[0].x.toFixed(1)} ${height} Z`;
+
+  const trendPath = document.getElementById('snap-trend-path');
+  const graphArea = document.getElementById('snap-graph-area');
+  const dotsGroup = document.getElementById('snap-graph-dots');
+
+  if (trendPath) {
+    trendPath.setAttribute('d', lineD);
+    if (netPnL > 0) {
+      trendPath.setAttribute('stroke', 'var(--success, #10b981)');
+    } else if (netPnL < 0) {
+      trendPath.setAttribute('stroke', 'var(--danger, #ef4444)');
+    } else {
+      trendPath.setAttribute('stroke', 'var(--text-muted)');
+    }
+  }
+  if (graphArea) {
+    graphArea.setAttribute('d', areaD);
+  }
+
+  if (dotsGroup) {
+    dotsGroup.innerHTML = '';
+    points.forEach(p => {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', p.x.toFixed(1));
+      circle.setAttribute('cy', p.y.toFixed(1));
+      circle.setAttribute('r', '3');
+      circle.setAttribute('fill', netPnL > 0 ? 'var(--success, #10b981)' : netPnL < 0 ? 'var(--danger, #ef4444)' : 'var(--text-muted)');
+      circle.setAttribute('stroke', 'var(--bg-primary, #06070c)');
+      circle.setAttribute('stroke-width', '1');
+      circle.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+      circle.style.cursor = 'pointer';
+      
+      circle.addEventListener('mouseover', () => {
+        circle.setAttribute('r', '5.5');
+        circle.setAttribute('stroke-width', '1.5');
+      });
+      circle.addEventListener('mouseout', () => {
+        circle.setAttribute('r', '3');
+        circle.setAttribute('stroke-width', '1');
+      });
+      
+      dotsGroup.appendChild(circle);
+    });
   }
 }

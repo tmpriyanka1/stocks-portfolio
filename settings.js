@@ -313,6 +313,44 @@ function initPortfolioOverrides() {
       });
     });
   }
+
+  // ── Wallet & Capital Funds click handlers ───────────────────────────────
+  const depositBtn = document.getElementById('depositFundsBtn');
+  const withdrawBtn = document.getElementById('withdrawFundsBtn');
+
+  if (depositBtn) {
+    depositBtn.addEventListener('click', () => {
+      showConfirmModal({
+        icon: '💵',
+        title: 'Deposit Funds',
+        message: 'Enter the amount you would like to deposit to your wallet:',
+        hasInput: true
+      }, (amount) => {
+        if (isNaN(amount) || amount <= 0) {
+          showToast('⚠️ Please enter a valid positive amount.', true);
+          return;
+        }
+        executeCashAdjustment('DEPOSIT', amount);
+      });
+    });
+  }
+
+  if (withdrawBtn) {
+    withdrawBtn.addEventListener('click', () => {
+      showConfirmModal({
+        icon: '💸',
+        title: 'Withdraw Funds',
+        message: 'Enter the amount you would like to withdraw from your wallet:',
+        hasInput: true
+      }, (amount) => {
+        if (isNaN(amount) || amount <= 0) {
+          showToast('⚠️ Please enter a valid positive amount.', true);
+          return;
+        }
+        executeCashAdjustment('WITHDRAWAL', amount);
+      });
+    });
+  }
 }
 
 /**
@@ -399,6 +437,8 @@ function showConfirmModal(options, onConfirm) {
   const msgEl = document.getElementById('confirmModalMessage');
   const cancelBtn = document.getElementById('confirmModalCancel');
   const confirmBtn = document.getElementById('confirmModalConfirm');
+  const inputContainer = document.getElementById('confirmModalInputContainer');
+  const inputEl = document.getElementById('confirmModalInput');
 
   if (!modal || !confirmBtn || !cancelBtn) {
     if (confirm(options.message)) {
@@ -411,17 +451,32 @@ function showConfirmModal(options, onConfirm) {
   titleEl.textContent = options.title || 'Are you sure?';
   msgEl.textContent = options.message || 'Please confirm this action.';
 
+  if (options.hasInput) {
+    if (inputContainer) inputContainer.style.display = 'block';
+    if (inputEl) {
+      inputEl.value = '';
+      setTimeout(() => inputEl.focus(), 50);
+    }
+  } else {
+    if (inputContainer) inputContainer.style.display = 'none';
+  }
+
   modal.classList.add('active');
 
   const cleanup = () => {
     modal.classList.remove('active');
     confirmBtn.removeEventListener('click', handleConfirm);
     cancelBtn.removeEventListener('click', handleCancel);
+    if (inputContainer) inputContainer.style.display = 'none';
   };
 
   function handleConfirm() {
+    let result = undefined;
+    if (options.hasInput && inputEl) {
+      result = parseFloat(inputEl.value);
+    }
     cleanup();
-    onConfirm();
+    onConfirm(result);
   }
 
   function handleCancel() {
@@ -431,4 +486,165 @@ function showConfirmModal(options, onConfirm) {
   confirmBtn.addEventListener('click', handleConfirm);
   cancelBtn.addEventListener('click', handleCancel);
 }
+
+const CLOUD_SPREADSHEET_CONFIG = {
+  endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
+};
+
+function saveTransactionLocally(tx) {
+  let txs = [];
+  const stored = localStorage.getItem('portfolio_transactions');
+  if (stored) {
+    try {
+      txs = JSON.parse(stored);
+    } catch (e) {
+      txs = [];
+    }
+  }
+  txs.push(tx);
+  localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+}
+
+async function pushCashTransactionToCloud(tx, name) {
+  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  if (!url || url.includes("YOUR_API_URL")) {
+    showToast("Transaction saved locally (Offline Mode)", true);
+    return;
+  }
+
+  try {
+    await fetch(url, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify({
+        data: [
+          {
+            Symbol: tx.ticker,
+            Name: name,
+            Date: tx.date,
+            "Asset Type": tx.assetType,
+            Action: tx.action,
+            Shares: Number(tx.shares),
+            CostBasis: Number(tx.price),
+            "Avg Price": Number(tx.price),
+            CurrentPrice: Number(tx.price),
+            SL: 0,
+            Icon: "",
+            "Trade Journal Note": ""
+          }
+        ]
+      })
+    });
+    showToast("🟢 Cash Transaction Synced to Cloud Sheet!");
+  } catch (err) {
+    console.error('Cloud post failed:', err);
+    showToast("Transaction saved locally (Offline Mode)", true);
+  }
+}
+
+function executeCashAdjustment(actionType, amount) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const txDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+
+  const tx = {
+    ticker: "CASH",
+    assetType: "CASH",
+    action: actionType,
+    shares: 1,
+    price: amount,
+    date: txDate,
+    comment: "",
+    stopLoss: 0
+  };
+
+  // 1. Save locally
+  saveTransactionLocally(tx);
+
+  // 2. Recalculate Buying Power
+  let txs = [];
+  try {
+    txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
+  } catch (e) {
+    txs = [];
+  }
+
+  let totalCashAdjustments = 0;
+  const openPositions = {};
+  txs.forEach(t => {
+    if (!t) return;
+    if (t.ticker === 'CASH' || t.assetType === 'CASH') {
+      if (t.action === 'DEPOSIT') {
+        totalCashAdjustments += Number(t.price);
+      } else if (t.action === 'WITHDRAWAL') {
+        totalCashAdjustments -= Number(t.price);
+      }
+      return;
+    }
+    // Aggregate open positions
+    if (!openPositions[t.ticker]) {
+      openPositions[t.ticker] = { shares: 0, assetType: t.assetType || 'stocks', avgCost: 0 };
+    }
+    const pos = openPositions[t.ticker];
+    const sharesNum = Number(t.shares) || 0;
+    const priceNum  = parseFloat(t.price) || 0;
+    if (t.action === 'BUY') {
+      const newShares = pos.shares + sharesNum;
+      if (newShares > 0) {
+        pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
+      }
+      pos.shares = newShares;
+    } else if (t.action === 'SELL') {
+      pos.shares = Math.max(0, pos.shares - sharesNum);
+    }
+  });
+
+  let totalInvestedCapital = 0;
+  for (const ticker in openPositions) {
+    const pos = openPositions[ticker];
+    if (pos.shares <= 0) continue;
+    const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
+    const multiplier = isOpt ? 100 : 1;
+    totalInvestedCapital += pos.shares * pos.avgCost * multiplier;
+  }
+
+  const INITIAL_CASH = 200000.00;
+  let cashFlow = INITIAL_CASH;
+  txs.forEach(t => {
+    if (!t || t.ticker === 'CASH' || t.assetType === 'CASH') return;
+    const cost = Number(t.shares) * parseFloat(t.price || 0);
+    if (t.action === 'BUY') {
+      cashFlow -= cost;
+    } else if (t.action === 'SELL') {
+      cashFlow += cost;
+    }
+  });
+  const buyingPowerBaseline = Math.max(0, cashFlow);
+
+  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
+  const startingBase = isUserSet
+    ? parseFloat(localStorage.getItem('portfolio_buying_power') || '200000.00')
+    : (buyingPowerBaseline + totalInvestedCapital);
+
+  const calculatedBuyingPower = startingBase + totalCashAdjustments - totalInvestedCapital;
+
+  if (!isUserSet) {
+    localStorage.setItem('portfolio_buying_power', calculatedBuyingPower.toFixed(2));
+    // Update inputs
+    const bpInput  = document.getElementById('buyingPowerInput');
+    const bpPreview = document.getElementById('buyingPowerPreview');
+    if (bpInput) bpInput.value = calculatedBuyingPower.toFixed(2);
+    if (bpPreview) bpPreview.textContent = 'Current: $' + calculatedBuyingPower.toFixed(2);
+  }
+
+  // 3. Stream to cloud
+  const name = actionType === 'DEPOSIT' ? "Capital Bank Deposit" : "Capital Bank Withdrawal";
+  pushCashTransactionToCloud(tx, name);
+}
+
 

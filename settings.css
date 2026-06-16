@@ -526,3 +526,45 @@
   box-shadow: 0 6px 16px var(--accent-glow);
 }
 
+/* Wallet & Capital Funds Sub-panel Card */
+.sub-panel-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+#depositFundsBtn {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  color: #10b981 !important;
+}
+
+#depositFundsBtn:hover {
+  background: rgba(16, 185, 129, 0.18) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+#depositFundsBtn:active {
+  transform: scale(0.98);
+}
+
+#withdrawFundsBtn {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  color: #ef4444 !important;
+}
+
+#withdrawFundsBtn:hover {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+#withdrawFundsBtn:active {
+  transform: scale(0.98);
+}
+
+

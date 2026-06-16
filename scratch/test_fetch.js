@@ -3,8 +3,8 @@ async function testSpreadsheet() {
   try {
     const res = await fetch(url);
     const data = await res.json();
-    console.log('Sample item:', data[0]);
-    console.log('Keys of sample item:', Object.keys(data[0]));
+    console.log('All transactions count:', data.length);
+    console.log('Transactions:', JSON.stringify(data, null, 2));
   } catch (err) {
     console.error('Fetch failed:', err);
   }

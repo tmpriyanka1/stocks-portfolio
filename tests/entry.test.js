@@ -135,13 +135,17 @@ function getVal(obj, key) {
 // SOURCE: pullCloudData row parser (entry.js version)
 function parseCloudRow(tx) {
   const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
-  const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+  const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
   const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
   const currentPrice = rawCurrentPrice && rawCurrentPrice > 0 ? rawCurrentPrice : costBasis;
   let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
   let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
-  if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
-    assetType = 'options';
+  if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
+    assetType = 'CASH';
+  } else {
+    if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
+      assetType = 'options';
+    }
   }
   const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
   const action = String(getVal(tx, 'Action') || 'BUY');

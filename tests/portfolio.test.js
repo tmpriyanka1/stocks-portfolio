@@ -115,7 +115,7 @@ function getVal(obj, key) {
 
 function parseCloudRow(tx) {
   const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
-  const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+  const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
   const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
   const currentPrice = rawCurrentPrice && rawCurrentPrice > 0 ? rawCurrentPrice : costBasis;
   let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
@@ -816,6 +816,7 @@ function computeEquityEngine(transactions, marketPricesMap, defaultAssets) {
   const openPositions = {};
   transactions.forEach(tx => {
     if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
     if (!openPositions[tx.ticker]) {
       openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0 };
     }
@@ -837,6 +838,7 @@ function computeEquityEngine(transactions, marketPricesMap, defaultAssets) {
   let totalAssetEquity = 0;
   let optionContractsCount = 0;
   for (const ticker in openPositions) {
+    if (ticker === 'CASH') continue;
     const pos = openPositions[ticker];
     if (pos.shares <= 0) continue;
     const marketEntry = marketPricesMap[ticker] || (defaultAssets && defaultAssets[ticker]) || {};
@@ -1187,4 +1189,35 @@ describe('cleanAssetName — asset name cleaning', () => {
     expect(cleanAssetName('My Custom Stock LLC')).toBe('My Custom Stock');
   });
 });
+
+describe('Cash Management adjustments & metric calculations', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('deposits and withdrawals calculate totalCashAdjustments correctly', () => {
+    const txs = [
+      { ticker: 'CASH', assetType: 'CASH', action: 'DEPOSIT', price: 15000 },
+      { ticker: 'CASH', assetType: 'CASH', action: 'WITHDRAWAL', price: 5000 }
+    ];
+    let totalCashAdjustments = 0;
+    txs.forEach(tx => {
+      if (tx.action === 'WITHDRAWAL') {
+        totalCashAdjustments -= Number(tx.price);
+      } else if (tx.assetType === 'CASH' || tx.action === 'DEPOSIT') {
+        totalCashAdjustments += Number(tx.price);
+      }
+    });
+    expect(totalCashAdjustments).toBe(10000);
+  });
+
+  test('Buying Power calculation with starting base and active open position capital', () => {
+    const startingBase = 200000.00;
+    const totalCashAdjustments = 10000.00; // deposit 10k
+    const totalInvestedCapital = 4800.00; // bought 10 NVDA @ 480
+    const buyingPower = startingBase + totalCashAdjustments - totalInvestedCapital;
+    expect(buyingPower).toBe(205200.00);
+  });
+});
+
 

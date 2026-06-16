@@ -201,22 +201,27 @@ async function pullCloudData() {
         }
         const action = String(getVal(tx, 'Action') || 'BUY');
         const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
-        const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
         // Fallback: if CurrentPrice is missing or 0, use costBasis so balance never drops to $0
         const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
         const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
-        const date = String(getVal(tx, 'Date') || new Date().toISOString());
+        const rawDate = getVal(tx, 'Date');
+        const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
         const comment = String(getVal(tx, 'Trade Journal Note') || '');
         const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
         
         let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
-        // Also auto-detect options from the symbol itself (e.g. "SPY $723 CALL 6/11")
-        if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
-          assetType = 'options';
+        if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
+          assetType = 'CASH';
+        } else {
+          // Also auto-detect options from the symbol itself (e.g. "SPY $723 CALL 6/11")
+          if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
+            assetType = 'options';
+          }
         }
 
-        if (ticker) {
+        if (ticker && assetType !== 'CASH') {
           marketPrices[ticker] = {
             name: name,
             currentPrice: currentPrice,
@@ -233,11 +238,10 @@ async function pullCloudData() {
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
 
       // ── BUYING POWER BASELINE: derive from BUY/SELL flows in cloud schema ─
-      // Start from a fixed initial cash amount then deduct BUY outflows
-      // and add back SELL proceeds so the displayed cash is always live.
-      const INITIAL_CASH = 50000.00;
+      const INITIAL_CASH = 200000.00;
       let cashFlow = INITIAL_CASH;
       parsedTxs.forEach(tx => {
+        if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
         const cost = Number(tx.shares) * parseFloat(tx.price || 0);
         if (tx.action === 'BUY') {
           cashFlow -= cost;
@@ -245,10 +249,58 @@ async function pullCloudData() {
           cashFlow += cost;
         }
       });
-      // Floor at zero — buying power is never shown negative
       const buyingPowerBaseline = Math.max(0, cashFlow);
-      if (localStorage.getItem('portfolio_buying_power_user_set') !== 'true') {
-        localStorage.setItem('portfolio_buying_power', buyingPowerBaseline.toFixed(2));
+
+      // ── CASH ADJUSTMENTS ──
+      let totalCashAdjustments = 0;
+      parsedTxs.forEach(tx => {
+        if (tx.action === 'WITHDRAWAL') {
+          totalCashAdjustments -= Number(tx.price);
+        } else if (tx.assetType === 'CASH' || tx.action === 'DEPOSIT') {
+          totalCashAdjustments += Number(tx.price);
+        }
+      });
+
+      // ── TOTAL INVESTED CAPITAL ──
+      const openPositions = {};
+      parsedTxs.forEach(tx => {
+        if (!tx || !tx.ticker) return;
+        if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+        if (!openPositions[tx.ticker]) {
+          openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0 };
+        }
+        const pos = openPositions[tx.ticker];
+        const sharesNum = Number(tx.shares) || 0;
+        const priceNum  = parseFloat(tx.price) || 0;
+        if (tx.action === 'BUY') {
+          const newShares = pos.shares + sharesNum;
+          if (newShares > 0) {
+            pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
+          }
+          pos.shares = newShares;
+        } else if (tx.action === 'SELL') {
+          pos.shares = Math.max(0, pos.shares - sharesNum);
+        }
+      });
+
+      let totalInvestedCapital = 0;
+      for (const ticker in openPositions) {
+        const pos = openPositions[ticker];
+        if (pos.shares <= 0) continue;
+        const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
+        const multiplier = isOpt ? 100 : 1;
+        totalInvestedCapital += pos.shares * pos.avgCost * multiplier;
+      }
+
+      const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
+      const startingBase = isUserSet
+        ? parseFloat(localStorage.getItem('portfolio_buying_power') || '200000.00')
+        : (buyingPowerBaseline + totalInvestedCapital);
+
+      const calculatedBuyingPower = startingBase + totalCashAdjustments - totalInvestedCapital;
+
+      if (!isUserSet) {
+        localStorage.setItem('portfolio_buying_power', calculatedBuyingPower.toFixed(2));
       }
       // ─────────────────────────────────────────────────────────────────────
 
@@ -457,6 +509,8 @@ function refreshPortfolioAssets() {
   const groups = {};
 
   txs.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
     if (!groups[tx.ticker]) {
       groups[tx.ticker] = {
         ticker: tx.ticker,
@@ -576,6 +630,7 @@ function updateBalanceMetrics() {
   const openPositions = {}; // ticker → { shares, assetType, avgCost }
   localTransactions.forEach(tx => {
     if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
     if (!openPositions[tx.ticker]) {
       openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0 };
     }
@@ -599,6 +654,7 @@ function updateBalanceMetrics() {
   let optionContractsCount = 0;
 
   for (const ticker in openPositions) {
+    if (ticker === 'CASH') continue;
     const pos = openPositions[ticker];
     if (pos.shares <= 0) continue;
 
@@ -623,20 +679,64 @@ function updateBalanceMetrics() {
   }
 
   // ── 4. NET PORTFOLIO VALUE = CASH (buying power) + OPEN POSITION EQUITY ──
-  const buyingPowerBaseline = parseFloat(
-    localStorage.getItem('portfolio_buying_power') || '12342.90'
-  );
+  let totalCashAdjustments = 0;
+  localTransactions.forEach(tx => {
+    if (tx.action === 'WITHDRAWAL') {
+      totalCashAdjustments -= Number(tx.price);
+    } else if (tx.assetType === 'CASH' || tx.action === 'DEPOSIT') {
+      totalCashAdjustments += Number(tx.price);
+    }
+  });
+
+  let totalInvestedCapital = 0;
+  for (const ticker in openPositions) {
+    const pos = openPositions[ticker];
+    if (pos.shares <= 0) continue;
+    if (ticker === 'CASH') continue;
+    const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
+    const multiplier = isOpt ? 100 : 1;
+    totalInvestedCapital += pos.shares * pos.avgCost * multiplier;
+  }
+
+  // Calculate base cash baseline
+  const INITIAL_CASH = 200000.00;
+  let cashFlow = INITIAL_CASH;
+  localTransactions.forEach(tx => {
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+    const cost = Number(tx.shares) * parseFloat(tx.price || 0);
+    if (tx.action === 'BUY') {
+      cashFlow -= cost;
+    } else if (tx.action === 'SELL') {
+      cashFlow += cost;
+    }
+  });
+  const buyingPowerBaseline = Math.max(0, cashFlow);
+
+  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
+  const startingBase = isUserSet
+    ? parseFloat(localStorage.getItem('portfolio_buying_power') || '200000.00')
+    : (buyingPowerBaseline + totalInvestedCapital);
+
+  let buyingPower = startingBase + totalCashAdjustments - totalInvestedCapital;
+  if (isUserSet) {
+    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+  }
+
   // If the user has manually overridden the display value in Settings, use it.
   const portfolioValueOverride = localStorage.getItem('portfolio_value_override');
   const netPortfolioValue = portfolioValueOverride !== null
     ? parseFloat(portfolioValueOverride)
-    : buyingPowerBaseline + totalAssetEquity;
+    : buyingPower + totalAssetEquity;
 
   // ── 5. RENDER BALANCE CARD ────────────────────────────────────────────────
-  balanceAmountEl.textContent = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(netPortfolioValue);
+  const formattedBalance = '$' + netPortfolioValue.toFixed(2);
+  const formattedBP = '$' + buyingPower.toFixed(2);
+
+  balanceAmountEl.textContent = formattedBalance;
+  const totalBalanceEl2 = document.getElementById('total-balance');
+  if (totalBalanceEl2) {
+    totalBalanceEl2.textContent = formattedBalance;
+  }
 
   const totalChange    = totalAssetEquity - totalPrevEquity;
   const totalChangePct = totalPrevEquity > 0 ? (totalChange / totalPrevEquity) * 100 : 0;
@@ -670,12 +770,13 @@ function updateBalanceMetrics() {
   }
 
   // ── 6. BUYING POWER (cash balance) ───────────────────────────────────────
-  const bpElement = document.getElementById('buying-power-value');
+  const bpElement = document.getElementById('buying-power-value') || document.getElementById('buying-power');
   if (bpElement) {
-    bpElement.textContent = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(buyingPowerBaseline);
+    bpElement.textContent = formattedBP;
+  }
+  const bpElement2 = document.getElementById('buying-power');
+  if (bpElement2) {
+    bpElement2.textContent = formattedBP;
   }
 }
 
@@ -763,15 +864,15 @@ function renderAssetsTable(filterMode) {
     // Options: apply standard 100-share leverage multiplier to all position math
     const multiplier = isOption ? 100 : 1;
 
-    // VALUE = shares * avgCost (* 100 for options)
-    const holdingsValue = asset.shares * asset.avgCost * multiplier;
+    // VALUE = shares * currentPrice (* 100 for options)
+    const liveValue = asset.shares * asset.currentPrice * multiplier;
     const formattedVal = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(holdingsValue);
+    }).format(liveValue);
 
     // TREND = (shares * livePrice * multiplier) - holdingsValue → P&L in dollars
-    const liveValue = asset.shares * asset.currentPrice * multiplier;
+    const holdingsValue = asset.shares * asset.avgCost * multiplier;
     const changeUsd = liveValue - holdingsValue;
     const isPositive = changeUsd >= 0;
     const changeSign = isPositive ? 'positive' : 'negative';
@@ -848,16 +949,11 @@ function renderAssetsTable(filterMode) {
           ${isOption ? `<div class="underlying-price-pill" title="Underlying Asset Price">${underlyingTicker}: $${underlyingPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
         </div>
         
-        <!-- Column 5: Total position value and mini graph -->
+        <!-- Column 5: Total position value -->
         <div class="asset-col-total-graph">
           <div class="total-value-row">
             <span class="asset-total-val">${formattedVal}</span>
             <span class="asset-row-perf ${changeSign}">${formattedChange}</span>
-          </div>
-          <div class="asset-mini-chart">
-            <svg class="mini-chart" viewBox="0 0 90 24" preserveAspectRatio="none">
-              <path d="${sparklinePath}" fill="none" stroke="${chartStrokeColor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
           </div>
         </div>
       </div>

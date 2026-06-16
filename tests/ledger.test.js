@@ -18,65 +18,111 @@
 
 const SIMULATED_TODAY = new Date();
 
+// SOURCE: isTxInRange
+function isTxInRange(tx, range) {
+  if (!tx || !tx.date) return false;
+  const txDate = new Date(tx.date);
+  if (isNaN(txDate.getTime())) return false; // Skip malformed dates
+
+  const diffTime = SIMULATED_TODAY - txDate;
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+  if (range === 'daily') {
+    return txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
+           txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
+           txDate.getDate() === SIMULATED_TODAY.getDate();
+  } else if (range === 'weekly') {
+    return diffDays <= 7 && diffDays >= -1;
+  } else if (range === 'monthly') {
+    return diffDays <= 30 && diffDays >= -1;
+  } else if (range === 'yearly') {
+    return diffDays <= 365 && diffDays >= -1;
+  }
+  return true;
+}
+
 // SOURCE: getFilteredTransactions
 function getFilteredTransactions(txs, range) {
-  return txs.filter(tx => {
-    if (!tx || !tx.date) return false;
-    const txDate = new Date(tx.date);
-    if (isNaN(txDate.getTime())) return false;
-
-    const diffTime = SIMULATED_TODAY - txDate;
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-    if (range === 'daily') {
-      return txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
-             txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
-             txDate.getDate() === SIMULATED_TODAY.getDate();
-    } else if (range === 'weekly') {
-      return diffDays <= 7 && diffDays >= -1;
-    } else if (range === 'monthly') {
-      return diffDays <= 30 && diffDays >= -1;
-    } else if (range === 'yearly') {
-      return diffDays <= 365 && diffDays >= -1;
-    }
-    return true;
-  });
+  return txs.filter(tx => isTxInRange(tx, range));
 }
 
 // SOURCE: groupTransactionsByTicker
-function groupTransactionsByTicker(transactions) {
+function groupTransactionsByTicker(transactions, range) {
   const groups = {};
   transactions.forEach(tx => {
     if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
     const ticker = tx.ticker;
     const assetType = tx.assetType || 'stocks';
     if (!groups[ticker]) {
-      groups[ticker] = { ticker, assetType, buyQty: 0, buyVal: 0, sellQty: 0, sellVal: 0, transactions: [] };
+      groups[ticker] = { ticker, assetType, transactions: [] };
     }
     const g = groups[ticker];
     g.transactions.push(tx);
-    const sharesNum = parseFloat(tx.shares) || 0;
-    const priceNum = parseFloat(tx.price) || 0;
-    const action = tx.action || 'BUY';
-    if (action === 'BUY') {
-      g.buyQty += sharesNum;
-      g.buyVal += sharesNum * priceNum;
-    } else if (action === 'SELL') {
-      g.sellQty += sharesNum;
-      g.sellVal += sharesNum * priceNum;
-    }
   });
 
   const results = [];
   for (const ticker in groups) {
     const g = groups[ticker];
     g.transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
-    const avgBuy = g.buyQty > 0 ? g.buyVal / g.buyQty : 0;
-    const avgSell = g.sellQty > 0 ? g.sellVal / g.sellQty : 0;
-    const netShares = g.buyQty - g.sellQty;
-    const closedShares = Math.min(g.buyQty, g.sellQty);
-    const realizedPL = closedShares > 0 ? closedShares * (avgSell - avgBuy) : 0;
-    results.push({ ticker: g.ticker, assetType: g.assetType, buyQty: g.buyQty, buyAvg: avgBuy, sellQty: g.sellQty, sellAvg: avgSell, netShares, realizedPL, transactions: g.transactions });
+
+    let runningShares = 0;
+    let runningAvgBuy = 0;
+    let realizedPLInRange = 0;
+    let buyQtyInRange = 0;
+    let buyValInRange = 0;
+    let sellQtyInRange = 0;
+    let sellValInRange = 0;
+    const inRangeTransactions = [];
+
+    g.transactions.forEach(tx => {
+      const sharesNum = parseFloat(tx.shares) || 0;
+      const priceNum = parseFloat(tx.price) || 0;
+      const action = tx.action || 'BUY';
+
+      const inRange = isTxInRange(tx, range);
+
+      if (action === 'BUY') {
+        const newShares = runningShares + sharesNum;
+        if (newShares > 0) {
+          runningAvgBuy = (runningShares * runningAvgBuy + sharesNum * priceNum) / newShares;
+        }
+        runningShares = newShares;
+        if (inRange) {
+          buyQtyInRange += sharesNum;
+          buyValInRange += sharesNum * priceNum;
+          inRangeTransactions.push(tx);
+        }
+      } else if (action === 'SELL') {
+        const pnl = sharesNum * (priceNum - runningAvgBuy);
+        runningShares = Math.max(0, runningShares - sharesNum);
+        if (runningShares === 0) {
+          runningAvgBuy = 0;
+        }
+        if (inRange) {
+          sellQtyInRange += sharesNum;
+          sellValInRange += sharesNum * priceNum;
+          realizedPLInRange += pnl;
+          inRangeTransactions.push(tx);
+        }
+      }
+    });
+
+    if (inRangeTransactions.length > 0 || runningShares > 0) {
+      const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : runningAvgBuy;
+      const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : 0;
+      results.push({
+        ticker: g.ticker,
+        assetType: g.assetType,
+        buyQty: buyQtyInRange,
+        buyAvg: avgBuy,
+        sellQty: sellQtyInRange,
+        sellAvg: avgSell,
+        netShares: runningShares,
+        realizedPL: realizedPLInRange,
+        transactions: inRangeTransactions
+      });
+    }
   }
   return results;
 }
@@ -118,13 +164,17 @@ function getVal(obj, key) {
 // SOURCE: pullCloudData row parser (ledger.js version)
 function parseCloudRow(tx) {
   const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
-  const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+  const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
   const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
   const currentPrice = rawCurrentPrice && rawCurrentPrice > 0 ? rawCurrentPrice : costBasis;
   let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
   let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
-  if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
-    assetType = 'options';
+  if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
+    assetType = 'CASH';
+  } else {
+    if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
+      assetType = 'options';
+    }
   }
   const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
   const action = String(getVal(tx, 'Action') || 'BUY');
@@ -333,6 +383,17 @@ describe('groupTransactionsByTicker — position aggregation', () => {
 
   test('empty transaction list returns empty results', () => {
     expect(groupTransactionsByTicker([])).toHaveLength(0);
+  });
+
+  test('active position with no transactions in the daily range is included in daily view', () => {
+    const txs = [
+      { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185, date: daysAgoISO(10) + 'T10:00:00' },
+    ];
+    const result = groupTransactionsByTicker(txs, 'daily');
+    expect(result).toHaveLength(1);
+    expect(result[0].ticker).toBe('TSLA');
+    expect(result[0].netShares).toBe(15);
+    expect(result[0].transactions).toHaveLength(0);
   });
 });
 

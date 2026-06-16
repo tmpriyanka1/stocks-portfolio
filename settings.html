@@ -204,6 +204,15 @@
               <span class="override-hint">⚠️ When set, this overrides the calculated equity total on the Portfolio screen. Clear the field to restore live math.</span>
             </div>
 
+            <!-- Wallet & Capital Funds sub-panel -->
+            <div class="sub-panel-card">
+              <h3 class="settings-title" style="margin-bottom: 12px; font-size: 13px;">Wallet & Capital Funds</h3>
+              <div style="display: flex; gap: 12px;">
+                <button type="button" class="action-btn" id="depositFundsBtn">+ Add Cash Deposit</button>
+                <button type="button" class="action-btn" id="withdrawFundsBtn">- Log Cash Withdrawal</button>
+              </div>
+            </div>
+
             <button type="button" class="action-btn save-btn" id="saveOverridesBtn">💾 Save Portfolio Overrides</button>
           </div>
         </div>
@@ -279,6 +288,9 @@
         <div class="confirm-modal-icon" id="confirmModalIcon">⚠️</div>
         <h3 class="confirm-modal-title" id="confirmModalTitle">Are you sure?</h3>
         <p class="confirm-modal-message" id="confirmModalMessage">Do you really want to proceed with this action?</p>
+        <div class="confirm-modal-input-container" id="confirmModalInputContainer" style="display: none; margin-bottom: 16px;">
+          <input type="number" id="confirmModalInput" placeholder="Enter amount..." min="0.01" step="0.01" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(0, 0, 0, 0.2); color: white; text-align: center; font-size: 16px; outline: none;">
+        </div>
         <div class="confirm-modal-actions">
           <button type="button" class="confirm-modal-btn btn-cancel" id="confirmModalCancel">Cancel</button>
           <button type="button" class="confirm-modal-btn btn-confirm" id="confirmModalConfirm">Confirm</button>

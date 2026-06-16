@@ -444,16 +444,24 @@ async function pullCloudData() {
         }
         const action = String(getVal(tx, 'Action') || 'BUY');
         const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
-        const costBasis = parseFloat(getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
+        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
         const currentPrice = parseFloat(getVal(tx, 'CurrentPrice') || costBasis);
-        const date = String(getVal(tx, 'Date') || new Date().toISOString());
+        const rawDate = getVal(tx, 'Date');
+        const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
         const comment = String(getVal(tx, 'Trade Journal Note') || '');
         const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
         
         let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
+        if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
+          assetType = 'CASH';
+        } else {
+          if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
+            assetType = 'options';
+          }
+        }
 
-        if (ticker) {
+        if (ticker && assetType !== 'CASH') {
           marketPrices[ticker] = {
             name: name,
             currentPrice: currentPrice,

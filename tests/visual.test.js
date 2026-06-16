@@ -152,6 +152,28 @@ describe('Visual Regression UI Tests', () => {
     if (!result.pass) {
       throw new Error(result.message);
     }
+
+    // 4. Yearly Filter State
+    await page.click('button[data-range="yearly"]');
+    await page.waitForFunction(() => document.querySelector('button[data-range="yearly"]').classList.contains('active'));
+    await page.waitForTimeout(600);
+
+    screenshot = await takeScreenshot(page);
+    result = compareScreenshot(screenshot, 'ledger-yearly');
+    if (!result.pass) {
+      throw new Error(result.message);
+    }
+
+    // 5. All Time Filter State
+    await page.click('button[data-range="all"]');
+    await page.waitForFunction(() => document.querySelector('button[data-range="all"]').classList.contains('active'));
+    await page.waitForTimeout(600);
+
+    screenshot = await takeScreenshot(page);
+    result = compareScreenshot(screenshot, 'ledger-all');
+    if (!result.pass) {
+      throw new Error(result.message);
+    }
   }, 30000);
 
   test('Add Trade View - Initial Form Layout', async () => {

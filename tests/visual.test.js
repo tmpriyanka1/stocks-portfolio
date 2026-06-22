@@ -39,6 +39,16 @@ describe('Visual Regression UI Tests', () => {
     return await page.screenshot({ fullPage: true });
   }
 
+  // Helper to wait for the asynchronous AI summary engine fetch to settle
+  async function waitForAISummary(page) {
+    await page.waitForFunction(() => {
+      const el = document.querySelector('#snap-ai-brief-text');
+      if (!el) return true;
+      const text = el.textContent;
+      return !text.includes('Gathering') && !text.includes('Generating');
+    }, { timeout: 5000 }).catch(() => {});
+  }
+
   beforeAll(async () => {
     jest.setTimeout(30000);
     browser = await chromium.launch({
@@ -59,15 +69,43 @@ describe('Visual Regression UI Tests', () => {
     // Use standard high-definition viewport for rendering UI pages
     await page.setViewportSize({ width: 1200, height: 1200 });
 
+    // Mock Google Apps Script endpoint fetches to be deterministic and offline-safe
+    await page.route('**/macros/s/**', route => {
+      const req = route.request();
+      if (req.method() === 'POST') {
+        try {
+          const bodyData = JSON.parse(req.postData() || '{}');
+          if (bodyData.action === 'getAIJournalSummary') {
+            route.fulfill({
+              status: 200,
+              contentType: 'text/plain',
+              body: 'Mocked AI Journal summary digest content.'
+            });
+            return;
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      } else if (req.method() === 'GET') {
+        route.fulfill({
+          status: 500,
+          contentType: 'text/plain',
+          body: 'Offline mock: cloud pull disabled for visual tests'
+        });
+        return;
+      }
+      route.continue();
+    });
+
     // Mock global Date to 2026-06-03T12:00:00 to align with ledger transaction filters
     await page.addInitScript(() => {
       const mockDate = new Date('2026-06-03T12:00:00');
       const OriginalDate = Date;
-      function MockDate(y, m, d, h, min, s, ms) {
-        if (arguments.length === 0) {
+      function MockDate(...args) {
+        if (args.length === 0) {
           return new OriginalDate(mockDate.getTime());
         }
-        return new OriginalDate(y, m, d, h, min, s, ms);
+        return new OriginalDate(...args);
       }
       MockDate.prototype = OriginalDate.prototype;
       MockDate.now = () => mockDate.getTime();
@@ -123,6 +161,7 @@ describe('Visual Regression UI Tests', () => {
     // 1. Initial/Daily Filter State
     await page.waitForSelector('.ledger-section');
     await page.waitForTimeout(600);
+    await waitForAISummary(page);
 
     let screenshot = await takeScreenshot(page);
     let result = compareScreenshot(screenshot, 'ledger-daily');
@@ -131,11 +170,18 @@ describe('Visual Regression UI Tests', () => {
     }
 
     // 2. Weekly Filter State
-    await page.click('button[data-range="weekly"]');
+    console.log('Clicking pill-weekly...');
+    await page.click('#pill-weekly');
+    console.log('Clicking dropdown-weekly li...');
+    await page.click('#dropdown-weekly li[data-value="This Week"]');
+    console.log('Waiting for active class weekly...');
     // Wait for the active class to settle and table layout update
-    await page.waitForFunction(() => document.querySelector('button[data-range="weekly"]').classList.contains('active'));
+    await page.waitForFunction(() => document.querySelector('.pill-dropdown-container[data-type="weekly"]').classList.contains('active'));
+    console.log('Waiting for 600ms weekly...');
     await page.waitForTimeout(600);
+    await waitForAISummary(page);
 
+    console.log('Taking screenshot weekly...');
     screenshot = await takeScreenshot(page);
     result = compareScreenshot(screenshot, 'ledger-weekly');
     if (!result.pass) {
@@ -143,10 +189,19 @@ describe('Visual Regression UI Tests', () => {
     }
 
     // 3. Monthly Filter State
-    await page.click('button[data-range="monthly"]');
-    await page.waitForFunction(() => document.querySelector('button[data-range="monthly"]').classList.contains('active'));
+    console.log('Clicking pill-monthly...');
+    await page.click('#pill-monthly');
+    const monthlyOpts = await page.$$eval('#dropdown-monthly li', lis => lis.map(li => li.getAttribute('data-value')));
+    console.log('Available monthly options:', monthlyOpts);
+    console.log('Clicking dropdown-monthly li...');
+    await page.click(`#dropdown-monthly li[data-value="${monthlyOpts[0]}"]`);
+    console.log('Waiting for active class monthly...');
+    await page.waitForFunction(() => document.querySelector('.pill-dropdown-container[data-type="monthly"]').classList.contains('active'));
+    console.log('Waiting for 600ms monthly...');
     await page.waitForTimeout(600);
+    await waitForAISummary(page);
 
+    console.log('Taking screenshot monthly...');
     screenshot = await takeScreenshot(page);
     result = compareScreenshot(screenshot, 'ledger-monthly');
     if (!result.pass) {
@@ -154,26 +209,45 @@ describe('Visual Regression UI Tests', () => {
     }
 
     // 4. Yearly Filter State
-    await page.click('button[data-range="yearly"]');
-    await page.waitForFunction(() => document.querySelector('button[data-range="yearly"]').classList.contains('active'));
+    console.log('Clicking pill-yearly...');
+    await page.click('#pill-yearly');
+    const yearlyOpts = await page.$$eval('#dropdown-yearly li', lis => lis.map(li => li.getAttribute('data-value')));
+    console.log('Available yearly options:', yearlyOpts);
+    console.log('Clicking dropdown-yearly li...');
+    await page.click(`#dropdown-yearly li[data-value="${yearlyOpts[0]}"]`);
+    console.log('Waiting for active class yearly...');
+    await page.waitForFunction(() => document.querySelector('.pill-dropdown-container[data-type="yearly"]').classList.contains('active'));
+    console.log('Waiting for 600ms yearly...');
     await page.waitForTimeout(600);
+    await waitForAISummary(page);
 
+    console.log('Taking screenshot yearly...');
     screenshot = await takeScreenshot(page);
     result = compareScreenshot(screenshot, 'ledger-yearly');
     if (!result.pass) {
       throw new Error(result.message);
     }
 
-    // 5. All Time Filter State
-    await page.click('button[data-range="all"]');
-    await page.waitForFunction(() => document.querySelector('button[data-range="all"]').classList.contains('active'));
+    // 5. Quarterly Filter State
+    console.log('Clicking pill-quarterly...');
+    await page.click('#pill-quarterly');
+    const quarterlyOpts = await page.$$eval('#dropdown-quarterly li', lis => lis.map(li => li.getAttribute('data-value')));
+    console.log('Available quarterly options:', quarterlyOpts);
+    console.log('Clicking dropdown-quarterly li...');
+    await page.click(`#dropdown-quarterly li[data-value="${quarterlyOpts[0]}"]`);
+    console.log('Waiting for active class quarterly...');
+    await page.waitForFunction(() => document.querySelector('.pill-dropdown-container[data-type="quarterly"]').classList.contains('active'));
+    console.log('Waiting for 600ms quarterly...');
     await page.waitForTimeout(600);
+    await waitForAISummary(page);
 
+    console.log('Taking screenshot quarterly...');
     screenshot = await takeScreenshot(page);
-    result = compareScreenshot(screenshot, 'ledger-all');
+    result = compareScreenshot(screenshot, 'ledger-quarterly');
     if (!result.pass) {
       throw new Error(result.message);
     }
+    console.log('All reports filter tests done!');
   }, 30000);
 
   test('Add Trade View - Initial Form Layout', async () => {

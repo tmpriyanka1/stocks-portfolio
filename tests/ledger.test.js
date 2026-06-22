@@ -19,39 +19,74 @@
 const SIMULATED_TODAY = new Date();
 
 // SOURCE: isTxInRange
-function isTxInRange(tx, range) {
+function isTxInRange(tx, startDateOrRange, endDate) {
+  if (startDateOrRange === undefined) return true;
   if (!tx || !tx.date) return false;
   const txDate = new Date(tx.date);
   if (isNaN(txDate.getTime())) return false; // Skip malformed dates
 
-  if (range === 'all') {
-    return true; // Bypass date boundaries completely to parse every single transaction record row
+  if (typeof startDateOrRange === 'string') {
+    const range = startDateOrRange;
+    if (range === 'all') {
+      return true;
+    }
+    const diffTime = SIMULATED_TODAY - txDate;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    if (range === 'daily') {
+      return txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
+             txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
+             txDate.getDate() === SIMULATED_TODAY.getDate();
+    } else if (range === 'weekly') {
+      return diffDays <= 7 && diffDays >= -1;
+    } else if (range === 'monthly') {
+      return diffDays <= 30 && diffDays >= -1;
+    } else if (range === 'yearly') {
+      return diffDays <= 365 && diffDays >= -1;
+    }
+    return true;
   }
 
-  const diffTime = SIMULATED_TODAY - txDate;
-  const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-  if (range === 'daily') {
-    return txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
-           txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
-           txDate.getDate() === SIMULATED_TODAY.getDate();
-  } else if (range === 'weekly') {
-    return diffDays <= 7 && diffDays >= -1;
-  } else if (range === 'monthly') {
-    return diffDays <= 30 && diffDays >= -1;
-  } else if (range === 'yearly') {
-    return diffDays <= 365 && diffDays >= -1;
-  }
-  return true;
+  const startDate = startDateOrRange;
+  if (!startDate || !endDate) return false;
+  return txDate >= startDate && txDate <= endDate;
 }
 
 // SOURCE: getFilteredTransactions
-function getFilteredTransactions(txs, range) {
-  return txs.filter(tx => isTxInRange(tx, range));
+function getFilteredTransactions(txs, startDateOrRange, endDate) {
+  return txs.filter(tx => isTxInRange(tx, startDateOrRange, endDate));
 }
 
 // SOURCE: groupTransactionsByTicker
-function groupTransactionsByTicker(transactions, range) {
+function groupTransactionsByTicker(transactions, startDateOrRange, endDate) {
+  let start = (startDateOrRange instanceof Date) ? startDateOrRange : null;
+  let end = (endDate instanceof Date) ? endDate : null;
+
+  if (!start || !end) {
+    if (typeof startDateOrRange === 'string') {
+      const refDate = new Date(SIMULATED_TODAY.getTime());
+      if (startDateOrRange === 'daily') {
+        start = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 0, 0, 0);
+        end = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 23, 59, 59, 999);
+      } else if (startDateOrRange === 'weekly') {
+        start = new Date(refDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+        end = refDate;
+      } else if (startDateOrRange === 'monthly') {
+        start = new Date(refDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+        end = refDate;
+      } else if (startDateOrRange === 'yearly') {
+        start = new Date(refDate.getFullYear() - 1, refDate.getMonth(), refDate.getDate(), 12, 0, 0);
+        end = refDate;
+      } else {
+        start = new Date(0);
+        end = new Date();
+      }
+    } else {
+      start = new Date(0);
+      end = new Date();
+    }
+  }
+
   const groups = {};
   transactions.forEach(tx => {
     if (!tx || !tx.ticker) return;
@@ -61,8 +96,7 @@ function groupTransactionsByTicker(transactions, range) {
     if (!groups[ticker]) {
       groups[ticker] = { ticker, assetType, transactions: [] };
     }
-    const g = groups[ticker];
-    g.transactions.push(tx);
+    groups[ticker].transactions.push(tx);
   });
 
   const results = [];
@@ -77,14 +111,20 @@ function groupTransactionsByTicker(transactions, range) {
     let buyValInRange = 0;
     let sellQtyInRange = 0;
     let sellValInRange = 0;
+    let hasSellInRange = false;
     const inRangeTransactions = [];
+
+    // Rolling balance as of end date
+    let netSharesAsOfEndDate = 0;
+    let avgBuyAsOfEndDate = 0;
 
     g.transactions.forEach(tx => {
       const sharesNum = parseFloat(tx.shares) || 0;
       const priceNum = parseFloat(tx.price) || 0;
       const action = tx.action || 'BUY';
-
-      const inRange = isTxInRange(tx, range);
+      const txDate = new Date(tx.date);
+      const isBeforeOrOnEnd = txDate <= end;
+      const inRange = txDate >= start && txDate <= end;
 
       if (action === 'BUY') {
         const newShares = runningShares + sharesNum;
@@ -107,14 +147,34 @@ function groupTransactionsByTicker(transactions, range) {
           sellQtyInRange += sharesNum;
           sellValInRange += sharesNum * priceNum;
           realizedPLInRange += pnl;
+          hasSellInRange = true;
           inRangeTransactions.push(tx);
         }
       }
+
+      if (isBeforeOrOnEnd) {
+        netSharesAsOfEndDate = runningShares;
+        avgBuyAsOfEndDate = runningAvgBuy;
+      }
     });
 
-    if (inRangeTransactions.length > 0) {
-      const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : runningAvgBuy;
+    // Compute net shares today (current balance)
+    let runningSharesAllTime = 0;
+    g.transactions.forEach(tx => {
+      const sharesNum = parseFloat(tx.shares) || 0;
+      const action = tx.action || 'BUY';
+      if (action === 'BUY') {
+        runningSharesAllTime += sharesNum;
+      } else if (action === 'SELL') {
+        runningSharesAllTime = Math.max(0, runningSharesAllTime - sharesNum);
+      }
+    });
+    const currentSharesToday = runningSharesAllTime;
+
+    if (netSharesAsOfEndDate > 0 || hasSellInRange) {
+      const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : avgBuyAsOfEndDate;
       const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : 0;
+
       results.push({
         ticker: g.ticker,
         assetType: g.assetType,
@@ -122,9 +182,12 @@ function groupTransactionsByTicker(transactions, range) {
         buyAvg: avgBuy,
         sellQty: sellQtyInRange,
         sellAvg: avgSell,
-        netShares: runningShares,
+        netShares: netSharesAsOfEndDate,
         realizedPL: realizedPLInRange,
-        transactions: inRangeTransactions
+        transactions: inRangeTransactions,
+        hasSellInRange: hasSellInRange,
+        currentSharesToday: currentSharesToday,
+        avgBuyAsOfEndDate: avgBuyAsOfEndDate
       });
     }
   }
@@ -389,12 +452,46 @@ describe('groupTransactionsByTicker — position aggregation', () => {
     expect(groupTransactionsByTicker([])).toHaveLength(0);
   });
 
-  test('active position with no transactions in the daily range is NOT included in daily view', () => {
+  test('active position with no transactions in the daily range IS included in daily view under rolling balance engine', () => {
     const txs = [
       { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185, date: daysAgoISO(10) + 'T10:00:00' },
     ];
     const result = groupTransactionsByTicker(txs, 'daily');
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].ticker).toBe('TSLA');
+    expect(result[0].netShares).toBe(15);
+  });
+
+  test('rolling balance identifies historical open positions that are closed today', () => {
+    const txs = [
+      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 400, date: daysAgoISO(10) + 'T10:00:00' },
+      { ticker: 'NVDA', assetType: 'stocks', action: 'SELL', shares: 10, price: 450, date: daysAgoISO(2) + 'T12:00:00' } // Sold 2 days ago
+    ];
+    // Check as of 5 days ago (weekly filter of a past week, or custom end date = 5 days ago)
+    const refDate = new Date(SIMULATED_TODAY.getTime());
+    const fiveDaysAgo = new Date(refDate.getTime() - 5 * 24 * 60 * 60 * 1000);
+    const tenDaysAgo = new Date(refDate.getTime() - 10 * 24 * 60 * 60 * 1000);
+    
+    const result = groupTransactionsByTicker(txs, tenDaysAgo, fiveDaysAgo);
+    expect(result).toHaveLength(1);
+    expect(result[0].ticker).toBe('NVDA');
+    expect(result[0].netShares).toBe(10); // Had 10 shares as of 5 days ago
+    expect(result[0].currentSharesToday).toBe(0); // Has 0 shares today
+  });
+
+  test('rolling balance identifies partial close positions', () => {
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 20, price: 150, date: daysAgoISO(5) + 'T10:00:00' },
+      { ticker: 'AAPL', assetType: 'stocks', action: 'SELL', shares: 5, price: 170, date: daysAgoISO(2) + 'T12:00:00' } // Partial sell
+    ];
+    const refDate = new Date(SIMULATED_TODAY.getTime());
+    const startOfWeek = new Date(refDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const result = groupTransactionsByTicker(txs, startOfWeek, refDate);
+    expect(result).toHaveLength(1);
+    expect(result[0].ticker).toBe('AAPL');
+    expect(result[0].netShares).toBe(15); // holds 15 shares at end of week
+    expect(result[0].hasSellInRange).toBe(true); // sold shares in the week (partial close)
   });
 });
 
@@ -731,27 +828,34 @@ describe('getAssetName & cleanAssetName — ledger name resolution and cleaning'
 });
 
 // SOURCE: isTxBeforeRange (from ledger.js)
-function isTxBeforeRange(tx, range) {
+function isTxBeforeRange(tx, rangeOrStartDate) {
   if (!tx || !tx.date) return false;
   const txDate = new Date(tx.date);
   if (isNaN(txDate.getTime())) return false;
 
-  if (range === 'all') return false;
+  if (typeof rangeOrStartDate === 'string') {
+    const range = rangeOrStartDate;
+    if (range === 'all') return false;
 
-  const diffTime = SIMULATED_TODAY - txDate;
-  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    const diffTime = SIMULATED_TODAY - txDate;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
-  if (range === 'daily') {
-    const todayStart = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate());
-    return txDate < todayStart;
-  } else if (range === 'weekly') {
-    return diffDays > 7;
-  } else if (range === 'monthly') {
-    return diffDays > 30;
-  } else if (range === 'yearly') {
-    return diffDays > 365;
+    if (range === 'daily') {
+      const todayStart = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate());
+      return txDate < todayStart;
+    } else if (range === 'weekly') {
+      return diffDays > 7;
+    } else if (range === 'monthly') {
+      return diffDays > 30;
+    } else if (range === 'yearly') {
+      return diffDays > 365;
+    }
+    return false;
   }
-  return false;
+
+  const startDate = rangeOrStartDate;
+  if (!startDate) return false;
+  return txDate < startDate;
 }
 
 // SOURCE: getAllTransactions (from ledger.js)
@@ -768,36 +872,70 @@ function getAllTransactions() {
 }
 
 // SOURCE: calculateSection1Metrics (from ledger.js)
-function calculateSection1Metrics(filteredTransactions, range) {
+function calculateSection1Metrics(filteredTransactionsOrRangeType, rangeTypeOrStartDate, endDate) {
+  let rangeType;
+  let startDate;
+  let targetEndDate;
+
+  if (typeof filteredTransactionsOrRangeType === 'string') {
+    rangeType = filteredTransactionsOrRangeType;
+    startDate = rangeTypeOrStartDate;
+    targetEndDate = endDate;
+  } else {
+    rangeType = rangeTypeOrStartDate;
+    const refDate = new Date(SIMULATED_TODAY.getTime());
+    if (rangeType === 'daily') {
+      startDate = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 0, 0, 0);
+      targetEndDate = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 23, 59, 59, 999);
+    } else if (rangeType === 'weekly') {
+      startDate = new Date(refDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+      targetEndDate = refDate;
+    } else if (rangeType === 'monthly') {
+      startDate = new Date(refDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      targetEndDate = refDate;
+    } else if (rangeType === 'yearly') {
+      startDate = new Date(refDate.getFullYear() - 1, refDate.getMonth(), refDate.getDate(), 12, 0, 0);
+      targetEndDate = refDate;
+    } else {
+      const allTxs = getAllTransactions().filter(tx => tx.ticker !== 'CASH' && tx.assetType !== 'CASH');
+      const dates = allTxs.map(tx => new Date(tx.date).getTime());
+      const oldestTime = dates.length > 0 ? Math.min(...dates) : refDate.getTime() - 365 * 24 * 60 * 60 * 1000;
+      startDate = new Date(oldestTime);
+      targetEndDate = refDate;
+    }
+  }
+
   const allTxs = getAllTransactions().filter(tx => tx.ticker !== 'CASH' && tx.assetType !== 'CASH');
 
-  // Define interval times based on range
   const intervalTimes = [];
-  if (range === 'daily') {
-    const start = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate(), 0, 0, 0);
+  const start = new Date(startDate.getTime());
+  const end = new Date(targetEndDate.getTime());
+
+  if (rangeType === 'daily') {
     for (let h = 0; h <= 24; h++) {
       intervalTimes.push(new Date(start.getTime() + h * 60 * 60 * 1000));
     }
-  } else if (range === 'weekly') {
-    const start = new Date(SIMULATED_TODAY.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if (rangeType === 'weekly') {
     for (let d = 0; d <= 7; d++) {
       intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
     }
-  } else if (range === 'monthly') {
-    const start = new Date(SIMULATED_TODAY.getTime() - 30 * 24 * 60 * 60 * 1000);
-    for (let d = 0; d <= 30; d++) {
+  } else if (rangeType === 'monthly') {
+    const numDays = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+    for (let d = 0; d <= numDays; d++) {
       intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
     }
-  } else if (range === 'yearly') {
-    for (let m = 12; m >= 0; m--) {
-      intervalTimes.push(new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth() - m, SIMULATED_TODAY.getDate(), 12, 0, 0));
+  } else if (rangeType === 'quarterly') {
+    const step = (end.getTime() - start.getTime()) / 12;
+    for (let i = 0; i <= 12; i++) {
+      intervalTimes.push(new Date(start.getTime() + i * step));
+    }
+  } else if (rangeType === 'yearly') {
+    const startYear = start.getFullYear();
+    const startMonth = start.getMonth();
+    for (let m = 0; m <= 12; m++) {
+      intervalTimes.push(new Date(startYear, startMonth + m, 1, 12, 0, 0));
     }
   } else {
-    // 'all'
-    const dates = allTxs.map(tx => new Date(tx.date).getTime());
-    const oldestTime = dates.length > 0 ? Math.min(...dates) : SIMULATED_TODAY.getTime() - 365 * 24 * 60 * 60 * 1000;
-    const start = new Date(oldestTime);
-    const end = SIMULATED_TODAY;
     const step = (end.getTime() - start.getTime()) / 12;
     for (let i = 0; i <= 12; i++) {
       intervalTimes.push(new Date(start.getTime() + i * step));
@@ -830,6 +968,57 @@ function calculateSection1Metrics(filteredTransactions, range) {
   const startValEl = document.getElementById('snap-start-value');
   const currentValEl = document.getElementById('snap-current-value');
   const pnlEl = document.getElementById('snap-pnl-value');
+
+  let closedPL = 0;
+  let activePL = 0;
+
+  const defaultAssetDataForTests = {
+    'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
+    'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
+    'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
+    'SPY': { name: 'SPDR S&P 500 ETF Trust', currentPrice: 512.42, stopLoss: 490.00, change24h: 0.45, icon: 'SP' },
+    'SPX': { name: 'S&P 500 Index', currentPrice: 5120.30, stopLoss: 5000.00, change24h: 0.52, icon: 'SX' }
+  };
+
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) {
+    marketPrices = {};
+  }
+
+  const allGroups = groupTransactionsByTicker(allTxs, startDate, targetEndDate);
+  allGroups.forEach(pos => {
+    const isOption = pos.assetType === 'options' || (/\$\d/.test(pos.ticker) && /\b(call|put)\b/i.test(pos.ticker));
+    const multiplier = isOption ? 100 : 1;
+    
+    // Closed P&L
+    closedPL += pos.realizedPL * multiplier;
+    
+    // Active P&L
+    if (pos.netShares > 0) {
+      const marketEntry = marketPrices[pos.ticker] || defaultAssetDataForTests[pos.ticker] || {};
+      const currentPrice = parseFloat(marketEntry.currentPrice) || pos.buyAvg || 0;
+      const unrealizedPL = pos.netShares * (currentPrice - pos.buyAvg) * multiplier;
+      activePL += unrealizedPL;
+    }
+  });
+
+  const totalPerformance = closedPL + activePL;
+  const perfEl = document.getElementById('total-performance-value');
+  if (perfEl) {
+    perfEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral');
+    if (totalPerformance > 0) {
+      perfEl.textContent = `+$${totalPerformance.toFixed(2)}`;
+      perfEl.classList.add('pnl-up');
+    } else if (totalPerformance < 0) {
+      perfEl.textContent = `-$${Math.abs(totalPerformance).toFixed(2)}`;
+      perfEl.classList.add('pnl-down');
+    } else {
+      perfEl.textContent = `$0.00`;
+      perfEl.classList.add('pnl-neutral');
+    }
+  }
 
   if (startValEl) startValEl.textContent = "$" + periodOpenCost.toFixed(2);
   if (currentValEl) currentValEl.textContent = "$" + periodCurrentValue.toFixed(2);
@@ -927,6 +1116,8 @@ describe('isTxBeforeRange & calculateSection1Metrics', () => {
       <span id="snap-start-value"></span>
       <span id="snap-current-value"></span>
       <span id="snap-pnl-value"></span>
+      <div id="total-performance-value"></div>
+      <div id="snap-ai-brief-text"></div>
       <svg>
         <path id="snap-trend-path" d="" />
         <path id="snap-graph-area" d="" />
@@ -1031,6 +1222,20 @@ describe('isTxBeforeRange & calculateSection1Metrics', () => {
     expect(document.getElementById('snap-start-value').textContent).toBe('$1500.00'); // oldest value
     expect(document.getElementById('snap-current-value').textContent).toBe('$2300.00'); // current cumulative value
     expect(document.getElementById('snap-pnl-value').textContent).toBe('+$800.00');
+  });
+
+  test('calculateSection1Metrics computes correct total performance (Closed P&L + Active P&L)', () => {
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 10, price: 150, date: daysAgoISO(5) + 'T10:00:00' },
+      { ticker: 'AAPL', assetType: 'stocks', action: 'SELL', shares: 5, price: 170, date: daysAgoISO(2) + 'T10:00:00' }
+    ];
+    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+    const weeklyTxs = getFilteredTransactions(txs, 'weekly');
+    calculateSection1Metrics(weeklyTxs, 'weekly');
+
+    expect(document.getElementById('total-performance-value').textContent).toBe('+$227.50');
+    expect(document.getElementById('total-performance-value').classList.contains('pnl-up')).toBe(true);
   });
 });
 

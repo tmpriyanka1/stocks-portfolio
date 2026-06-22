@@ -415,4 +415,151 @@
 .snap-value.pnl-down { color: var(--danger, #ef4444) !important; }
 .snap-value.pnl-neutral { color: var(--text-secondary) !important; }
 
+/* Glass Dropdown Styles */
+.glass-dropdown {
+  position: absolute;
+  top: calc(100% + 10px); /* Positions exactly 10px below the button */
+  left: 0; /* Aligns perfectly with the left edge of the pill button */
+  display: none;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 6px 0;
+  min-width: 110px; /* Reduced from 150px to fit tightly around text */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  list-style: none;
+  z-index: 100;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* The Left-Above Corner Arrow Token Component */
+.glass-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px; /* Positions triangle right on top boundary border */
+  left: 16px; /* Shifts arrow to the left corner area */
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid rgba(255, 255, 255, 0.08); /* Matches card theme tint color */
+}
+
+/* Right-Edge alignment modifier for Quarterly and Yearly dropdowns */
+.filter-pill-wrapper.align-right .glass-dropdown {
+  left: auto;
+  right: 0; /* Aligns the dropdown container right edge with the pill button right edge */
+}
+
+.filter-pill-wrapper.align-right .glass-dropdown::before {
+  left: auto;
+  right: 16px; /* Positions the arrow perfectly on the right side under the pill */
+}
+
+.glass-dropdown.show {
+  display: block;
+  animation: fadeInSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInSlide {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.glass-dropdown li {
+  padding: 8px 12px; /* Snug fit around the year/quarter strings */
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  font-family: var(--font-main);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.glass-dropdown li:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.glass-dropdown li.selected {
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Pill active state styling */
+.pill-dropdown-container.active .pill-btn {
+  color: var(--accent) !important;
+  font-weight: 700;
+}
+
+/* Dim effect */
+.pill-group-dimmed .pill-dropdown-container:not(.active) {
+  opacity: 0.4;
+}
+
+.pill-dropdown-container {
+  position: relative;
+  display: inline-block;
+  transition: opacity 0.25s ease;
+}
+
+/* Chevron orientation logic */
+.chevron {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.pill-dropdown-container.active .chevron {
+  transform: rotate(180deg);
+}
+
+/* Global PnL styling classes to handle color indicators dynamically */
+.pnl-up {
+  color: var(--success, #10b981) !important;
+}
+.pnl-down {
+  color: var(--danger, #ef4444) !important;
+}
+.pnl-neutral {
+  color: var(--text-secondary) !important;
+}
+
+.ai-notes-content {
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 3.5px solid var(--accent);
+  border-radius: 4px 12px 12px 4px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Badge styles for dynamic status tokens */
+.badge {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  white-space: nowrap;
+}
+.badge-historical {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.badge-partial {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
 

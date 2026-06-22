@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
+  endpointUrl: "https://script.google.com/macros/s/AKfycbxoVjvu0Zkcq7LlDXs8195vF2ocQiuXW6KHHlFKeABkHsx3Sxp2D46cu2no3Axwx9FZ/exec"
 };
 
 const defaultAssetData = {
@@ -45,7 +45,7 @@ function resolveAssetName(ticker) {
   if (tickersDb && tickersDb[capitalized]) {
     return tickersDb[capitalized];
   }
-  
+
   // Try matching option underlying ticker
   const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
   if (isOption) {
@@ -57,7 +57,7 @@ function resolveAssetName(ticker) {
       return tickersDb[underlying];
     }
   }
-  
+
   // Fallback to extraction from regex
   const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
   if (underlyingMatch) {
@@ -69,11 +69,15 @@ function resolveAssetName(ticker) {
       return tickersDb[underlying];
     }
   }
-  
+
   return capitalized;
 }
 
 const SIMULATED_TODAY = new Date();
+
+let currentStartDate = null;
+let currentEndDate = null;
+let currentRangeType = 'daily';
 
 // 1. MOCK TRANSACTIONS HISTORY DATABASE
 const portfolioTransactions = [
@@ -237,12 +241,11 @@ document.addEventListener('DOMContentLoaded', () => {
     applyAccentColor(savedAccent);
   }
 
-  initTimeFilters();
   initNavigationRedirects();
 
-  // Load tickers DB, then render ledger from cache
+  // Load tickers DB, then initialize dropdowns and render ledger
   loadTickersDb().then(() => {
-    renderLedger('daily');
+    initDropdownFilters();
   });
 
   // Background cloud pull — updates UI silently once fresh data arrives
@@ -258,32 +261,14 @@ function applyAccentColor(hexColor) {
 }
 
 /**
- * Filters the transaction list by selected time range pill relative to simulated date
+ * Checks if a transaction is within a start/end date range
  */
-function isTxInRange(tx, range) {
+function isTxInRange(tx, startDate, endDate) {
   if (!tx || !tx.date) return false;
   const txDate = new Date(tx.date);
   if (isNaN(txDate.getTime())) return false; // Skip malformed dates
-
-  if (range === 'all') {
-    return true; // Bypass date boundaries completely to parse every single transaction record row
-  }
-
-  const diffTime = SIMULATED_TODAY - txDate;
-  const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-  if (range === 'daily') {
-    return txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
-           txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
-           txDate.getDate() === SIMULATED_TODAY.getDate();
-  } else if (range === 'weekly') {
-    return diffDays <= 7 && diffDays >= -1;
-  } else if (range === 'monthly') {
-    return diffDays <= 30 && diffDays >= -1;
-  } else if (range === 'yearly') {
-    return diffDays <= 365 && diffDays >= -1;
-  }
-  return true;
+  if (!startDate || !endDate) return false;
+  return txDate >= startDate && txDate <= endDate;
 }
 
 function getAllTransactions() {
@@ -303,26 +288,51 @@ function getAllTransactions() {
 }
 
 /**
- * Filters the transaction list by selected time range pill relative to simulated date
+ * Filters the transaction list by start and end dates
  */
-function getFilteredTransactions(range) {
+function getFilteredTransactions(startDate, endDate) {
   const txs = getAllTransactions();
-  return txs.filter(tx => isTxInRange(tx, range));
+  return txs.filter(tx => isTxInRange(tx, startDate, endDate));
 }
 
 /**
  * Groups raw transactions by ticker and computes weighted metrics
  */
-function groupTransactionsByTicker(transactions, range) {
-  const groups = {};
+function groupTransactionsByTicker(transactions, startDate, endDate) {
+  let start = (startDate instanceof Date) ? startDate : null;
+  let end = (endDate instanceof Date) ? endDate : null;
 
+  if (!start || !end) {
+    if (typeof startDate === 'string') {
+      const refDate = new Date(SIMULATED_TODAY.getTime());
+      if (startDate === 'daily') {
+        start = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 0, 0, 0);
+        end = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 23, 59, 59, 999);
+      } else if (startDate === 'weekly') {
+        start = new Date(refDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+        end = refDate;
+      } else if (startDate === 'monthly') {
+        start = new Date(refDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+        end = refDate;
+      } else if (startDate === 'yearly') {
+        start = new Date(refDate.getFullYear() - 1, refDate.getMonth(), refDate.getDate(), 12, 0, 0);
+        end = refDate;
+      } else {
+        start = new Date(0);
+        end = new Date();
+      }
+    } else {
+      start = new Date(0);
+      end = new Date();
+    }
+  }
+
+  const groups = {};
   transactions.forEach(tx => {
-    if (!tx || !tx.ticker) return; // Skip invalid or malformed transaction lines
+    if (!tx || !tx.ticker) return;
     if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
-    
     const ticker = tx.ticker;
     const assetType = tx.assetType || 'stocks';
-
     if (!groups[ticker]) {
       groups[ticker] = {
         ticker: ticker,
@@ -330,16 +340,12 @@ function groupTransactionsByTicker(transactions, range) {
         transactions: []
       };
     }
-
-    const g = groups[ticker];
-    g.transactions.push(tx);
+    groups[ticker].transactions.push(tx);
   });
 
   const results = [];
   for (const ticker in groups) {
     const g = groups[ticker];
-
-    // Sort transactions oldest first for natural chronological history reading
     g.transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     let runningShares = 0;
@@ -349,15 +355,20 @@ function groupTransactionsByTicker(transactions, range) {
     let buyValInRange = 0;
     let sellQtyInRange = 0;
     let sellValInRange = 0;
+    let hasSellInRange = false;
     const inRangeTransactions = [];
+
+    // Rolling balance as of end date
+    let netSharesAsOfEndDate = 0;
+    let avgBuyAsOfEndDate = 0;
 
     g.transactions.forEach(tx => {
       const sharesNum = parseFloat(tx.shares) || 0;
       const priceNum = parseFloat(tx.price) || 0;
       const action = tx.action || 'BUY';
-
-      // Check if this transaction date is in range
-      const inRange = isTxInRange(tx, range);
+      const txDate = new Date(tx.date);
+      const isBeforeOrOnEnd = txDate <= end;
+      const inRange = txDate >= start && txDate <= end;
 
       if (action === 'BUY') {
         const newShares = runningShares + sharesNum;
@@ -365,34 +376,48 @@ function groupTransactionsByTicker(transactions, range) {
           runningAvgBuy = (runningShares * runningAvgBuy + sharesNum * priceNum) / newShares;
         }
         runningShares = newShares;
-        
         if (inRange) {
           buyQtyInRange += sharesNum;
           buyValInRange += sharesNum * priceNum;
           inRangeTransactions.push(tx);
         }
       } else if (action === 'SELL') {
-        // Realized P&L = shares sold * (sell price - average buy price at that moment)
         const pnl = sharesNum * (priceNum - runningAvgBuy);
-        
         runningShares = Math.max(0, runningShares - sharesNum);
         if (runningShares === 0) {
-          runningAvgBuy = 0; // reset average buy if position is completely closed
+          runningAvgBuy = 0;
         }
-
         if (inRange) {
           sellQtyInRange += sharesNum;
           sellValInRange += sharesNum * priceNum;
           realizedPLInRange += pnl;
+          hasSellInRange = true;
           inRangeTransactions.push(tx);
         }
       }
+
+      if (isBeforeOrOnEnd) {
+        netSharesAsOfEndDate = runningShares;
+        avgBuyAsOfEndDate = runningAvgBuy;
+      }
     });
 
-    if (inRangeTransactions.length > 0) {
-      const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : runningAvgBuy;
+    // Compute net shares today (current balance)
+    let runningSharesAllTime = 0;
+    g.transactions.forEach(tx => {
+      const sharesNum = parseFloat(tx.shares) || 0;
+      const action = tx.action || 'BUY';
+      if (action === 'BUY') {
+        runningSharesAllTime += sharesNum;
+      } else if (action === 'SELL') {
+        runningSharesAllTime = Math.max(0, runningSharesAllTime - sharesNum);
+      }
+    });
+    const currentSharesToday = runningSharesAllTime;
+
+    if (netSharesAsOfEndDate > 0 || hasSellInRange) {
+      const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : avgBuyAsOfEndDate;
       const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : 0;
-      const netShares = runningShares; // the net shares remaining after ALL transactions
 
       results.push({
         ticker: g.ticker,
@@ -401,9 +426,12 @@ function groupTransactionsByTicker(transactions, range) {
         buyAvg: avgBuy,
         sellQty: sellQtyInRange,
         sellAvg: avgSell,
-        netShares: netShares,
+        netShares: netSharesAsOfEndDate,
         realizedPL: realizedPLInRange,
-        transactions: inRangeTransactions
+        transactions: inRangeTransactions,
+        hasSellInRange: hasSellInRange,
+        currentSharesToday: currentSharesToday,
+        avgBuyAsOfEndDate: avgBuyAsOfEndDate
       });
     }
   }
@@ -444,7 +472,7 @@ function getAssetName(ticker) {
   if (marketPrices[ticker] && marketPrices[ticker].name) {
     return marketPrices[ticker].name;
   }
-  
+
   return resolveAssetName(ticker);
 }
 
@@ -464,64 +492,68 @@ function formatOptionTicker(ticker) {
 /**
  * Builds HTML code dynamically for a grouped Position Master Card
  */
-function createMasterCardHTML(cardData) {
-  const isCompleted = cardData.netShares <= 0;
+function createMasterCardHTML(cardData, listType) {
   // Dual-source options detection: type field OR ticker pattern ($price + CALL/PUT)
   const isOption = cardData.assetType === 'options'
     || (/\$\d/.test(cardData.ticker) && /\b(call|put)\b/i.test(cardData.ticker));
   // Options: apply standard 100-share leverage multiplier to P&L display
   const multiplier = isOption ? 100 : 1;
 
-
-  const buyAvgStr = cardData.buyAvg > 0 ? `$${cardData.buyAvg.toFixed(2)}` : '—';
+  const buyAvgVal = cardData.avgBuyAsOfEndDate || cardData.buyAvg || 0;
+  const buyAvgStr = buyAvgVal > 0 ? `$${buyAvgVal.toFixed(2)}` : '—';
   const sellAvgStr = cardData.sellAvg > 0 ? `$${cardData.sellAvg.toFixed(2)}` : '—';
 
-  let pnlClass = 'neutral';
-  let pnlSign = '';
-  const realizedPLLeveraged = cardData.realizedPL * multiplier;
-  if (realizedPLLeveraged > 0) {
-    pnlClass = 'positive';
-    pnlSign = '+';
-  } else if (realizedPLLeveraged < 0) {
-    pnlClass = 'negative';
+  // Retrieve current market price for Unrealized P&L
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) {
+    marketPrices = {};
   }
-  const pnlStr = `$${Math.abs(realizedPLLeveraged).toFixed(2)}`;
+  const marketEntry = marketPrices[cardData.ticker] || defaultAssetData[cardData.ticker] || {};
+  const currentPrice = parseFloat(marketEntry.currentPrice) || buyAvgVal || 0;
 
-  let unrealizedBadgeHTML = '';
-  if (!isCompleted) {
-    let marketPrices = {};
-    try {
-      marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-    } catch (e) {
-      marketPrices = {};
+  // 3-Tier P&L calculations
+  const realizedPL = cardData.realizedPL * multiplier;
+  const unrealizedPL = cardData.netShares * (currentPrice - buyAvgVal) * multiplier;
+  const totalPL = realizedPL + unrealizedPL;
+
+  // Class / sign formatting
+  let realizedClass = 'neutral';
+  let realizedSign = '';
+  if (realizedPL > 0) { realizedClass = 'pnl-up'; realizedSign = '+'; }
+  else if (realizedPL < 0) { realizedClass = 'pnl-down'; }
+
+  let unrealizedClass = 'neutral';
+  let unrealizedSign = '';
+  if (unrealizedPL > 0) { unrealizedClass = 'pnl-up'; unrealizedSign = '+'; }
+  else if (unrealizedPL < 0) { unrealizedClass = 'pnl-down'; }
+
+  let totalClass = 'neutral';
+  let totalSign = '';
+  if (totalPL > 0) { totalClass = 'pnl-up'; totalSign = '+'; }
+  else if (totalPL < 0) { totalClass = 'pnl-down'; }
+
+  // Inject dynamic badges based on status check
+  let badgeHTML = '';
+  if (listType === 'active') {
+    if (cardData.netShares > 0 && cardData.currentSharesToday === 0) {
+      badgeHTML = `<span class="badge badge-historical">🕒 Historical Open / Closed Today</span>`;
     }
-    const marketEntry = marketPrices[cardData.ticker] || defaultAssetData[cardData.ticker] || {};
-    const currentPrice = parseFloat(marketEntry.currentPrice) || cardData.buyAvg || 0;
-    
-    // Unrealized P&L based on current market price
-    const unrealizedPL = cardData.netShares * (currentPrice - cardData.buyAvg) * multiplier;
-    
-    let unrealizedClass = 'neutral';
-    let unrealizedSign = '';
-    if (unrealizedPL > 0) {
-      unrealizedClass = 'positive';
-      unrealizedSign = '+';
-    } else if (unrealizedPL < 0) {
-      unrealizedClass = 'negative';
+  } else if (listType === 'closed') {
+    if (cardData.netShares > 0) {
+      badgeHTML = `<span class="badge badge-partial">⚖️ Partial Close</span>`;
     }
-    const unrealizedStr = `$${Math.abs(unrealizedPL).toFixed(2)}`;
-    unrealizedBadgeHTML = `<span class="card-pnl-badge ${unrealizedClass}">Market P&L: ${unrealizedSign}${unrealizedStr}</span>`;
   }
 
   const assetTypeLabel = isOption ? 'Option' : 'Stock';
   const qtyLabel = isOption ? 'CON' : 'SHR';
 
   // OPTIONS CONTRACT SPECIFICATION PARSER
-  // Extracts strike price and Call/Put type from ticker like "NVDA $490 Call"
   let optionBadgeHTML = '';
   if (isOption) {
     const contractType = /\bCall\b/i.test(cardData.ticker) ? 'call'
-                       : /\bPut\b/i.test(cardData.ticker) ? 'put' : null;
+      : /\bPut\b/i.test(cardData.ticker) ? 'put' : null;
     if (contractType) {
       optionBadgeHTML += `<span class="option-badge ${contractType}">${contractType.toUpperCase()}</span>`;
     }
@@ -535,31 +567,30 @@ function createMasterCardHTML(cardData) {
   const timelineHTML = cardData.transactions.length === 0
     ? `<div style="padding: 10px 0; font-size: 11px; color: var(--text-muted); text-align: center; font-style: italic;">No transactions in this period.</div>`
     : cardData.transactions.map(tx => {
-        if (!tx) return '';
-        
-        const txDate = tx.date ? new Date(tx.date) : new Date();
-        const isToday = !isNaN(txDate.getTime()) &&
-                        txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
-                        txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
-                        txDate.getDate() === SIMULATED_TODAY.getDate();
-                        
-        const formattedDate = isNaN(txDate.getTime())
-          ? 'Unknown Date'
-          : (isToday
-            ? txDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-            : txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+      if (!tx) return '';
 
-        const action = tx.action || 'BUY';
-        const actionClass = action.toLowerCase();
-        const actionLabel = action === 'SELL' ? 'Sold' : 'Bought';
+      const txDate = tx.date ? new Date(tx.date) : new Date();
+      const isToday = !isNaN(txDate.getTime()) &&
+        txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
+        txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
+        txDate.getDate() === SIMULATED_TODAY.getDate();
 
-        const sharesVal = parseFloat(tx.shares) || 0;
-        const priceVal = parseFloat(tx.price) || 0;
-        const comment = tx.comment || '';
-        // For options, show the leveraged contract value in the timeline
-        const txValue = isOption ? (sharesVal * priceVal * 100) : (sharesVal * priceVal);
+      const formattedDate = isNaN(txDate.getTime())
+        ? 'Unknown Date'
+        : (isToday
+          ? txDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+          : txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
 
-        return `
+      const action = tx.action || 'BUY';
+      const actionClass = action.toLowerCase();
+      const actionLabel = action === 'SELL' ? 'Sold' : 'Bought';
+
+      const sharesVal = parseFloat(tx.shares) || 0;
+      const priceVal = parseFloat(tx.price) || 0;
+      const comment = tx.comment || '';
+      const txValue = isOption ? (sharesVal * priceVal * 100) : (sharesVal * priceVal);
+
+      return `
           <div class="timeline-item ${actionClass}">
             <div class="timeline-dot"></div>
             <div class="timeline-header">
@@ -569,22 +600,23 @@ function createMasterCardHTML(cardData) {
             ${comment ? `<div class="timeline-comment">${comment}</div>` : ''}
           </div>
         `;
-      }).join('');
+    }).join('');
 
   return `
     <div class="master-card" data-ticker="${cardData.ticker}">
       <div class="card-header-row">
         <div class="card-title-box">
           <div class="ticker-text-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
-            <span class="card-ticker">${displayTicker}</span>
+            <div class="ticker-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span class="card-ticker" style="margin-bottom: 0;">${displayTicker}</span>
+              ${badgeHTML}
+            </div>
             <span class="card-asset-name">${cleanName}</span>
           </div>
           ${assetTypeLabel === 'Stock' ? '' : `<span class="card-asset-type">${assetTypeLabel}</span>`}
           ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
         </div>
         <div class="card-actions-area">
-          <span class="card-pnl-badge ${pnlClass}">Realized P&L: ${pnlSign}${pnlStr}</span>
-          ${unrealizedBadgeHTML}
           <div class="expand-caret">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"></polyline>
@@ -600,8 +632,8 @@ function createMasterCardHTML(cardData) {
         </div>
         <div class="stat-mini-item" style="text-align: center;">
           <span class="stat-mini-label">Net Holdings</span>
-          <span class="stat-mini-value" style="color: ${isCompleted ? 'var(--text-muted)' : 'var(--success)'}">
-            ${isCompleted ? 'Closed' : `${cardData.netShares} ${qtyLabel}`}
+          <span class="stat-mini-value" style="color: ${cardData.netShares <= 0 ? 'var(--text-muted)' : 'var(--success)'}">
+            ${cardData.netShares <= 0 ? 'Closed' : `${cardData.netShares} ${qtyLabel}`}
           </span>
         </div>
         <div class="stat-mini-item">
@@ -609,7 +641,12 @@ function createMasterCardHTML(cardData) {
           <span class="stat-mini-value">${sellAvgStr}${isOption ? ' <span class="option-multiplier-hint">×100</span>' : ''}</span>
         </div>
       </div>
-      
+
+      <div class="pnl-tier-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; font-size: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main);">
+        <div><span style="color: var(--text-muted);">Realized:</span> <strong class="realized-val ${realizedClass}">${realizedSign}$${Math.abs(realizedPL).toFixed(2)}</strong></div>
+        <div><span style="color: var(--text-muted);">Unrealized:</span> <strong class="unrealized-val ${unrealizedClass}">${unrealizedSign}$${Math.abs(unrealizedPL).toFixed(2)}</strong></div>
+        <div><span style="color: var(--text-muted);">Total P&L:</span> <strong class="total-pnl-val ${totalClass}">${totalSign}$${Math.abs(totalPL).toFixed(2)}</strong></div>
+      </div>
       <!-- Expandable Chronological Timeline -->
       <div class="timeline-wrapper">
         <div class="timeline-container">
@@ -623,34 +660,38 @@ function createMasterCardHTML(cardData) {
 /**
  * Groups, formats, and renders Master Cards into Active vs Completed sections
  */
-function renderLedger(range) {
+function renderLedger(rangeType, startDate, endDate) {
   const activeList = document.getElementById('active-ledger-list');
   const completedList = document.getElementById('completed-ledger-list');
 
   if (!activeList || !completedList) return;
 
   const allTxs = getAllTransactions();
-  const grouped = groupTransactionsByTicker(allTxs, range);
+  const grouped = groupTransactionsByTicker(allTxs, startDate, endDate);
 
   const activeCards = grouped.filter(g => g.netShares > 0);
-  const completedCards = grouped.filter(g => g.netShares <= 0);
+  const completedCards = grouped.filter(g => g.hasSellInRange);
 
   // Render 🟢 Active Positions
   if (activeCards.length === 0) {
     activeList.innerHTML = `<div class="ledger-empty">No active positions in this period.</div>`;
   } else {
-    activeList.innerHTML = activeCards.map(createMasterCardHTML).join('');
+    activeList.innerHTML = activeCards.map(c => createMasterCardHTML(c, 'active')).join('');
   }
 
   // Render ⚪ Closed Positions
   if (completedCards.length === 0) {
     completedList.innerHTML = `<div class="ledger-empty">No closed positions in this period.</div>`;
   } else {
-    completedList.innerHTML = completedCards.map(createMasterCardHTML).join('');
+    completedList.innerHTML = completedCards.map(c => createMasterCardHTML(c, 'closed')).join('');
   }
 
   // Calculate and update Section 1 metrics
-  calculateSection1Metrics(getFilteredTransactions(range), range);
+  calculateSection1Metrics(rangeType, startDate, endDate);
+
+  // Fetch and update AI Journal Digest summary
+  const filteredTxs = getFilteredTransactions(startDate, endDate);
+  fetchAIJournalSummary(filteredTxs, rangeType);
 
   // Attach expanding interaction event listeners
   const cards = document.querySelectorAll('.master-card');
@@ -668,39 +709,297 @@ function renderLedger(range) {
 /**
  * Initial setup for top sliding filter pills row
  */
-function initTimeFilters() {
-  const filterBtns = document.querySelectorAll('.pill-btn, .filter-btn');
-  const slider = document.getElementById('ledger-slider');
+/**
+ * Initial setup for dropdown filters row
+ */
+function initDropdownFilters() {
+  generatePeriodOptions();
 
-  function updateSlider(btn) {
-    if (slider && btn) {
-      slider.style.width = `${btn.offsetWidth}px`;
-      slider.style.transform = `translateX(${btn.offsetLeft}px)`;
+  const containers = document.querySelectorAll('.pill-dropdown-container');
+  const pillGroup = document.querySelector('.pill-group');
+
+  function closeAllDropdowns() {
+    containers.forEach(container => {
+      const dropdown = container.querySelector('.glass-dropdown');
+      if (dropdown) dropdown.classList.remove('show');
+    });
+
+    containers.forEach(container => {
+      const type = container.getAttribute('data-type') || container.querySelector('.dropdown-toggle')?.getAttribute('data-type');
+      if (type === currentRangeType) {
+        container.classList.add('active');
+      } else {
+        container.classList.remove('active');
+      }
+    });
+    if (pillGroup) {
+      pillGroup.classList.remove('pill-group-dimmed');
+      if (document.querySelector('.pill-dropdown-container.active')) {
+        pillGroup.classList.add('pill-group-dimmed');
+      }
     }
   }
 
-  const initialActive = document.querySelector('.pill-btn.active, .filter-btn.active');
-  if (initialActive) {
-    requestAnimationFrame(() => {
-      updateSlider(initialActive);
+  containers.forEach(container => {
+    const type = container.getAttribute('data-type') || container.querySelector('.dropdown-toggle')?.getAttribute('data-type');
+    const button = container.querySelector('.dropdown-toggle');
+    const dropdown = container.querySelector('.glass-dropdown');
+
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isShown = dropdown.classList.contains('show');
+
+      closeAllDropdowns();
+
+      if (!isShown) {
+        dropdown.classList.add('show');
+        containers.forEach(c => {
+          if (c === container) {
+            c.classList.add('active');
+          } else {
+            c.classList.remove('active');
+          }
+        });
+        if (pillGroup) {
+          pillGroup.classList.add('pill-group-dimmed');
+        }
+      } else {
+        dropdown.classList.remove('show');
+        closeAllDropdowns();
+      }
+    });
+
+    dropdown.addEventListener('click', (e) => {
+      const li = e.target.closest('li');
+      if (!li) return;
+      e.stopPropagation();
+
+      const value = li.getAttribute('data-value');
+
+      const { startDate, endDate } = getPeriodDateRange(type, value);
+      currentStartDate = startDate;
+      currentEndDate = endDate;
+      currentRangeType = type;
+
+      dropdown.querySelectorAll('li').forEach(item => {
+        item.classList.remove('selected');
+      });
+      li.classList.add('selected');
+
+      let displayText = value;
+      if (type === 'monthly') {
+        displayText = value.split(' ')[0];
+      }
+      const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
+      button.innerHTML = `${capitalizedType}: ${displayText} <span class="chevron">⌵</span>`;
+
+      containers.forEach(c => {
+        if (c !== container) {
+          const otherType = c.getAttribute('data-type') || c.querySelector('.dropdown-toggle')?.getAttribute('data-type');
+          const otherButton = c.querySelector('.dropdown-toggle');
+          const capitalizedOtherType = otherType.charAt(0).toUpperCase() + otherType.slice(1);
+          otherButton.innerHTML = `${capitalizedOtherType} <span class="chevron">⌵</span>`;
+          const otherDropdown = c.querySelector('.glass-dropdown');
+          if (otherDropdown) {
+            otherDropdown.querySelectorAll('li').forEach(item => {
+              item.classList.remove('selected');
+            });
+          }
+        }
+      });
+
+      const contextLabel = document.getElementById('reporting-context-label');
+      if (contextLabel) {
+        contextLabel.textContent = `Reporting for: ${formatDateRange(startDate, endDate)}`;
+      }
+
+      dropdown.classList.remove('show');
+      closeAllDropdowns();
+
+      renderLedger(currentRangeType, currentStartDate, currentEndDate);
+    });
+  });
+
+  document.addEventListener('click', () => {
+    closeAllDropdowns();
+  });
+
+  const dailyDropdown = document.getElementById('dropdown-daily');
+  if (dailyDropdown) {
+    const todayOption = dailyDropdown.querySelector('li[data-value="Today"]');
+    if (todayOption) {
+      todayOption.click();
+    }
+  }
+}
+
+function generatePeriodOptions() {
+  const refDate = new Date(SIMULATED_TODAY.getTime());
+
+  // 1. Daily
+  const dailyUl = document.getElementById('dropdown-daily');
+  if (dailyUl) {
+    dailyUl.innerHTML = '';
+    const options = ['Today', 'D-1', 'D-2', 'D-3'];
+    options.forEach(opt => {
+      const li = document.createElement('li');
+      li.textContent = opt;
+      li.setAttribute('data-value', opt);
+      dailyUl.appendChild(li);
     });
   }
 
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const range = btn.getAttribute('data-range');
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      updateSlider(btn);
-
-      renderLedger(range);
+  // 2. Weekly
+  const weeklyUl = document.getElementById('dropdown-weekly');
+  if (weeklyUl) {
+    weeklyUl.innerHTML = '';
+    const options = ['This Week', 'W-1', 'W-2', 'W-3'];
+    options.forEach(opt => {
+      const li = document.createElement('li');
+      li.textContent = opt;
+      li.setAttribute('data-value', opt);
+      weeklyUl.appendChild(li);
     });
-  });
+  }
 
-  window.addEventListener('resize', () => {
-    const activeBtn = document.querySelector('.pill-btn.active, .filter-btn.active');
-    updateSlider(activeBtn);
-  });
+  // 3. Monthly
+  const monthlyUl = document.getElementById('dropdown-monthly');
+  if (monthlyUl) {
+    monthlyUl.innerHTML = '';
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    let currentYear = refDate.getFullYear();
+    let currentMonthIdx = refDate.getMonth();
+    for (let i = 0; i < 12; i++) {
+      const label = `${monthNames[currentMonthIdx]} ${currentYear}`;
+      const li = document.createElement('li');
+      li.textContent = label;
+      li.setAttribute('data-value', label);
+      monthlyUl.appendChild(li);
+
+      currentMonthIdx--;
+      if (currentMonthIdx < 0) {
+        currentMonthIdx = 11;
+        currentYear--;
+      }
+    }
+  }
+
+  // 4. Quarterly
+  const quarterlyUl = document.getElementById('dropdown-quarterly');
+  if (quarterlyUl) {
+    quarterlyUl.innerHTML = '';
+    let currentYear = refDate.getFullYear();
+    let currentQuarter = Math.floor(refDate.getMonth() / 3) + 1;
+    for (let i = 0; i < 8; i++) {
+      const label = `${currentYear}-Q${currentQuarter}`;
+      const li = document.createElement('li');
+      li.textContent = label;
+      li.setAttribute('data-value', label);
+      quarterlyUl.appendChild(li);
+
+      currentQuarter--;
+      if (currentQuarter === 0) {
+        currentQuarter = 4;
+        currentYear--;
+      }
+    }
+  }
+
+  // 5. Yearly
+  const yearlyUl = document.getElementById('dropdown-yearly');
+  if (yearlyUl) {
+    yearlyUl.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+      const year = refDate.getFullYear() - i;
+      const label = `${year}`;
+      const li = document.createElement('li');
+      li.textContent = label;
+      li.setAttribute('data-value', label);
+      yearlyUl.appendChild(li);
+    }
+  }
+}
+
+function getPeriodDateRange(type, value) {
+  let startDate = new Date();
+  let endDate = new Date();
+  const refDate = new Date(SIMULATED_TODAY.getTime());
+
+  if (type === 'daily') {
+    if (value === 'Today') {
+      startDate = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 0, 0, 0);
+      endDate = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 23, 59, 59, 999);
+    } else {
+      const num = parseInt(value.replace('D-', ''), 10);
+      const targetDate = new Date(refDate.getTime() - num * 24 * 60 * 60 * 1000);
+      startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+      endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+    }
+  } else if (type === 'weekly') {
+    if (value === 'This Week') {
+      const day = refDate.getDay();
+      const sunday = new Date(refDate.getTime() - day * 24 * 60 * 60 * 1000);
+      startDate = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 0, 0, 0);
+      endDate = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 23, 59, 59, 999);
+    } else {
+      const num = parseInt(value.replace('W-', ''), 10);
+      const day = refDate.getDay();
+      const sundayOfThisWeek = new Date(refDate.getTime() - day * 24 * 60 * 60 * 1000);
+      const targetSunday = new Date(sundayOfThisWeek.getTime() - num * 7 * 24 * 60 * 60 * 1000);
+      const targetSaturday = new Date(targetSunday.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+      startDate = new Date(targetSunday.getFullYear(), targetSunday.getMonth(), targetSunday.getDate(), 0, 0, 0);
+      endDate = new Date(targetSaturday.getFullYear(), targetSaturday.getMonth(), targetSaturday.getDate(), 23, 59, 59, 999);
+    }
+  } else if (type === 'monthly') {
+    const parts = value.split(' ');
+    const monthName = parts[0];
+    const year = parseInt(parts[1], 10);
+    const monthIndex = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ].indexOf(monthName);
+
+    startDate = new Date(year, monthIndex, 1, 0, 0, 0);
+    endDate = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+  } else if (type === 'quarterly') {
+    const parts = value.split('-Q');
+    const year = parseInt(parts[0], 10);
+    const qNum = parseInt(parts[1], 10);
+
+    let startMonth = 0;
+    let endMonth = 2;
+    if (qNum === 1) { startMonth = 0; endMonth = 2; }
+    else if (qNum === 2) { startMonth = 3; endMonth = 5; }
+    else if (qNum === 3) { startMonth = 6; endMonth = 8; }
+    else if (qNum === 4) { startMonth = 9; endMonth = 11; }
+
+    startDate = new Date(year, startMonth, 1, 0, 0, 0);
+    endDate = new Date(year, endMonth + 1, 0, 23, 59, 59, 999);
+  } else if (type === 'yearly') {
+    const year = parseInt(value, 10);
+    startDate = new Date(year, 0, 1, 0, 0, 0);
+    endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+  }
+
+  return { startDate, endDate };
+}
+
+function formatShortDate(date) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
+function formatDateRange(startDate, endDate) {
+  const startStr = formatShortDate(startDate);
+  const endStr = formatShortDate(endDate);
+  if (startStr === endStr) {
+    return startStr;
+  }
+  return `${startStr} - ${endStr}`;
 }
 
 /**
@@ -741,10 +1040,10 @@ async function pullCloudData() {
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
-    
+
     if (Array.isArray(data)) {
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-      
+
       const parsedTxs = data.map(tx => {
         const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
         let name = String(getVal(tx, 'Name') || '').trim();
@@ -754,20 +1053,18 @@ async function pullCloudData() {
         const action = String(getVal(tx, 'Action') || 'BUY');
         const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
         const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
-        // Fallback: if CurrentPrice is missing or 0, use costBasis so balance never drops to $0
         const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
         const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
         const rawDate = getVal(tx, 'Date');
         const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
         const comment = String(getVal(tx, 'Trade Journal Note') || '');
         const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
-        
+
         let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
         if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
           assetType = 'CASH';
         } else {
-          // Auto-detect options from symbol string (e.g. "SPY $723 CALL 6/11")
           if (!rawType.toLowerCase().includes('option') && /\b(call|put)\b/i.test(ticker)) {
             assetType = 'options';
           }
@@ -789,9 +1086,8 @@ async function pullCloudData() {
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
 
-      // Re-render ledger with the current time-range filter
-      const activeBtn = document.querySelector('.pill-btn.active, .filter-btn.active');
-      renderLedger(activeBtn ? activeBtn.getAttribute('data-range') : 'daily');
+      // Re-render ledger with the current range
+      renderLedger(currentRangeType, currentStartDate, currentEndDate);
     }
   } catch (err) {
     console.error('Background pull failed:', err);
@@ -799,64 +1095,45 @@ async function pullCloudData() {
 }
 
 /**
- * Checks if a transaction occurred before the specified time range start
+ * Checks if a transaction occurred before the specified start date
  */
-function isTxBeforeRange(tx, range) {
+function isTxBeforeRange(tx, startDate) {
   if (!tx || !tx.date) return false;
   const txDate = new Date(tx.date);
   if (isNaN(txDate.getTime())) return false;
-
-  if (range === 'all') return false;
-
-  const diffTime = SIMULATED_TODAY - txDate;
-  const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-  if (range === 'daily') {
-    const todayStart = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate());
-    return txDate < todayStart;
-  } else if (range === 'weekly') {
-    return diffDays > 7;
-  } else if (range === 'monthly') {
-    return diffDays > 30;
-  } else if (range === 'yearly') {
-    return diffDays > 365;
-  }
-  return false;
+  if (!startDate) return false;
+  return txDate < startDate;
 }
 
 /**
  * Calculates Section 1 metrics and updates DOM snapshot card plus sparkline
  */
-function calculateSection1Metrics(filteredTransactions, range) {
+function calculateSection1Metrics(rangeType, startDate, endDate) {
   const allTxs = getAllTransactions().filter(tx => tx.ticker !== 'CASH' && tx.assetType !== 'CASH');
 
-  // Define interval times based on range
   const intervalTimes = [];
-  if (range === 'daily') {
-    const start = new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth(), SIMULATED_TODAY.getDate(), 0, 0, 0);
+  const start = new Date(startDate.getTime());
+  const end = new Date(endDate.getTime());
+
+  if (rangeType === 'daily') {
     for (let h = 0; h <= 24; h++) {
       intervalTimes.push(new Date(start.getTime() + h * 60 * 60 * 1000));
     }
-  } else if (range === 'weekly') {
-    const start = new Date(SIMULATED_TODAY.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if (rangeType === 'weekly') {
     for (let d = 0; d <= 7; d++) {
       intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
     }
-  } else if (range === 'monthly') {
-    const start = new Date(SIMULATED_TODAY.getTime() - 30 * 24 * 60 * 60 * 1000);
-    for (let d = 0; d <= 30; d++) {
+  } else if (rangeType === 'monthly') {
+    const numDays = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+    for (let d = 0; d <= numDays; d++) {
       intervalTimes.push(new Date(start.getTime() + d * 24 * 60 * 60 * 1000));
     }
-  } else if (range === 'yearly') {
-    for (let m = 12; m >= 0; m--) {
-      intervalTimes.push(new Date(SIMULATED_TODAY.getFullYear(), SIMULATED_TODAY.getMonth() - m, SIMULATED_TODAY.getDate(), 12, 0, 0));
+  } else if (rangeType === 'quarterly') {
+    const step = (end.getTime() - start.getTime()) / 12;
+    for (let i = 0; i <= 12; i++) {
+      intervalTimes.push(new Date(start.getTime() + i * step));
     }
   } else {
-    // 'all'
-    const dates = allTxs.map(tx => new Date(tx.date).getTime());
-    const oldestTime = dates.length > 0 ? Math.min(...dates) : SIMULATED_TODAY.getTime() - 365 * 24 * 60 * 60 * 1000;
-    const start = new Date(oldestTime);
-    const end = SIMULATED_TODAY;
     const step = (end.getTime() - start.getTime()) / 12;
     for (let i = 0; i <= 12; i++) {
       intervalTimes.push(new Date(start.getTime() + i * step));
@@ -889,6 +1166,49 @@ function calculateSection1Metrics(filteredTransactions, range) {
   const startValEl = document.getElementById('snap-start-value');
   const currentValEl = document.getElementById('snap-current-value');
   const pnlEl = document.getElementById('snap-pnl-value');
+
+  let closedPL = 0;
+  let activePL = 0;
+
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) {
+    marketPrices = {};
+  }
+
+  const allGroups = groupTransactionsByTicker(allTxs, startDate, endDate);
+  allGroups.forEach(pos => {
+    const isOption = pos.assetType === 'options' || (/\$\d/.test(pos.ticker) && /\b(call|put)\b/i.test(pos.ticker));
+    const multiplier = isOption ? 100 : 1;
+
+    // Closed P&L
+    closedPL += pos.realizedPL * multiplier;
+
+    // Active P&L
+    if (pos.netShares > 0) {
+      const marketEntry = marketPrices[pos.ticker] || defaultAssetData[pos.ticker] || {};
+      const currentPrice = parseFloat(marketEntry.currentPrice) || pos.buyAvg || 0;
+      const unrealizedPL = pos.netShares * (currentPrice - pos.buyAvg) * multiplier;
+      activePL += unrealizedPL;
+    }
+  });
+
+  const totalPerformance = closedPL + activePL;
+  const perfEl = document.getElementById('total-performance-value');
+  if (perfEl) {
+    perfEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral');
+    if (totalPerformance > 0) {
+      perfEl.textContent = `+$${totalPerformance.toFixed(2)}`;
+      perfEl.classList.add('pnl-up');
+    } else if (totalPerformance < 0) {
+      perfEl.textContent = `-$${Math.abs(totalPerformance).toFixed(2)}`;
+      perfEl.classList.add('pnl-down');
+    } else {
+      perfEl.textContent = `$0.00`;
+      perfEl.classList.add('pnl-neutral');
+    }
+  }
 
   if (startValEl) startValEl.textContent = "$" + periodOpenCost.toFixed(2);
   if (currentValEl) currentValEl.textContent = "$" + periodCurrentValue.toFixed(2);
@@ -964,7 +1284,7 @@ function calculateSection1Metrics(filteredTransactions, range) {
       circle.setAttribute('stroke-width', '1');
       circle.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
       circle.style.cursor = 'pointer';
-      
+
       circle.addEventListener('mouseover', () => {
         circle.setAttribute('r', '5.5');
         circle.setAttribute('stroke-width', '1.5');
@@ -973,8 +1293,77 @@ function calculateSection1Metrics(filteredTransactions, range) {
         circle.setAttribute('r', '3');
         circle.setAttribute('stroke-width', '1');
       });
-      
+
       dotsGroup.appendChild(circle);
     });
+  }
+}
+
+/**
+ * Issues a POST request to Google Apps Script endpoint to get Gemini summary of Trade Journal notes
+ */
+async function fetchAIJournalSummary(transactions, currentRange) {
+  const briefTextEl = document.getElementById('snap-ai-brief-text');
+  if (!briefTextEl) return;
+
+  const notes = transactions
+    .map(tx => (tx.comment || '').trim())
+    .filter(note => note.length > 0);
+
+  if (notes.length === 0) {
+    briefTextEl.textContent = "No journal notes logged for this reporting period.";
+    return;
+  }
+
+  briefTextEl.textContent = "Generating AI Summary...";
+
+  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  if (!url || url.includes("YOUR_API_URL")) {
+    briefTextEl.textContent = "AI Summary unavailable (Offline Mode).";
+    return;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify({
+        action: 'getAIJournalSummary',
+        notes: notes,
+        range: currentRange
+      })
+    });
+    if (!response.ok) {
+      throw new Error('Network response error.');
+    }
+    const data = await response.text();
+
+    // Check if the response is JSON (which means the Apps Script web app is not updated)
+    let isJson = false;
+    let jsonParsed = null;
+    try {
+      const trimmed = data.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        jsonParsed = JSON.parse(trimmed);
+        isJson = true;
+      }
+    } catch (e) {
+      isJson = false;
+    }
+
+    if (isJson && jsonParsed) {
+      if (jsonParsed.summary) {
+        briefTextEl.textContent = jsonParsed.summary;
+      } else if (jsonParsed.status === 'success' || jsonParsed.message) {
+        briefTextEl.innerHTML = `<span style="color: var(--danger, #ef4444); font-weight: 600;">Deployment Error:</span> Your Google Apps Script web app is running an older version and returned a spreadsheet status response instead of the Gemini AI digest. Please copy the updated code from the local file <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace;">google_apps_script.gs</code> into your Google Apps Script editor, and click <b>Deploy > New Deployment</b> (Web App, Everyone access) to deploy the updated endpoint.`;
+      } else {
+        briefTextEl.textContent = JSON.stringify(jsonParsed);
+      }
+    } else {
+      briefTextEl.textContent = data || "No summary returned.";
+    }
+  } catch (err) {
+    console.error('AI Journal summary fetch failed:', err);
+    briefTextEl.textContent = "AI Summary failed to load. (Offline Mode)";
   }
 }

@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
+  endpointUrl: "https://script.google.com/macros/s/AKfycbxoVjvu0Zkcq7LlDXs8195vF2ocQiuXW6KHHlFKeABkHsx3Sxp2D46cu2no3Axwx9FZ/exec"
 };
 
 // Tracks the currently-active filter pill ('all', 'stocks', 'options')
@@ -49,7 +49,7 @@ function resolveAssetName(ticker) {
   if (tickersDb && tickersDb[capitalized]) {
     return tickersDb[capitalized];
   }
-  
+
   // Try matching option underlying ticker
   const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
   if (isOption) {
@@ -61,7 +61,7 @@ function resolveAssetName(ticker) {
       return tickersDb[underlying];
     }
   }
-  
+
   // Fallback to extraction from regex
   const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
   if (underlyingMatch) {
@@ -73,7 +73,7 @@ function resolveAssetName(ticker) {
       return tickersDb[underlying];
     }
   }
-  
+
   return capitalized;
 }
 
@@ -189,10 +189,10 @@ async function pullCloudData() {
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
-    
+
     if (Array.isArray(data)) {
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-      
+
       const parsedTxs = data.map(tx => {
         const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
         let name = String(getVal(tx, 'Name') || '').trim();
@@ -209,7 +209,7 @@ async function pullCloudData() {
         const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
         const comment = String(getVal(tx, 'Trade Journal Note') || '');
         const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
-        
+
         let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
         if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
@@ -271,7 +271,7 @@ async function pullCloudData() {
         }
         const pos = openPositions[tx.ticker];
         const sharesNum = Number(tx.shares) || 0;
-        const priceNum  = parseFloat(tx.price) || 0;
+        const priceNum = parseFloat(tx.price) || 0;
         if (tx.action === 'BUY') {
           const newShares = pos.shares + sharesNum;
           if (newShares > 0) {
@@ -636,7 +636,7 @@ function updateBalanceMetrics() {
     }
     const pos = openPositions[tx.ticker];
     const sharesNum = Number(tx.shares) || 0;
-    const priceNum  = parseFloat(tx.price) || 0;
+    const priceNum = parseFloat(tx.price) || 0;
     if (tx.action === 'BUY') {
       const newShares = pos.shares + sharesNum;
       if (newShares > 0) {
@@ -650,7 +650,7 @@ function updateBalanceMetrics() {
 
   // ── 3. COMPUTE TOTAL ASSET EQUITY (options ×100, stocks ×1) ──────────────
   let totalAssetEquity = 0;
-  let totalPrevEquity  = 0;
+  let totalPrevEquity = 0;
   let optionContractsCount = 0;
 
   for (const ticker in openPositions) {
@@ -661,7 +661,7 @@ function updateBalanceMetrics() {
     // Resolve live price: cloud marketPrices → defaultAssetData → avgCost fallback
     const marketEntry = marketPrices[ticker] || defaultAssetData[ticker] || {};
     const currentPrice = parseFloat(marketEntry.currentPrice) || pos.avgCost || 0;
-    const change24h    = parseFloat(marketEntry.change24h) || 0;
+    const change24h = parseFloat(marketEntry.change24h) || 0;
 
     // Dual-source options detection: explicit assetType field OR ticker pattern
     const isOpt = pos.assetType === 'options'
@@ -670,10 +670,10 @@ function updateBalanceMetrics() {
 
     const assetValue = Number(pos.shares) * parseFloat(currentPrice) * multiplier;
     // Previous-day estimate for today's change display
-    const prevValue  = assetValue / (1 + change24h / 100);
+    const prevValue = assetValue / (1 + change24h / 100);
 
     totalAssetEquity += assetValue;
-    totalPrevEquity  += prevValue;
+    totalPrevEquity += prevValue;
 
     if (isOpt) optionContractsCount += pos.shares;
   }
@@ -738,15 +738,15 @@ function updateBalanceMetrics() {
     totalBalanceEl2.textContent = formattedBalance;
   }
 
-  const totalChange    = totalAssetEquity - totalPrevEquity;
+  const totalChange = totalAssetEquity - totalPrevEquity;
   const totalChangePct = totalPrevEquity > 0 ? (totalChange / totalPrevEquity) * 100 : 0;
-  const isPositive     = totalChange >= 0;
+  const isPositive = totalChange >= 0;
 
   balanceChangeEl.className = `balance-change ${isPositive ? 'positive' : 'negative'}`;
 
   if (balanceCard) {
     balanceCard.classList.toggle('profit', isPositive);
-    balanceCard.classList.toggle('loss',   !isPositive);
+    balanceCard.classList.toggle('loss', !isPositive);
   }
 
   const formattedChangeStr = new Intl.NumberFormat('en-US', {
@@ -902,7 +902,7 @@ function renderAssetsTable(filterMode) {
     if (isOption) {
       // Detect CALL or PUT — case-insensitive, whole-word boundary
       const contractType = /\bcall\b/i.test(asset.ticker) ? 'call'
-                         : /\bput\b/i.test(asset.ticker) ? 'put' : null;
+        : /\bput\b/i.test(asset.ticker) ? 'put' : null;
 
       // Build colored badge pills (only keep CALL/PUT to prevent clutter)
       if (contractType) {
@@ -1342,7 +1342,7 @@ async function updateLivePrices() {
               const fetchedPrice = meta.regularMarketPrice;
               const prevClose = meta.chartPreviousClose || meta.previousClose || fetchedPrice;
               const fetchedChange = ((fetchedPrice - prevClose) / prevClose) * 100;
-              
+
               if (isOption) {
                 // Save underlying stock price separately so underlying price pills are accurate
                 if (!marketPrices[queryTicker]) {
@@ -1353,7 +1353,7 @@ async function updateLivePrices() {
                 }
                 marketPrices[queryTicker].currentPrice = fetchedPrice;
                 marketPrices[queryTicker].change24h = fetchedChange;
-                
+
                 // Do NOT overwrite the option contract's premium price with the stock price
                 // Let the option contract price drift slightly around its current premium price
                 const pct = (Math.random() - 0.5) * 0.1; // ±0.05%
@@ -1403,12 +1403,12 @@ async function updateLivePrices() {
 
   if (updatedAny) {
     localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
-    
+
     // Refresh the local assets array and re-render dashboard components
     refreshPortfolioAssets();
     updateBalanceMetrics();
     renderAssetsTable('all');
-    
+
     if (shouldSyncCloud) {
       lastCloudSyncTime = now;
     }

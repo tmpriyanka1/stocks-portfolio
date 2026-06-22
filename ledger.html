@@ -42,44 +42,48 @@
       <!-- Time Filter Button Row at the very top of the ledger -->
       <section class="filter-section" id="ledger-filters">
         <div class="pill-group">
-          <div class="pill-slider" id="ledger-slider"></div>
-          <button class="pill-btn active" data-range="daily">Daily</button>
-          <button class="pill-btn" data-range="weekly">Weekly</button>
-          <button class="pill-btn" data-range="monthly">Monthly</button>
-          <button class="pill-btn" data-range="yearly">Yearly</button>
-          <button class="pill-btn filter-btn" data-range="all">All Time</button>
+          <!-- Daily Pill -->
+          <div class="pill-dropdown-container filter-pill-wrapper" data-type="daily">
+            <button class="pill-btn dropdown-toggle" id="pill-daily" data-type="daily">Daily <span class="chevron">⌵</span></button>
+            <ul class="glass-dropdown" id="dropdown-daily"></ul>
+          </div>
+          <!-- Weekly Pill -->
+          <div class="pill-dropdown-container filter-pill-wrapper" data-type="weekly">
+            <button class="pill-btn dropdown-toggle" id="pill-weekly" data-type="weekly">Weekly <span class="chevron">⌵</span></button>
+            <ul class="glass-dropdown" id="dropdown-weekly"></ul>
+          </div>
+          <!-- Monthly Pill -->
+          <div class="pill-dropdown-container filter-pill-wrapper" data-type="monthly">
+            <button class="pill-btn dropdown-toggle" id="pill-monthly" data-type="monthly">Monthly <span class="chevron">⌵</span></button>
+            <ul class="glass-dropdown" id="dropdown-monthly"></ul>
+          </div>
+          <!-- Quarterly Pill -->
+          <div class="pill-dropdown-container filter-pill-wrapper align-right" data-type="quarterly">
+            <button class="pill-btn dropdown-toggle" id="pill-quarterly" data-type="quarterly">Quarterly <span class="chevron">⌵</span></button>
+            <ul class="glass-dropdown" id="dropdown-quarterly"></ul>
+          </div>
+          <!-- Yearly Pill -->
+          <div class="pill-dropdown-container filter-pill-wrapper align-right" data-type="yearly">
+            <button class="pill-btn dropdown-toggle" id="pill-yearly" data-type="yearly">Yearly <span class="chevron">⌵</span></button>
+            <ul class="glass-dropdown" id="dropdown-yearly"></ul>
+          </div>
         </div>
       </section>
 
       <!-- Section 1: Dynamic performance snapshot card -->
       <section class="snapshot-overview-section" id="snapshot-section1" style="margin: 0 24px 20px 24px;">
         <div class="snapshot-card-container" style="padding: 16px 20px;">
-          <div class="snap-metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
-            <div class="snap-metric-block" style="display: flex; flex-direction: column; gap: 2px;">
-              <span class="snap-label" style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500;">Period Open</span>
-              <span id="snap-start-value" class="snap-value" style="font-size: 14px; font-weight: 600; color: var(--text-primary); font-family: var(--font-main);">$0.00</span>
+          <div id="reporting-context-label" style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; font-family: var(--font-main);">Reporting for: </div>
+          <div class="portfolio-performance-card" style="margin-top: 8px;">
+            <span class="performance-title" style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;">Portfolio Performance</span>
+            <div id="total-performance-value" class="performance-value" style="font-size: 24px; font-weight: 700; margin: 4px 0 12px 0;">$0.00</div>
+            
+            <div class="snap-ai-notes-container">
+              <div class="ai-notes-header" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                <span style="font-size: 10px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚡ AI Journal Digest</span>
+              </div>
+              <div id="snap-ai-brief-text" class="ai-notes-content">Gathering trading notes for summary...</div>
             </div>
-            <div class="snap-metric-block text-center" style="display: flex; flex-direction: column; gap: 2px; text-align: center;">
-              <span class="snap-label" style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500;">Period P&L ($)</span>
-              <span id="snap-pnl-value" class="snap-value pnl-neutral" style="font-size: 14px; font-weight: 600; font-family: var(--font-main); color: var(--text-secondary);">$0.00</span>
-            </div>
-            <div class="snap-metric-block text-right" style="display: flex; flex-direction: column; gap: 2px; text-align: right;">
-              <span class="snap-label" style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500;">Current Value</span>
-              <span id="snap-current-value" class="snap-value" style="font-size: 14px; font-weight: 600; color: var(--text-primary); font-family: var(--font-main);">$0.00</span>
-            </div>
-          </div>
-          <div class="snap-graph-wrapper" style="width: 100%; height: 64px; margin-bottom: 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.15); padding: 6px 0; overflow: visible;">
-            <svg class="snap-interval-chart" viewBox="0 0 300 60" preserveAspectRatio="none" style="width: 100%; height: 100%; overflow: visible;">
-              <defs>
-                <linearGradient id="snap-graph-gradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
-                  <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.00"/>
-                </linearGradient>
-              </defs>
-              <path id="snap-graph-area" d="" fill="url(#snap-graph-gradient)" />
-              <path id="snap-trend-path" d="M 0 30 L 300 30" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-              <g id="snap-graph-dots"></g>
-            </svg>
           </div>
         </div>
       </section>

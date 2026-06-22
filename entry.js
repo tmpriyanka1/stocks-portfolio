@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
+  endpointUrl: "https://script.google.com/macros/s/AKfycbxoVjvu0Zkcq7LlDXs8195vF2ocQiuXW6KHHlFKeABkHsx3Sxp2D46cu2no3Axwx9FZ/exec"
 };
 
 const defaultAssetData = {
@@ -45,7 +45,7 @@ function resolveAssetName(ticker) {
   if (tickersDb && tickersDb[capitalized]) {
     return tickersDb[capitalized];
   }
-  
+
   // Try matching option underlying ticker
   const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
   if (isOption) {
@@ -57,7 +57,7 @@ function resolveAssetName(ticker) {
       return tickersDb[underlying];
     }
   }
-  
+
   // Fallback to extraction from regex
   const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
   if (underlyingMatch) {
@@ -69,7 +69,7 @@ function resolveAssetName(ticker) {
       return tickersDb[underlying];
     }
   }
-  
+
   return capitalized;
 }
 
@@ -157,7 +157,7 @@ function initNavigation() {
 function initActionPills() {
   const pills = document.querySelectorAll('.action-pill');
   const actionInput = document.getElementById('inputAction');
-  
+
   if (pills.length && actionInput) {
     pills.forEach(pill => {
       pill.addEventListener('click', () => {
@@ -217,7 +217,7 @@ async function fetchAssetName(ticker) {
   if (localName !== ticker.trim().toUpperCase()) {
     return localName;
   }
-  
+
   if (!tickersDb || Object.keys(tickersDb).length === 0) {
     await loadTickersDb();
     const afterFetch = resolveAssetName(ticker);
@@ -225,11 +225,11 @@ async function fetchAssetName(ticker) {
       return afterFetch;
     }
   }
-  
+
   const capitalized = ticker.trim().toUpperCase();
   const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
   let queryTicker = isOption ? ticker.split(' ')[0].toUpperCase() : capitalized;
-  
+
   try {
     const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${queryTicker}`;
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
@@ -252,7 +252,7 @@ async function fetchAssetName(ticker) {
   } catch (e) {
     console.warn('Failed to fetch name from Yahoo search API:', e);
   }
-  
+
   return queryTicker;
 }
 
@@ -365,7 +365,7 @@ function initFormSubmit() {
       document.getElementById('inputPrice').value = '';
       document.getElementById('inputSL').value = '';
       document.getElementById('inputComment').value = '';
-      
+
       // Reset action pill selection
       if (document.getElementById('inputAction')) {
         document.getElementById('inputAction').value = 'BUY';
@@ -431,11 +431,11 @@ async function pullCloudData() {
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
-    
+
     if (Array.isArray(data)) {
       const defaultTickerKeys = ['NVDA', 'AAPL', 'TSLA', 'NVDA $490 Call', 'AAPL $180 Call'];
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-      
+
       const parsedTxs = data.map(tx => {
         const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
         let name = String(getVal(tx, 'Name') || '').trim();
@@ -450,7 +450,7 @@ async function pullCloudData() {
         const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
         const comment = String(getVal(tx, 'Trade Journal Note') || '');
         const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
-        
+
         let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
         if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {

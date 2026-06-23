@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://script.google.com/macros/s/AKfycbxoVjvu0Zkcq7LlDXs8195vF2ocQiuXW6KHHlFKeABkHsx3Sxp2D46cu2no3Axwx9FZ/exec"
+  endpointUrl: "http://localhost:5001/api/trades"
 };
 
 // Tracks the currently-active filter pill ('all', 'stocks', 'options')
@@ -174,6 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
     rebootDashboard();
   });
 
+  // Initialize comment popup modal
+  initCommentModal();
+
+  // Initialize quick trade (Buy/Sell) popup modal
+  initQuickTradeModal();
+
   // Background Cloud Spreadsheet Pull
   pullCloudData().then(() => {
     startLivePriceEngine();
@@ -186,7 +192,7 @@ async function pullCloudData() {
 
   try {
     await loadTickersDb();
-    const response = await fetch(url, { method: 'GET', redirect: 'follow' });
+    const response = await fetch(url, { method: 'GET' });
     if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
 
@@ -194,23 +200,24 @@ async function pullCloudData() {
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
 
       const parsedTxs = data.map(tx => {
-        const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
-        let name = String(getVal(tx, 'Name') || '').trim();
+        const ticker = String(getVal(tx, 'Symbol') || tx.ticker || '').trim().toUpperCase();
+        let name = String(getVal(tx, 'Name') || tx.name || '').trim();
         if (!name) {
           name = resolveAssetName(ticker);
         }
-        const action = String(getVal(tx, 'Action') || 'BUY');
-        const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
-        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
-        // Fallback: if CurrentPrice is missing or 0, use costBasis so balance never drops to $0
-        const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
-        const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
-        const rawDate = getVal(tx, 'Date');
+        const action = String(getVal(tx, 'Action') || tx.action || 'BUY');
+        const shares = parseInt(getVal(tx, 'Shares') || tx.shares || tx.quantity || 0, 10);
+        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || tx.price || 0);
+        // Only use CurrentPrice if it's a real live price (> 0 and explicitly provided).
+        // Do NOT fall back to costBasis here — that causes avg cost to appear as live price on refresh.
+        const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || tx.currentPrice || 0);
+        const hasRealPrice = rawCurrentPrice && rawCurrentPrice > 0;
+        const rawDate = getVal(tx, 'Date') || tx.date;
         const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
-        const comment = String(getVal(tx, 'Trade Journal Note') || '');
-        const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
+        const comment = String(getVal(tx, 'Trade Journal Note') || tx.comment || tx.note || '');
+        const stopLoss = parseFloat(getVal(tx, 'SL') || tx.stopLoss || tx.stopLimit || 0);
 
-        let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
+        let rawType = String(getVal(tx, 'Asset Type') || tx.assetType || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
         if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
           assetType = 'CASH';
@@ -222,13 +229,23 @@ async function pullCloudData() {
         }
 
         if (ticker && assetType !== 'CASH') {
-          marketPrices[ticker] = {
+          // Only write currentPrice to marketPrices if it's a genuinely fetched live price.
+          // Omitting currentPrice here means updateLivePrices() will fetch real market data instead.
+          const priceEntry = {
             name: name,
-            currentPrice: currentPrice,
-            change24h: parseFloat(getVal(tx, 'change24h') || 0),
-            icon: getVal(tx, 'Icon') || ticker.slice(0, 2).toUpperCase(),
+            change24h: parseFloat(getVal(tx, 'change24h') || tx.change24h || 0),
+            icon: getVal(tx, 'Icon') || tx.icon || ticker.slice(0, 2).toUpperCase(),
             stopLoss: stopLoss
           };
+          if (hasRealPrice) {
+            priceEntry.currentPrice = rawCurrentPrice;
+          }
+          // Preserve existing live price if we already have one in cache
+          const existing = marketPrices[ticker];
+          if (existing && existing.currentPrice && !hasRealPrice) {
+            priceEntry.currentPrice = existing.currentPrice;
+          }
+          marketPrices[ticker] = priceEntry;
         }
 
         return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss };
@@ -816,6 +833,27 @@ function formatOptionTicker(ticker) {
 }
 
 /**
+ * Extracts the expiry date from an option's stored `name` field.
+ * The name is typically set as "Exp MM/DD/YY • Buy to Open" from defaultAssetData
+ * or parsed from the ticker string itself.
+ * Returns a formatted string like "Exp 07/16/26" or empty string.
+ */
+function getOptionExpiry(ticker, name) {
+  // 1. Try to extract date from ticker string FIRST (most reliable)
+  // Handles patterns like "SPY $723 CALL 6/11", "AAPL $180 Call 06/20/26", "NVDA $490 CALL 7/16/26"
+  const tickerDateMatch = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+  if (tickerDateMatch) return `Exp ${tickerDateMatch[1]}`;
+
+  // 2. Fallback: try name field if it contains "Exp MM/DD/YY" (defaultAssetData entries)
+  // asset.name is often the company name from resolveAssetName(), so this is secondary
+  if (name) {
+    const nameMatch = name.match(/Exp\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+    if (nameMatch) return `Exp ${nameMatch[1]}`;
+  }
+  return '';
+}
+
+/**
  * 2. ASSET HOLDERS GRID BUILDER ENGINE: dynamic layout function
  * targets the '#tableBody' element in portfolio.html.
  */
@@ -919,6 +957,10 @@ function renderAssetsTable(filterMode) {
     const underlyingPrice = parseFloat(underlyingEntry.currentPrice) || parseFloat(underlyingEntry.price) || (underlyingTicker === 'SPX' ? 5120.30 : (underlyingTicker === 'SPY' ? 512.42 : 100.00));
 
     const slDisplay = (asset.stopLoss && asset.stopLoss > 0) ? `$${asset.stopLoss.toFixed(2)}` : '—';
+    const changeText = asset.change24h >= 0 ? `up ${asset.change24h.toFixed(2)}%` : `down ${Math.abs(asset.change24h).toFixed(2)}%`;
+
+    // Extract expiry date for options
+    const optionExpiry = isOption ? getOptionExpiry(asset.ticker, asset.name) : '';
 
     const rowHTML = `
       <div class="asset-row" data-ticker="${asset.ticker}" role="button" tabindex="0">
@@ -927,13 +969,14 @@ function renderAssetsTable(filterMode) {
           <div class="ticker-text-container" style="align-items: flex-start;">
             <span class="asset-ticker">${displayTicker}</span>
             ${subTicker ? `<span class="asset-sub-ticker">${subTicker}</span>` : ''}
+            ${optionExpiry ? `<span class="asset-sub-ticker" style="color: var(--text-muted); font-size: 10px;">${optionExpiry}</span>` : ''}
             ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
           </div>
         </div>
         
         <!-- Column 2: Number of contracts/shares @ avg cost -->
         <div class="asset-col-shares-avg">
-          <span class="asset-shares-qty">${asset.shares} ${qtySuffix}</span>
+          <span class="asset-shares-qty">${asset.shares}</span>
           <span class="asset-avg-cost">@ $${asset.avgCost.toFixed(2)}</span>
         </div>
         
@@ -956,6 +999,20 @@ function renderAssetsTable(filterMode) {
             <span class="asset-row-perf ${changeSign}">${formattedChange}</span>
           </div>
         </div>
+        
+        <!-- Expanded Details Drawer (Covers full grid span) -->
+        <div class="asset-details-drawer" style="display: none; grid-column: 1 / -1; width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); flex-direction: column; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
+            <span>${asset.ticker} is currently trading at $${asset.currentPrice.toFixed(2)} (${changeText}) today.</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
+              <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
+              <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
+              <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
+              <button class="asset-drawer-close-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;" onclick="event.stopPropagation();">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -965,13 +1022,86 @@ function renderAssetsTable(filterMode) {
   // Attach feedback click listeners to the asset rows
   const assetRows = tableBody.querySelectorAll('.asset-row');
   assetRows.forEach(row => {
-    row.addEventListener('click', () => {
-      const ticker = row.getAttribute('data-ticker');
-      const asset = filtered.find(a => a.ticker === ticker);
-      if (asset) {
-        showAssetFeedback(asset);
+    row.addEventListener('click', (e) => {
+      // Find the drawer in this row
+      const drawer = row.querySelector('.asset-details-drawer');
+      if (!drawer) return;
+
+      // If the click occurred inside the drawer, don't close the drawer
+      if (e.target.closest('.asset-details-drawer')) {
+        return;
+      }
+
+      const isVisible = drawer.style.display !== 'none';
+
+      // Collapse all other drawers first
+      const allDrawers = tableBody.querySelectorAll('.asset-details-drawer');
+      allDrawers.forEach(d => {
+        d.style.display = 'none';
+      });
+
+      // Toggle current drawer
+      if (isVisible) {
+        drawer.style.display = 'none';
+      } else {
+        drawer.style.display = 'flex';
       }
     });
+
+    // Handle clicks inside the drawer
+    const drawer = row.querySelector('.asset-details-drawer');
+    if (drawer) {
+      // Close button on drawer click
+      const drawerCloseBtn = drawer.querySelector('.asset-drawer-close-btn');
+      if (drawerCloseBtn) {
+        drawerCloseBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          drawer.style.display = 'none';
+        });
+      }
+
+      // Buy button
+      const buyBtn = drawer.querySelector('.quick-buy-btn');
+      if (buyBtn) {
+        buyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ticker = row.getAttribute('data-ticker');
+          openQuickTradeModal(ticker, 'BUY');
+        });
+      }
+
+      // Sell button
+      const sellBtn = drawer.querySelector('.quick-sell-btn');
+      if (sellBtn) {
+        sellBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ticker = row.getAttribute('data-ticker');
+          openQuickTradeModal(ticker, 'SELL');
+        });
+      }
+
+      // Add comment trigger button click (opens popup modal)
+      const triggerBtn = drawer.querySelector('.add-comment-trigger-btn');
+      if (triggerBtn) {
+        triggerBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ticker = row.getAttribute('data-ticker');
+          openCommentModal(ticker);
+        });
+      }
+
+      // Latest News button click (window.open popup)
+      const newsBtn = drawer.querySelector('.latest-news-btn');
+      if (newsBtn) {
+        newsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ticker = row.getAttribute('data-ticker');
+          const baseTicker = ticker.split(' ')[0].toUpperCase();
+          const newsUrl = `https://www.google.com/finance/quote/${baseTicker}:NASDAQ`;
+          window.open(newsUrl, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
+        });
+      }
+    }
   });
 }
 
@@ -1354,10 +1484,9 @@ async function updateLivePrices() {
                 marketPrices[queryTicker].currentPrice = fetchedPrice;
                 marketPrices[queryTicker].change24h = fetchedChange;
 
-                // Do NOT overwrite the option contract's premium price with the stock price
-                // Let the option contract price drift slightly around its current premium price
-                const pct = (Math.random() - 0.5) * 0.1; // ±0.05%
-                price = price * (1 + pct / 100);
+                // For options: keep the option premium price as-is (from server/storage).
+                // Do NOT drift or overwrite — the option premium is user-entered or cloud-synced.
+                // price stays at asset.currentPrice (already set above before the try block)
                 success = true;
               } else {
                 price = fetchedPrice;
@@ -1372,11 +1501,9 @@ async function updateLivePrices() {
       console.warn(`Yahoo Finance API fetch failed for ${queryTicker} (${ticker}), using local fallback.`, e);
     }
 
-    // Fallback: apply a tiny ±0.05% micro-drift so the UI stays animated
-    // but doesn't diverge far from the last known real price
+    // Fallback: keep last known price (no random drift)
     if (!success) {
-      const pct = (Math.random() - 0.5) * 0.1; // ±0.05% only
-      price = price * (1 + pct / 100);
+      // price remains asset.currentPrice — stable, no artificial drift
       success = true;
     }
 
@@ -1407,7 +1534,7 @@ async function updateLivePrices() {
     // Refresh the local assets array and re-render dashboard components
     refreshPortfolioAssets();
     updateBalanceMetrics();
-    renderAssetsTable('all');
+    renderAssetsTable(activeFilterMode);
 
     if (shouldSyncCloud) {
       lastCloudSyncTime = now;
@@ -1425,6 +1552,7 @@ async function syncPriceToCloud(ticker, price) {
   try {
     const response = await fetch(url, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       redirect: 'follow',
       body: JSON.stringify({
         action: 'updatePrice',
@@ -1442,4 +1570,241 @@ async function syncPriceToCloud(ticker, price) {
   }
 }
 
+function openCommentModal(ticker) {
+  const modal = document.getElementById('commentModal');
+  const title = document.getElementById('commentModalTitle');
+  const input = document.getElementById('commentModalInput');
+  if (modal && title && input) {
+    title.textContent = `Add Comment for ${ticker.toUpperCase()}`;
+    input.value = '';
+    modal.setAttribute('data-current-ticker', ticker);
+    modal.classList.add('active');
+    input.focus();
+  }
+}
 
+function initCommentModal() {
+  const modal = document.getElementById('commentModal');
+  const input = document.getElementById('commentModalInput');
+  const closeBtn = document.getElementById('closeCommentModalBtn');
+  const cancelBtn = document.getElementById('cancelCommentModalBtn');
+  const saveBtn = document.getElementById('saveCommentModalBtn');
+
+  if (!modal) return;
+
+  const closeModal = () => {
+    modal.classList.remove('active');
+    if (input) input.value = '';
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+  if (saveBtn && input) {
+    saveBtn.addEventListener('click', async () => {
+      const ticker = modal.getAttribute('data-current-ticker');
+      const commentText = input.value.trim();
+      if (!ticker || !commentText) return;
+
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        const timeStr = `${hours}:${minutes}:${seconds}`;
+
+        const payload = {
+          ticker: ticker.trim().toUpperCase(),
+          author: 'Admin',
+          date: dateStr,
+          time: timeStr,
+          text: commentText
+        };
+
+        const response = await fetch('http://localhost:5001/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          // Cache locally
+          const allNotes = JSON.parse(localStorage.getItem('portfolio_notes') || '[]');
+          allNotes.push(payload);
+          localStorage.setItem('portfolio_notes', JSON.stringify(allNotes));
+
+          closeModal();
+          showToast('✨ Comment saved successfully!');
+        } else {
+          throw new Error('Failed to save comment to server.');
+        }
+      } catch (err) {
+        console.error('Error saving quick comment:', err);
+        showToast('❌ Failed to save comment.', true);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    });
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QUICK TRADE MODAL (Buy / Sell from asset drawer)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Opens the quick-trade popup for the given ticker and action ('BUY' or 'SELL').
+ * Pre-fills the average price with the asset's current live price.
+ */
+function openQuickTradeModal(ticker, action) {
+  const modal = document.getElementById('quickTradeModal');
+  const titleEl = document.getElementById('quickTradeModalTitle');
+  const sharesInput = document.getElementById('qtSharesInput');
+  const priceInput = document.getElementById('qtPriceInput');
+  const commentInput = document.getElementById('qtCommentInput');
+  if (!modal) return;
+
+  // Pre-fill price from live asset data
+  const asset = portfolioAssets.find(a => a.ticker === ticker);
+  const livePrice = asset ? asset.currentPrice : 0;
+
+  titleEl.textContent = `${action === 'BUY' ? '🟢 Buy' : '🔴 Sell'} — ${ticker}`;
+  modal.setAttribute('data-current-ticker', ticker);
+  modal.setAttribute('data-current-action', action);
+
+  // Clear and pre-fill fields
+  sharesInput.value = '';
+  priceInput.value = livePrice > 0 ? livePrice.toFixed(2) : '';
+  commentInput.value = '';
+
+  modal.classList.add('active');
+  sharesInput.focus();
+}
+
+/**
+ * Wires up the close and submit buttons for the quick-trade modal.
+ * Submit stores the trade in localStorage transactions AND posts to the server.
+ */
+function initQuickTradeModal() {
+  const modal = document.getElementById('quickTradeModal');
+  const closeBtn = document.getElementById('closeQuickTradeModalBtn');
+  const submitBtn = document.getElementById('submitQuickTradeBtn');
+  const sharesInput = document.getElementById('qtSharesInput');
+  const priceInput = document.getElementById('qtPriceInput');
+  const commentInput = document.getElementById('qtCommentInput');
+
+  if (!modal) return;
+
+  // Only close via Close button — backdrop click does NOT dismiss
+  const closeModal = () => {
+    modal.classList.remove('active');
+    if (sharesInput) sharesInput.value = '';
+    if (priceInput) priceInput.value = '';
+    if (commentInput) commentInput.value = '';
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+      const ticker = modal.getAttribute('data-current-ticker');
+      const action = modal.getAttribute('data-current-action') || 'BUY';
+      const shares = parseInt(sharesInput.value, 10);
+      const price = parseFloat(priceInput.value);
+      const comment = (commentInput.value || '').trim();
+
+      if (!ticker || isNaN(shares) || shares <= 0) {
+        showToast('⚠️ Please enter a valid number of shares.', true);
+        return;
+      }
+      if (isNaN(price) || price <= 0) {
+        showToast('⚠️ Please enter a valid price.', true);
+        return;
+      }
+
+      // Determine asset type from portfolioAssets
+      const asset = portfolioAssets.find(a => a.ticker === ticker);
+      const assetType = asset ? (asset.type || 'stocks') : 'stocks';
+
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      const timeStr = now.toTimeString().slice(0, 8);
+      const isoDate = now.toISOString();
+
+      const tx = {
+        ticker: ticker.trim().toUpperCase(),
+        assetType,
+        action,
+        shares,
+        price: Math.round(price * 100) / 100,
+        date: isoDate,
+        comment: comment || `Quick ${action.toLowerCase()} from portfolio drawer`
+      };
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      try {
+        // 1. POST to backend server (stored in trades.ndjson)
+        // Field names must match server.js POST /api/trades handler:
+        // expects: ticker, price, shares (or quantity), action, assetType, date, comment
+        const response = await fetch('http://localhost:5001/api/trades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticker: tx.ticker,
+            action: action,
+            shares: shares,
+            price: tx.price,
+            assetType: assetType,
+            date: isoDate,
+            comment: tx.comment
+          })
+        });
+
+        if (!response.ok) throw new Error('Server error saving trade.');
+
+        // 2. Save to localStorage transactions ledger so portfolio re-calculates instantly
+        let txs = [];
+        try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) { txs = []; }
+        txs.push(tx);
+        localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+        // 3. Recalculate and re-render immediately
+        refreshPortfolioAssets();
+        updateBalanceMetrics();
+        renderAssetsTable(activeFilterMode);
+
+        closeModal();
+        showToast(`✅ ${action === 'BUY' ? 'Buy' : 'Sell'} order recorded for ${ticker}!`);
+
+      } catch (err) {
+        console.error('Quick trade save error:', err);
+        // Still save locally even if server is down
+        let txs = [];
+        try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) { txs = []; }
+        txs.push(tx);
+        localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+
+        refreshPortfolioAssets();
+        updateBalanceMetrics();
+        renderAssetsTable(activeFilterMode);
+
+        closeModal();
+        showToast(`⚠️ Saved locally (server offline). ${action} for ${ticker} recorded.`, true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+      }
+    });
+  }
+}

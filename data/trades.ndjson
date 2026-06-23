@@ -1,0 +1,4 @@
+{"ticker":"CASH","shares":1,"price":10000,"action":"DEPOSIT","assetType":"CASH","date":"2026-06-23T19:12:11.854Z"}
+{"ticker":"NVDA","shares":10,"price":400,"action":"BUY","assetType":"stocks","date":"2026-06-23T19:12:12.854Z"}
+{"ticker":"NVDA $490 CALL","shares":3,"price":15.20,"action":"BUY","assetType":"options","date":"2026-06-23T19:12:13.854Z"}
+{"ticker":"NVDA","shares":10,"price":200.04,"action":"BUY","assetType":"stocks","date":"2026-06-23T23:09:24.262Z","comment":"Quick buy from portfolio drawer","stopLoss":0}

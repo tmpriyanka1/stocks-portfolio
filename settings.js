@@ -488,7 +488,7 @@ function showConfirmModal(options, onConfirm) {
 }
 
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://script.google.com/macros/s/AKfycbyq1B_7D2saPLfHISuwJrJI8PkUiQrgK3sDetSQE0rbcnTjSvXqKE0Dzl5gw4rB_xw7/exec"
+  endpointUrl: "http://localhost:5001/api/trades"
 };
 
 function saveTransactionLocally(tx) {
@@ -513,31 +513,26 @@ async function pushCashTransactionToCloud(tx, name) {
   }
 
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
-      redirect: 'follow',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        data: [
-          {
-            Symbol: tx.ticker,
-            Name: name,
-            Date: tx.date,
-            "Asset Type": tx.assetType,
-            Action: tx.action,
-            Shares: Number(tx.shares),
-            CostBasis: Number(tx.price),
-            "Avg Price": Number(tx.price),
-            CurrentPrice: Number(tx.price),
-            SL: 0,
-            Icon: "",
-            "Trade Journal Note": ""
-          }
-        ]
+        ticker: tx.ticker,
+        action: tx.action,
+        quantity: Number(tx.shares),
+        price: Number(tx.price),
+        date: tx.date,
+        stopLimit: 0,
+        note: tx.comment || '',
+        assetType: tx.assetType
       })
     });
-    showToast("🟢 Cash Transaction Synced to Cloud Sheet!");
+    if (!response.ok) throw new Error('Network response not ok');
+    showToast("🟢 Cash Transaction Synced to Local Server!");
   } catch (err) {
-    console.error('Cloud post failed:', err);
+    console.error('Local server cash post failed:', err);
     showToast("Transaction saved locally (Offline Mode)", true);
   }
 }

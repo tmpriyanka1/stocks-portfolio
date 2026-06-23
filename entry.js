@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://script.google.com/macros/s/AKfycbxoVjvu0Zkcq7LlDXs8195vF2ocQiuXW6KHHlFKeABkHsx3Sxp2D46cu2no3Axwx9FZ/exec"
+  endpointUrl: "http://localhost:5001/api/trades"
 };
 
 const defaultAssetData = {
@@ -394,29 +394,24 @@ async function pushTradeToCloud(tx, resolvedName) {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      redirect: 'follow',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        data: [
-          {
-            Symbol: tx.ticker,
-            Name: resolvedName,
-            Date: tx.date,
-            "Asset Type": tx.assetType === 'options' ? 'Option' : 'Stock',
-            Action: tx.action,
-            Shares: Number(tx.shares),
-            CostBasis: Number(tx.price),
-            "Avg Price": Number(tx.price),
-            CurrentPrice: Number(tx.price),
-            SL: tx.stopLoss ? Number(tx.stopLoss) : 0,
-            Icon: tx.ticker.substring(0, 2).toUpperCase(),
-            "Trade Journal Note": tx.comment
-          }
-        ]
+        ticker: tx.ticker,
+        action: tx.action,
+        quantity: Number(tx.shares),
+        price: Number(tx.price),
+        date: tx.date,
+        stopLimit: tx.stopLoss ? Number(tx.stopLoss) : 0,
+        note: tx.comment,
+        assetType: tx.assetType
       })
     });
-    showToast("🟢 Trade Synced to Cloud Sheet!");
+    if (!response.ok) throw new Error('Network response not ok');
+    showToast("🟢 Trade Synced to Local Server!");
   } catch (err) {
-    console.error('Cloud post failed:', err);
+    console.error('Local server post failed:', err);
     showToast("Trade saved locally (Offline Mode)", true);
   }
 }
@@ -437,21 +432,22 @@ async function pullCloudData() {
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
 
       const parsedTxs = data.map(tx => {
-        const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
-        let name = String(getVal(tx, 'Name') || '').trim();
+        const ticker = String(getVal(tx, 'Symbol') || tx.ticker || '').trim().toUpperCase();
+        let name = String(getVal(tx, 'Name') || tx.name || '').trim();
         if (!name) {
           name = resolveAssetName(ticker);
         }
-        const action = String(getVal(tx, 'Action') || 'BUY');
-        const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
-        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
-        const currentPrice = parseFloat(getVal(tx, 'CurrentPrice') || costBasis);
-        const rawDate = getVal(tx, 'Date');
+        const action = String(getVal(tx, 'Action') || tx.action || 'BUY');
+        const shares = parseInt(getVal(tx, 'Shares') || tx.shares || tx.quantity || 0, 10);
+        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || tx.price || 0);
+        const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || tx.currentPrice || 0);
+        const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
+        const rawDate = getVal(tx, 'Date') || tx.date;
         const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
-        const comment = String(getVal(tx, 'Trade Journal Note') || '');
-        const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
+        const comment = String(getVal(tx, 'Trade Journal Note') || tx.comment || tx.note || '');
+        const stopLoss = parseFloat(getVal(tx, 'SL') || tx.stopLoss || tx.stopLimit || 0);
 
-        let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
+        let rawType = String(getVal(tx, 'Asset Type') || tx.assetType || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
         if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
           assetType = 'CASH';
@@ -466,7 +462,7 @@ async function pullCloudData() {
             name: name,
             currentPrice: currentPrice,
             change24h: parseFloat(tx.change24h || 0),
-            icon: getVal(tx, 'Icon') || ticker.slice(0, 2).toUpperCase(),
+            icon: getVal(tx, 'Icon') || tx.icon || ticker.slice(0, 2).toUpperCase(),
             stopLoss: stopLoss
           };
         }
@@ -603,4 +599,32 @@ function initNotificationToggle() {
       }
     }
   }
+}
+
+// Expose helper to save note to local server (Quick-Comment Pipeline)
+async function saveNoteToLocalServer(ticker, text) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+  const timeStr = `${hours}:${minutes}:${seconds}`;
+
+  const payload = {
+    ticker: ticker.trim().toUpperCase(),
+    author: 'Admin',
+    date: dateStr,
+    time: timeStr,
+    text: text
+  };
+
+  const response = await fetch('http://localhost:5001/api/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return response;
 }

@@ -2,8 +2,9 @@
   "name": "portfolio-app",
   "version": "1.0.0",
   "description": "Stock & options portfolio tracker",
-  "main": "entry.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "test": "/Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest --coverage --testPathIgnorePatterns=visual",
     "test:watch": "/Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest --watch --testPathIgnorePatterns=visual",
     "test:coverage": "/Users/malathi/Library/Caches/ms-playwright-go/1.57.0/node node_modules/.bin/jest --coverage --coverageReporters=text --coverageReporters=lcov --testPathIgnorePatterns=visual",
@@ -29,6 +30,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
   "devDependencies": {
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",

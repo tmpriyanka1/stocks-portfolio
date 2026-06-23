@@ -97,6 +97,42 @@ describe('Visual Regression UI Tests', () => {
       route.continue();
     });
 
+    // Mock local API server trades endpoints to keep visual checks deterministic
+    await page.route('**/api/trades', route => {
+      const req = route.request();
+      if (req.method() === 'POST') {
+        route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true })
+        });
+      } else {
+        route.fulfill({
+          status: 500,
+          contentType: 'text/plain',
+          body: 'Offline mock: local server pull disabled for visual tests'
+        });
+      }
+    });
+
+    // Mock local API server notes endpoints to keep visual checks deterministic
+    await page.route('**/api/notes', route => {
+      const req = route.request();
+      if (req.method() === 'POST') {
+        route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true })
+        });
+      } else {
+        route.fulfill({
+          status: 500,
+          contentType: 'text/plain',
+          body: 'Offline mock: local server pull disabled for visual tests'
+        });
+      }
+    });
+
     // Mock global Date to 2026-06-03T12:00:00 to align with ledger transaction filters
     await page.addInitScript(() => {
       const mockDate = new Date('2026-06-03T12:00:00');
@@ -306,5 +342,101 @@ describe('Visual Regression UI Tests', () => {
     await page.click('#confirmModalCancel');
     await page.waitForSelector('#confirmModal:not(.active)');
     await page.waitForTimeout(500);
+  }, 30000);
+
+  test('Portfolio Tracker Tab - Quick Comment & Latest News Flow', async () => {
+    await page.goto('http://localhost:8080/portfolio.html');
+
+    // Mock window.open to assert parameters deterministically
+    await page.evaluate(() => {
+      window.openedWindows = [];
+      window.open = (url, target, features) => {
+        window.openedWindows.push({ url, target, features });
+        return { focus: () => {} };
+      };
+    });
+
+    // Wait for core elements to render
+    await page.waitForSelector('.balance-card');
+    await page.waitForSelector('.holdings-list');
+    await page.waitForTimeout(600);
+
+    const firstRowSelector = '.holdings-list .asset-row:first-child';
+    const secondRowSelector = '.holdings-list .asset-row:nth-child(2)';
+    const firstRowTicker = `${firstRowSelector} .asset-ticker`;
+    const secondRowTicker = `${secondRowSelector} .asset-ticker`;
+
+    await page.waitForSelector(firstRowSelector);
+
+    // Verify the drawer is initially hidden
+    let isDrawerVisible = await page.locator(`${firstRowSelector} .asset-details-drawer`).isVisible();
+    expect(isDrawerVisible).toBe(false);
+
+    // 1. Click the row ticker to expand the details drawer
+    await page.click(firstRowTicker);
+    await page.waitForTimeout(400);
+
+    // Verify drawer is visible
+    isDrawerVisible = await page.locator(`${firstRowSelector} .asset-details-drawer`).isVisible();
+    expect(isDrawerVisible).toBe(true);
+
+    // 2. Click the row ticker again - Verify it collapses/closes
+    await page.click(firstRowTicker);
+    await page.waitForTimeout(400);
+    isDrawerVisible = await page.locator(`${firstRowSelector} .asset-details-drawer`).isVisible();
+    expect(isDrawerVisible).toBe(false);
+
+    // 3. Open drawer again
+    await page.click(firstRowTicker);
+    await page.waitForTimeout(400);
+    isDrawerVisible = await page.locator(`${firstRowSelector} .asset-details-drawer`).isVisible();
+    expect(isDrawerVisible).toBe(true);
+
+    // 4. Click second stock row ticker - Verify first drawer closes and second drawer opens
+    await page.click(secondRowTicker);
+    await page.waitForTimeout(400);
+    isDrawerVisible = await page.locator(`${firstRowSelector} .asset-details-drawer`).isVisible();
+    expect(isDrawerVisible).toBe(false);
+    let isSecondDrawerVisible = await page.locator(`${secondRowSelector} .asset-details-drawer`).isVisible();
+    expect(isSecondDrawerVisible).toBe(true);
+
+    // 5. Click "+ Add Comment" trigger button inside second drawer
+    await page.click(`${secondRowSelector} .add-comment-trigger-btn`);
+    await page.waitForTimeout(400);
+
+    // Verify comment modal is active
+    let isModalActive = await page.locator('#commentModal').evaluate(el => el.classList.contains('active'));
+    expect(isModalActive).toBe(true);
+
+    // Verify modal title contains Ticker
+    const modalTitle = await page.locator('#commentModalTitle').innerText();
+    expect(modalTitle).toContain('Add Comment for');
+
+    // 6. Click on backdrop overlay of comment modal - Verify it does NOT close
+    await page.click('#commentModal', { position: { x: 5, y: 5 } }); // Click top-left of backdrop
+    await page.waitForTimeout(400);
+    isModalActive = await page.locator('#commentModal').evaluate(el => el.classList.contains('active'));
+    expect(isModalActive).toBe(true); // Must remain active!
+
+    // 7. Click Cancel button inside modal
+    await page.click('#cancelCommentModalBtn');
+    await page.waitForTimeout(400);
+
+    // Verify modal is closed
+    isModalActive = await page.locator('#commentModal').evaluate(el => el.classList.contains('active'));
+    expect(isModalActive).toBe(false);
+
+    // 8. Click Latest News button inside drawer
+    await page.click(`${secondRowSelector} .latest-news-btn`);
+    await page.waitForTimeout(400);
+
+    // Verify window.open was triggered with correct URL & sizing features
+    const openedList = await page.evaluate(() => window.openedWindows);
+    expect(openedList.length).toBe(1);
+    expect(openedList[0].url).toContain('https://www.google.com/finance/quote/');
+    expect(openedList[0].features).toContain('width=800');
+    expect(openedList[0].features).toContain('height=600');
+    expect(openedList[0].features).toContain('resizable=yes');
+    expect(openedList[0].features).toContain('scrollbars=yes');
   }, 30000);
 });

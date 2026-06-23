@@ -1,5 +1,5 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://script.google.com/macros/s/AKfycbxoVjvu0Zkcq7LlDXs8195vF2ocQiuXW6KHHlFKeABkHsx3Sxp2D46cu2no3Axwx9FZ/exec"
+  endpointUrl: "http://localhost:5001/api/trades"
 };
 
 const defaultAssetData = {
@@ -602,6 +602,40 @@ function createMasterCardHTML(cardData, listType) {
         `;
     }).join('');
 
+  // Retrieve local notes database to build notes history feed
+  let notesHTML = '';
+  try {
+    const allNotes = JSON.parse(localStorage.getItem('portfolio_notes') || '[]');
+    const tickerNotes = allNotes.filter(n => n.ticker && n.ticker.trim().toUpperCase() === cardData.ticker.trim().toUpperCase());
+    if (tickerNotes.length > 0) {
+      // Sort notes chronologically by parsing date and time
+      tickerNotes.sort((a, b) => {
+        const timeA = a.time || '00:00:00';
+        const timeB = b.time || '00:00:00';
+        return new Date(`${a.date}T${timeA}`) - new Date(`${b.date}T${timeB}`);
+      });
+      
+      const notesListHTML = tickerNotes.map(n => `
+        <div class="note-feed-item" style="margin-bottom: 8px; font-size: 11px; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); font-family: var(--font-main);">
+          <div style="display: flex; justify-content: space-between; color: var(--text-muted); margin-bottom: 4px; font-size: 10px;">
+            <strong>👤 ${n.author || 'Admin'}</strong>
+            <span>${n.date} ${n.time}</span>
+          </div>
+          <div style="color: var(--text-primary); line-height: 1.4; white-space: pre-wrap; text-align: left;">${n.text}</div>
+        </div>
+      `).join('');
+
+      notesHTML = `
+        <div class="notes-feed-container" style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+          <div style="font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; text-align: left;">Notes History</div>
+          ${notesListHTML}
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error('Error generating notes history:', err);
+  }
+
   return `
     <div class="master-card" data-ticker="${cardData.ticker}">
       <div class="card-header-row">
@@ -647,11 +681,13 @@ function createMasterCardHTML(cardData, listType) {
         <div><span style="color: var(--text-muted);">Unrealized:</span> <strong class="unrealized-val ${unrealizedClass}">${unrealizedSign}$${Math.abs(unrealizedPL).toFixed(2)}</strong></div>
         <div><span style="color: var(--text-muted);">Total P&L:</span> <strong class="total-pnl-val ${totalClass}">${totalSign}$${Math.abs(totalPL).toFixed(2)}</strong></div>
       </div>
+      
       <!-- Expandable Chronological Timeline -->
       <div class="timeline-wrapper">
         <div class="timeline-container">
           ${timelineHTML}
         </div>
+        ${notesHTML}
       </div>
     </div>
   `;
@@ -1037,30 +1073,44 @@ async function pullCloudData() {
 
   try {
     await loadTickersDb();
-    const response = await fetch(url, { method: 'GET', redirect: 'follow' });
+    
+    // Fetch trades
+    const response = await fetch(url, { method: 'GET' });
     if (!response.ok) throw new Error('Network response error.');
     const data = await response.json();
+
+    // Fetch notes/comments from local server
+    try {
+      const notesUrl = url.replace('/trades', '/notes');
+      const notesResponse = await fetch(notesUrl, { method: 'GET' });
+      if (notesResponse.ok) {
+        const notesData = await notesResponse.json();
+        localStorage.setItem('portfolio_notes', JSON.stringify(notesData));
+      }
+    } catch (notesErr) {
+      console.warn('Failed to fetch notes from server:', notesErr);
+    }
 
     if (Array.isArray(data)) {
       let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
 
       const parsedTxs = data.map(tx => {
-        const ticker = String(getVal(tx, 'Symbol') || '').trim().toUpperCase();
-        let name = String(getVal(tx, 'Name') || '').trim();
+        const ticker = String(getVal(tx, 'Symbol') || tx.ticker || '').trim().toUpperCase();
+        let name = String(getVal(tx, 'Name') || tx.name || '').trim();
         if (!name) {
           name = resolveAssetName(ticker);
         }
-        const action = String(getVal(tx, 'Action') || 'BUY');
-        const shares = parseInt(getVal(tx, 'Shares') || 0, 10);
-        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || 0);
-        const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || 0);
+        const action = String(getVal(tx, 'Action') || tx.action || 'BUY');
+        const shares = parseInt(getVal(tx, 'Shares') || tx.shares || tx.quantity || 0, 10);
+        const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || tx.price || 0);
+        const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || tx.currentPrice || 0);
         const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
-        const rawDate = getVal(tx, 'Date');
+        const rawDate = getVal(tx, 'Date') || tx.date;
         const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
-        const comment = String(getVal(tx, 'Trade Journal Note') || '');
-        const stopLoss = parseFloat(getVal(tx, 'SL') || 0);
+        const comment = String(getVal(tx, 'Trade Journal Note') || tx.comment || tx.note || '');
+        const stopLoss = parseFloat(getVal(tx, 'SL') || tx.stopLoss || tx.stopLimit || 0);
 
-        let rawType = String(getVal(tx, 'Asset Type') || 'Stock');
+        let rawType = String(getVal(tx, 'Asset Type') || tx.assetType || 'Stock');
         let assetType = rawType.toLowerCase().includes('option') ? 'options' : 'stocks';
         if (rawType.toUpperCase() === 'CASH' || ticker === 'CASH') {
           assetType = 'CASH';
@@ -1074,8 +1124,8 @@ async function pullCloudData() {
           marketPrices[ticker] = {
             name: name,
             currentPrice: currentPrice,
-            change24h: parseFloat(getVal(tx, 'change24h') || 0),
-            icon: getVal(tx, 'Icon') || ticker.slice(0, 2).toUpperCase(),
+            change24h: parseFloat(getVal(tx, 'change24h') || tx.change24h || 0),
+            icon: getVal(tx, 'Icon') || tx.icon || ticker.slice(0, 2).toUpperCase(),
             stopLoss: stopLoss
           };
         }
@@ -1318,8 +1368,8 @@ async function fetchAIJournalSummary(transactions, currentRange) {
   briefTextEl.textContent = "Generating AI Summary...";
 
   const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
-  if (!url || url.includes("YOUR_API_URL")) {
-    briefTextEl.textContent = "AI Summary unavailable (Offline Mode).";
+  if (!url || url.includes("YOUR_API_URL") || url.includes("localhost") || url.includes("127.0.0.1")) {
+    briefTextEl.textContent = "AI Summary unavailable (Local Mode).";
     return;
   }
 

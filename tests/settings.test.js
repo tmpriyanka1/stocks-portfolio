@@ -653,4 +653,88 @@ describe('showConfirmModal — confirmation dialog popup UI', () => {
   });
 });
 
+// SOURCE: getClosedPositionsPnLEvents
+function getClosedPositionsPnLEvents(allTxs) {
+  const txs = allTxs
+    .filter(tx => tx && tx.ticker && tx.ticker !== 'CASH' && tx.assetType !== 'CASH')
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const groups = {};
+  txs.forEach(tx => {
+    if (!groups[tx.ticker]) {
+      groups[tx.ticker] = [];
+    }
+    groups[tx.ticker].push(tx);
+  });
+
+  const pnlEvents = [];
+
+  for (const ticker in groups) {
+    const tickerTxs = groups[ticker];
+    const buyQueue = [];
+
+    tickerTxs.forEach(tx => {
+      const sharesNum = parseFloat(tx.shares) || 0;
+      const priceNum = parseFloat(tx.price) || 0;
+      const action = tx.action || 'BUY';
+      const isOption = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+      const multiplier = isOption ? 100 : 1;
+
+      if (action === 'BUY') {
+        buyQueue.push({ shares: sharesNum, price: priceNum });
+      } else if (action === 'SELL') {
+        let remainingToSell = sharesNum;
+        let sellPnL = 0;
+
+        while (remainingToSell > 0 && buyQueue.length > 0) {
+          const oldestLayer = buyQueue[0];
+          if (oldestLayer.shares <= remainingToSell) {
+            sellPnL += oldestLayer.shares * (priceNum - oldestLayer.price) * multiplier;
+            remainingToSell -= oldestLayer.shares;
+            buyQueue.shift();
+          } else {
+            sellPnL += remainingToSell * (priceNum - oldestLayer.price) * multiplier;
+            oldestLayer.shares -= remainingToSell;
+            remainingToSell = 0;
+          }
+        }
+
+        pnlEvents.push({
+          date: new Date(tx.date),
+          pnl: sellPnL,
+          ticker: tx.ticker
+        });
+      }
+    });
+  }
+
+  return pnlEvents;
+}
+
+describe('Profit & Loss calculation logic helper', () => {
+  test('calculates FIFO realized P&L events correctly', () => {
+    const mockTxs = [
+      { ticker: 'AAPL', action: 'BUY', shares: '10', price: '150', date: '2026-06-01T10:00:00' },
+      { ticker: 'AAPL', action: 'SELL', shares: '5', price: '160', date: '2026-06-02T10:00:00' },
+      { ticker: 'AAPL', action: 'SELL', shares: '5', price: '170', date: '2026-06-03T10:00:00' },
+      { ticker: 'CASH', action: 'DEPOSIT', price: '1000', date: '2026-06-01T09:00:00' }
+    ];
+
+    const events = getClosedPositionsPnLEvents(mockTxs);
+    expect(events).toHaveLength(2);
+    expect(events[0].ticker).toBe('AAPL');
+    expect(events[0].pnl).toBe(50); // (160 - 150) * 5 = 50
+    expect(events[1].pnl).toBe(100); // (170 - 150) * 5 = 100
+  });
+
+  test('ignores CASH transactions', () => {
+    const mockTxs = [
+      { ticker: 'CASH', action: 'DEPOSIT', shares: '1', price: '1000', date: '2026-06-01T09:00:00', assetType: 'CASH' }
+    ];
+    const events = getClosedPositionsPnLEvents(mockTxs);
+    expect(events).toHaveLength(0);
+  });
+});
+
+
 

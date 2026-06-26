@@ -37,7 +37,7 @@ function generateGeminiSummary(notes, range) {
   
   var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
   
-  var systemInstruction = "You are a professional financial portfolio analyst tool. Synthesize these raw user trade logs into a single coherent summary block. Do not use conversational intros like 'Here is your summary'. If the period range parameter is 'daily' or 'weekly', constrain output response to a maximum of 5 clear lines of text. If the range parameter is 'monthly', 'quarterly', or 'yearly', cap response to a maximum of 10 lines of text.";
+  var systemInstruction = "You are a professional financial portfolio analyst tool. Synthesize these raw user trading journal notes and trade comments into a cohesive, easy-to-understand paragraph format summarizing the trades and their reasoning. Do not use lists, bullet points, or conversational intros like 'Here is your summary'. The summary must be a single continuous paragraph block for easy understanding of our trades.";
   
   var prompt = "Here is the period range parameter: " + range + "\n\nHere are the raw user trading journal notes:\n" + notes.map(function(n) { return "- " + n; }).join("\n");
   

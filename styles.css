@@ -108,7 +108,7 @@ body {
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
   height: 100vh;
   height: -webkit-fill-available;
   height: 100dvh;
@@ -128,9 +128,13 @@ body {
 /* Add a sleek, modern smartphone frame on larger screens */
 @media (min-width: 481px) {
   .app-container {
-    height: 850px;
-    max-height: 90vh;
-    border-radius: 40px;
+    height: 100vh;
+    height: -webkit-fill-available;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: -webkit-fill-available;
+    max-height: 100dvh;
+    border-radius: 0;
   }
 }
 
@@ -468,4 +472,65 @@ body {
 /* Global Font Resets for Form Elements & Interactive Controls */
 input, select, textarea, button {
   font-family: var(--font-main) !important;
+}
+
+/* Global Orientation & Rotation Landscape Optimization */
+@media (orientation: landscape) {
+  .app-header {
+    padding: 12px 24px 6px 24px !important;
+  }
+  .filter-section {
+    height: 44px !important;
+    min-height: 44px !important;
+    margin-bottom: 4px !important;
+  }
+  .pill-group {
+    height: 36px !important;
+  }
+  .pill-btn, .filter-btn {
+    font-size: 12px !important;
+  }
+  .user-title {
+    font-size: 16px !important;
+  }
+  .sub-title {
+    font-size: 10px !important;
+  }
+  .avatar {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 13px !important;
+  }
+  .bottom-tab-bar {
+    height: 50px !important;
+    min-height: 50px !important;
+  }
+  .screen-view {
+    padding-bottom: 50px !important;
+  }
+}
+
+/* Call / Put option indicator pillars */
+.color-pillar {
+  display: inline-block;
+  width: 5px;
+  height: 14px;
+  border-radius: 2.5px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.color-pillar.call {
+  background-color: var(--success, #10b981) !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+.color-pillar.put {
+  background-color: var(--danger, #ef4444) !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+/* Global utility to disable glassmorphism blur styles */
+body.disable-glass-blur *,
+body.disable-glass-blur {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

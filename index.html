@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <title>Redirecting...</title>
   <script>
-    // Seamlessly forward query parameters (like ?tab=analytics-screen) to portfolio.html
+    // Route to login gateway; login.html redirects authenticated users to portfolio.html
     const urlParams = window.location.search;
-    window.location.replace('portfolio.html' + urlParams);
+    window.location.replace('login.html' + urlParams);
   </script>
 </head>
 <body>

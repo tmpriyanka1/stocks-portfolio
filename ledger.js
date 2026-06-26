@@ -37,21 +37,48 @@ function getVal(obj, key) {
   return undefined;
 }
 
+function getDefaultAsset(ticker) {
+  if (!ticker) return {};
+  const upper = ticker.trim().toUpperCase();
+  if (defaultAssetData[upper]) return defaultAssetData[upper];
+  for (const key in defaultAssetData) {
+    if (key.trim().toUpperCase() === upper) {
+      return defaultAssetData[key];
+    }
+  }
+  return {};
+}
+
 function resolveAssetName(ticker) {
   const capitalized = ticker.trim().toUpperCase();
-  if (defaultAssetData[capitalized] && defaultAssetData[capitalized].name) {
-    return defaultAssetData[capitalized].name;
+
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) {}
+
+  if (marketPrices[capitalized] && marketPrices[capitalized].name && marketPrices[capitalized].name !== capitalized) {
+    return marketPrices[capitalized].name;
+  }
+
+  const defAsset = getDefaultAsset(ticker);
+  if (defAsset && defAsset.name && !defAsset.name.toLowerCase().startsWith('exp ')) {
+    return defAsset.name;
   }
   if (tickersDb && tickersDb[capitalized]) {
     return tickersDb[capitalized];
   }
 
   // Try matching option underlying ticker
-  const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
+  const isOption = ticker.includes('@') || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
   if (isOption) {
-    const underlying = ticker.split(' ')[0].toUpperCase();
-    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
-      return defaultAssetData[underlying].name;
+    const underlying = ticker.split(/[\s$@]/)[0].toUpperCase();
+    if (marketPrices[underlying] && marketPrices[underlying].name) {
+      return marketPrices[underlying].name;
+    }
+    const undAsset = getDefaultAsset(underlying);
+    if (undAsset && undAsset.name) {
+      return undAsset.name;
     }
     if (tickersDb && tickersDb[underlying]) {
       return tickersDb[underlying];
@@ -62,8 +89,12 @@ function resolveAssetName(ticker) {
   const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
   if (underlyingMatch) {
     const underlying = underlyingMatch[1].toUpperCase();
-    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
-      return defaultAssetData[underlying].name;
+    if (marketPrices[underlying] && marketPrices[underlying].name) {
+      return marketPrices[underlying].name;
+    }
+    const undAsset = getDefaultAsset(underlying);
+    if (undAsset && undAsset.name) {
+      return undAsset.name;
     }
     if (tickersDb && tickersDb[underlying]) {
       return tickersDb[underlying];
@@ -242,6 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   initNavigationRedirects();
+  initAINotesCollapsible();
 
   // Load tickers DB, then initialize dropdowns and render ledger
   loadTickersDb().then(() => {
@@ -349,7 +381,6 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
     g.transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     let runningShares = 0;
-    let runningAvgBuy = 0;
     let realizedPLInRange = 0;
     let buyQtyInRange = 0;
     let buyValInRange = 0;
@@ -357,6 +388,9 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
     let sellValInRange = 0;
     let hasSellInRange = false;
     const inRangeTransactions = [];
+
+    // Buy layers queue for FIFO calculations
+    const buyQueue = [];
 
     // Rolling balance as of end date
     let netSharesAsOfEndDate = 0;
@@ -371,26 +405,42 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
       const inRange = txDate >= start && txDate <= end;
 
       if (action === 'BUY') {
-        const newShares = runningShares + sharesNum;
-        if (newShares > 0) {
-          runningAvgBuy = (runningShares * runningAvgBuy + sharesNum * priceNum) / newShares;
-        }
-        runningShares = newShares;
+        runningShares += sharesNum;
+        buyQueue.push({ shares: sharesNum, price: priceNum });
+
         if (inRange) {
           buyQtyInRange += sharesNum;
           buyValInRange += sharesNum * priceNum;
           inRangeTransactions.push(tx);
         }
       } else if (action === 'SELL') {
-        const pnl = sharesNum * (priceNum - runningAvgBuy);
-        runningShares = Math.max(0, runningShares - sharesNum);
-        if (runningShares === 0) {
-          runningAvgBuy = 0;
+        let remainingToSell = sharesNum;
+        let sellPnL = 0;
+
+        while (remainingToSell > 0 && buyQueue.length > 0) {
+          const oldestLayer = buyQueue[0];
+          if (oldestLayer.shares <= remainingToSell) {
+            sellPnL += oldestLayer.shares * (priceNum - oldestLayer.price);
+            remainingToSell -= oldestLayer.shares;
+            buyQueue.shift();
+          } else {
+            sellPnL += remainingToSell * (priceNum - oldestLayer.price);
+            oldestLayer.shares -= remainingToSell;
+            remainingToSell = 0;
+          }
         }
+
+        // If there's short selling or no match, assume 0 P&L for excess
+        if (remainingToSell > 0) {
+          remainingToSell = 0;
+        }
+
+        runningShares = Math.max(0, runningShares - sharesNum);
+
         if (inRange) {
           sellQtyInRange += sharesNum;
           sellValInRange += sharesNum * priceNum;
-          realizedPLInRange += pnl;
+          realizedPLInRange += sellPnL;
           hasSellInRange = true;
           inRangeTransactions.push(tx);
         }
@@ -398,26 +448,45 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
 
       if (isBeforeOrOnEnd) {
         netSharesAsOfEndDate = runningShares;
-        avgBuyAsOfEndDate = runningAvgBuy;
+        
+        // Compute average cost of remaining layers in buyQueue
+        let totalRemainingCost = 0;
+        let totalRemainingShares = 0;
+        buyQueue.forEach(layer => {
+          totalRemainingCost += layer.shares * layer.price;
+          totalRemainingShares += layer.shares;
+        });
+        avgBuyAsOfEndDate = totalRemainingShares > 0 ? (totalRemainingCost / totalRemainingShares) : 0;
       }
     });
 
     // Compute net shares today (current balance)
     let runningSharesAllTime = 0;
+    let allTimeSellQty = 0;
+    let allTimeSellVal = 0;
+    let allTimeBuyQty = 0;
+    let allTimeBuyVal = 0;
     g.transactions.forEach(tx => {
       const sharesNum = parseFloat(tx.shares) || 0;
+      const priceNum = parseFloat(tx.price) || 0;
       const action = tx.action || 'BUY';
       if (action === 'BUY') {
         runningSharesAllTime += sharesNum;
+        allTimeBuyQty += sharesNum;
+        allTimeBuyVal += sharesNum * priceNum;
       } else if (action === 'SELL') {
         runningSharesAllTime = Math.max(0, runningSharesAllTime - sharesNum);
+        allTimeSellQty += sharesNum;
+        allTimeSellVal += sharesNum * priceNum;
       }
     });
     const currentSharesToday = runningSharesAllTime;
+    const allTimeSellAvg = allTimeSellQty > 0 ? (allTimeSellVal / allTimeSellQty) : 0;
+    const allTimeBuyAvg = allTimeBuyQty > 0 ? (allTimeBuyVal / allTimeBuyQty) : 0;
 
     if (netSharesAsOfEndDate > 0 || hasSellInRange) {
-      const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : avgBuyAsOfEndDate;
-      const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : 0;
+      const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : (avgBuyAsOfEndDate || allTimeBuyAvg);
+      const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : allTimeSellAvg;
 
       results.push({
         ticker: g.ticker,
@@ -428,7 +497,8 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
         sellAvg: avgSell,
         netShares: netSharesAsOfEndDate,
         realizedPL: realizedPLInRange,
-        transactions: inRangeTransactions,
+        transactions: g.transactions,
+        inRangeTransactions: inRangeTransactions,
         hasSellInRange: hasSellInRange,
         currentSharesToday: currentSharesToday,
         avgBuyAsOfEndDate: avgBuyAsOfEndDate
@@ -476,6 +546,69 @@ function getAssetName(ticker) {
   return resolveAssetName(ticker);
 }
 
+function getOptionExpiry(ticker, name) {
+  // 1. Try to find from local storage transactions
+  try {
+    const stored = localStorage.getItem('portfolio_transactions');
+    if (stored) {
+      const txs = JSON.parse(stored);
+      const matchTx = txs.find(tx => tx.ticker === ticker && (tx.expiryDate || tx['Expiry Date'] || tx.expiry));
+      if (matchTx) {
+        const exp = matchTx.expiryDate || matchTx['Expiry Date'] || matchTx.expiry;
+        let formattedExp = exp;
+        const ymdMatch = exp.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (ymdMatch) {
+          formattedExp = `${parseInt(ymdMatch[2], 10)}/${parseInt(ymdMatch[3], 10)}/${ymdMatch[1].slice(-2)}`;
+        }
+        return `Exp ${formattedExp}`;
+      }
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+
+  // 2. Try to extract date from ticker string FIRST (most reliable)
+  const tickerDateMatch = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+  if (tickerDateMatch) return `Exp ${tickerDateMatch[1]}`;
+
+  // 3. Try to get it from defaultAssetData case-insensitively
+  const defaultAsset = getDefaultAsset(ticker);
+  if (defaultAsset && defaultAsset.name) {
+    const nameMatch = defaultAsset.name.match(/Exp\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+    if (nameMatch) return `Exp ${nameMatch[1]}`;
+  }
+
+  // 4. Fallback: try name field if it contains "Exp MM/DD/YY"
+  if (name) {
+    const nameMatch = name.match(/Exp\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+    if (nameMatch) return `Exp ${nameMatch[1]}`;
+  }
+  return '';
+}
+
+function formatDateTime(d) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthName = months[d.getMonth()];
+  const day = d.getDate();
+  const year = d.getFullYear();
+  const datePart = `${monthName} ${day},${year}`;
+  
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const timePart = `${hours}:${minutes}:${seconds} ${ampm}`;
+  return `${datePart} ${timePart}`;
+}
+
+function isQuickDrawerComment(comment) {
+  if (!comment) return false;
+  const trimmed = comment.trim();
+  return trimmed === 'Quick buy from portfolio drawer' || trimmed === 'Quick sell from portfolio drawer';
+}
+
 function formatOptionTicker(ticker) {
   const strikeMatch = ticker.match(/\$(\d+(?:\.\d+)?)/);
   const strikePrice = strikeMatch ? strikeMatch[1] : null;
@@ -510,130 +643,176 @@ function createMasterCardHTML(cardData, listType) {
   } catch (e) {
     marketPrices = {};
   }
-  const marketEntry = marketPrices[cardData.ticker] || defaultAssetData[cardData.ticker] || {};
-  const currentPrice = parseFloat(marketEntry.currentPrice) || buyAvgVal || 0;
+  const marketEntry = getVal(marketPrices, cardData.ticker) || {};
+  let currentPrice = parseFloat(marketEntry.currentPrice);
+  if (isNaN(currentPrice)) {
+    const defaultAsset = getDefaultAsset(cardData.ticker) || {};
+    currentPrice = parseFloat(defaultAsset.currentPrice) || buyAvgVal || 0;
+  }
 
   // 3-Tier P&L calculations
   const realizedPL = cardData.realizedPL * multiplier;
-  const unrealizedPL = cardData.netShares * (currentPrice - buyAvgVal) * multiplier;
-  const totalPL = realizedPL + unrealizedPL;
+  const unrealizedPL = (cardData.netShares * currentPrice - cardData.netShares * buyAvgVal) * multiplier;
+
+  let rightColumnHTML = '';
+  if (listType === 'active') {
+    const valueAmt = cardData.netShares * currentPrice * multiplier;
+    rightColumnHTML = `
+      <span class="stat-mini-label">Value</span>
+      <span class="stat-mini-value">$${valueAmt.toFixed(2)}</span>
+    `;
+  } else {
+    rightColumnHTML = `
+      <span class="stat-mini-label">Sell Average</span>
+      <span class="stat-mini-value">${sellAvgStr}${isOption ? ' <span class="option-multiplier-hint">×100</span>' : ''}</span>
+    `;
+  }
 
   // Class / sign formatting
-  let realizedClass = 'neutral';
+  let realizedClass = 'pnl-neutral';
   let realizedSign = '';
   if (realizedPL > 0) { realizedClass = 'pnl-up'; realizedSign = '+'; }
-  else if (realizedPL < 0) { realizedClass = 'pnl-down'; }
+  else if (realizedPL < 0) { realizedClass = 'pnl-down'; realizedSign = '-'; }
 
-  let unrealizedClass = 'neutral';
+  let unrealizedClass = 'pnl-neutral';
   let unrealizedSign = '';
   if (unrealizedPL > 0) { unrealizedClass = 'pnl-up'; unrealizedSign = '+'; }
-  else if (unrealizedPL < 0) { unrealizedClass = 'pnl-down'; }
+  else if (unrealizedPL < 0) { unrealizedClass = 'pnl-down'; unrealizedSign = '-'; }
 
-  let totalClass = 'neutral';
-  let totalSign = '';
-  if (totalPL > 0) { totalClass = 'pnl-up'; totalSign = '+'; }
-  else if (totalPL < 0) { totalClass = 'pnl-down'; }
-
-  // Inject dynamic badges based on status check
+  // Inject dynamic badges based on state matrix check (using calculateTradeStatus)
   let badgeHTML = '';
-  if (listType === 'active') {
-    if (cardData.netShares > 0 && cardData.currentSharesToday === 0) {
-      badgeHTML = `<span class="badge badge-historical">🕒 Historical Open / Closed Today</span>`;
-    }
-  } else if (listType === 'closed') {
-    if (cardData.netShares > 0) {
-      badgeHTML = `<span class="badge badge-partial">⚖️ Partial Close</span>`;
-    }
+  const badge = cardData.hasOwnProperty('badgeOverride') && cardData.badgeOverride
+    ? cardData.badgeOverride
+    : calculateTradeStatus(cardData);
+  if (badge) {
+    badgeHTML = `<span class="badge ${badge.class}">${badge.icon} ${badge.label}</span>`;
   }
 
   const assetTypeLabel = isOption ? 'Option' : 'Stock';
-  const qtyLabel = isOption ? 'CON' : 'SHR';
 
   // OPTIONS CONTRACT SPECIFICATION PARSER
   let optionBadgeHTML = '';
+  let colorPillarHTML = '';
   if (isOption) {
     const contractType = /\bCall\b/i.test(cardData.ticker) ? 'call'
       : /\bPut\b/i.test(cardData.ticker) ? 'put' : null;
     if (contractType) {
       optionBadgeHTML += `<span class="option-badge ${contractType}">${contractType.toUpperCase()}</span>`;
+      colorPillarHTML = `<span class="color-pillar ${contractType}" title="${contractType.toUpperCase()}"></span>`;
     }
   }
 
   const displayTicker = isOption ? formatOptionTicker(cardData.ticker) : cardData.ticker;
   const rawAssetName = getAssetName(cardData.ticker);
   const cleanName = cleanAssetName(rawAssetName);
+  const optionExpiry = isOption ? getOptionExpiry(cardData.ticker, rawAssetName) : '';
 
-  // Generate timeline nodes
+  // Generate timeline nodes (sorted in Reverse-Chronological Order)
   const timelineHTML = cardData.transactions.length === 0
     ? `<div style="padding: 10px 0; font-size: 11px; color: var(--text-muted); text-align: center; font-style: italic;">No transactions in this period.</div>`
-    : cardData.transactions.map(tx => {
-      if (!tx) return '';
+    : cardData.transactions.slice()
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .map(tx => {
+          if (!tx) return '';
 
-      const txDate = tx.date ? new Date(tx.date) : new Date();
-      const isToday = !isNaN(txDate.getTime()) &&
-        txDate.getFullYear() === SIMULATED_TODAY.getFullYear() &&
-        txDate.getMonth() === SIMULATED_TODAY.getMonth() &&
-        txDate.getDate() === SIMULATED_TODAY.getDate();
+          const txDate = tx.date ? new Date(tx.date) : new Date();
+          const action = tx.action || 'BUY';
+          const actionClass = action.toLowerCase();
+          const actionLabel = action === 'SELL' ? 'Sold' : 'Bought';
 
-      const formattedDate = isNaN(txDate.getTime())
-        ? 'Unknown Date'
-        : (isToday
-          ? txDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-          : txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+          const sharesVal = parseFloat(tx.shares) || 0;
+          const priceVal = parseFloat(tx.price) || 0;
+          const comment = tx.comment || '';
+          
+          const dateTimeStr = formatDateTime(txDate);
+          
+          // Filter out quick buy/sell drawer comments
+          let displayComment = comment;
+          if (isQuickDrawerComment(displayComment)) {
+            displayComment = '';
+          }
 
-      const action = tx.action || 'BUY';
-      const actionClass = action.toLowerCase();
-      const actionLabel = action === 'SELL' ? 'Sold' : 'Bought';
+          return `
+              <div class="timeline-item ${actionClass}">
+                <div class="timeline-dot"></div>
+                <div class="timeline-header">
+                  <span class="timeline-action-text">${actionLabel} ${sharesVal} @ $${priceVal.toFixed(2)} - ${dateTimeStr}</span>
+                </div>
+                ${displayComment ? `<div class="timeline-comment">${displayComment}</div>` : ''}
+              </div>
+            `;
+        }).join('');
 
-      const sharesVal = parseFloat(tx.shares) || 0;
-      const priceVal = parseFloat(tx.price) || 0;
-      const comment = tx.comment || '';
-      const txValue = isOption ? (sharesVal * priceVal * 100) : (sharesVal * priceVal);
-
-      return `
-          <div class="timeline-item ${actionClass}">
-            <div class="timeline-dot"></div>
-            <div class="timeline-header">
-              <span class="timeline-action-text">${actionLabel} ${sharesVal} ${isOption ? 'CON' : 'SHR'} @ $${priceVal.toFixed(2)}${isOption ? ' <span class="option-multiplier-hint">×100 = $' + txValue.toFixed(2) + '</span>' : ''}</span>
-              <span class="timeline-date">${formattedDate}</span>
-            </div>
-            ${comment ? `<div class="timeline-comment">${comment}</div>` : ''}
-          </div>
-        `;
-    }).join('');
-
-  // Retrieve local notes database to build notes history feed
-  let notesHTML = '';
+  // Retrieve local notes database to build notes history timeline
+  let tickerTimelineHTML = '';
   try {
     const allNotes = JSON.parse(localStorage.getItem('portfolio_notes') || '[]');
-    const tickerNotes = allNotes.filter(n => n.ticker && n.ticker.trim().toUpperCase() === cardData.ticker.trim().toUpperCase());
-    if (tickerNotes.length > 0) {
-      // Sort notes chronologically by parsing date and time
-      tickerNotes.sort((a, b) => {
-        const timeA = a.time || '00:00:00';
-        const timeB = b.time || '00:00:00';
-        return new Date(`${a.date}T${timeA}`) - new Date(`${b.date}T${timeB}`);
-      });
-      
-      const notesListHTML = tickerNotes.map(n => `
-        <div class="note-feed-item" style="margin-bottom: 8px; font-size: 11px; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); font-family: var(--font-main);">
-          <div style="display: flex; justify-content: space-between; color: var(--text-muted); margin-bottom: 4px; font-size: 10px;">
-            <strong>👤 ${n.author || 'Admin'}</strong>
-            <span>${n.date} ${n.time}</span>
+    const combinedNotes = [];
+    
+    // 1. Collect notes from portfolio_notes for this ticker
+    allNotes.forEach(n => {
+      if (n.ticker && n.ticker.trim().toUpperCase() === cardData.ticker.trim().toUpperCase()) {
+        const dateStr = n.date || '2026-06-03';
+        const timeStr = n.time || '00:00:00';
+        const noteDate = new Date(`${dateStr}T${timeStr}`);
+        combinedNotes.push({
+          author: n.author || 'Admin',
+          timestamp: noteDate,
+          text: n.text || n.comment || ''
+        });
+      }
+    });
+
+    // Sort notes chronologically (oldest at the top)
+    combinedNotes.sort((a, b) => a.timestamp - b.timestamp);
+
+    if (combinedNotes.length > 0) {
+      const formatTimestamp = (d) => formatDateTime(d);
+
+      const notesListHTML = combinedNotes.map(n => `
+        <div class="ticker-timeline-node" style="position: relative; padding-left: 20px; margin-bottom: 12px;">
+          <div class="ticker-timeline-dot" style="position: absolute; left: 4px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent, #a855f7); border: 2px solid var(--bg-primary, #06070c); box-shadow: 0 0 8px var(--accent-glow, rgba(168, 85, 247, 0.4));"></div>
+          <div class="ticker-timeline-meta" style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-bottom: 2px; font-family: var(--font-main);">
+            <span class="ticker-timeline-author">👤 ${n.author}</span>
+            <span class="ticker-timeline-timestamp">${formatTimestamp(n.timestamp)}</span>
           </div>
-          <div style="color: var(--text-primary); line-height: 1.4; white-space: pre-wrap; text-align: left;">${n.text}</div>
+          <div class="ticker-timeline-text" style="font-size: 11px; color: var(--text-primary); text-align: left; line-height: 1.4; white-space: pre-wrap; font-family: var(--font-main);">${n.text}</div>
         </div>
       `).join('');
 
-      notesHTML = `
-        <div class="notes-feed-container" style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
-          <div style="font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; text-align: left;">Notes History</div>
-          ${notesListHTML}
+      tickerTimelineHTML = `
+        <div class="ticker-timeline" style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 10px; position: relative;">
+          <div style="font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; text-align: left; font-family: var(--font-main);">Journal Notes Timeline</div>
+          <div class="ticker-timeline-list" style="position: relative;">
+            <div style="position: absolute; left: 7px; top: 6px; bottom: 6px; width: 1px; background: rgba(255,255,255,0.05);"></div>
+            ${notesListHTML}
+          </div>
+        </div>
+      `;
+    } else {
+      tickerTimelineHTML = `
+        <div class="ticker-timeline" style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 10px; text-align: center; font-size: 11px; color: var(--text-muted); font-style: italic; font-family: var(--font-main);">
+          No journal notes logged for this asset.
         </div>
       `;
     }
   } catch (err) {
-    console.error('Error generating notes history:', err);
+    console.error('Error generating notes history timeline:', err);
+  }
+
+  let pnlDisplayHTML = '';
+  if (listType === 'active') {
+    pnlDisplayHTML = `
+      <div class="pnl-single-display" style="margin-top: 10px; font-size: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main); text-align: left;">
+        <span style="color: var(--text-muted); font-size: 11px;">Unrealized P&L:</span> <strong class="unrealized-val ${unrealizedClass}" style="font-size: 13px;">${unrealizedSign}$${Math.abs(unrealizedPL).toFixed(2)}</strong>
+      </div>
+    `;
+  } else {
+    pnlDisplayHTML = `
+      <div class="pnl-single-display" style="margin-top: 10px; font-size: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main); text-align: left;">
+        <span style="color: var(--text-muted); font-size: 11px;">Realized P&L:</span> <strong class="realized-val ${realizedClass}" style="font-size: 13px;">${realizedSign}$${Math.abs(realizedPL).toFixed(2)}</strong>
+      </div>
+    `;
   }
 
   return `
@@ -645,7 +824,11 @@ function createMasterCardHTML(cardData, listType) {
               <span class="card-ticker" style="margin-bottom: 0;">${displayTicker}</span>
               ${badgeHTML}
             </div>
-            <span class="card-asset-name">${cleanName}</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              ${colorPillarHTML}
+              <span class="card-asset-name">${cleanName}</span>
+            </div>
+            ${optionExpiry ? `<span class="card-asset-expiry" style="color: var(--text-muted); font-size: 10px; display: block; margin-top: 2px;">${optionExpiry}</span>` : ''}
           </div>
           ${assetTypeLabel === 'Stock' ? '' : `<span class="card-asset-type">${assetTypeLabel}</span>`}
           ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
@@ -653,7 +836,7 @@ function createMasterCardHTML(cardData, listType) {
         <div class="card-actions-area">
           <div class="expand-caret">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
+               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
           </div>
         </div>
@@ -666,28 +849,23 @@ function createMasterCardHTML(cardData, listType) {
         </div>
         <div class="stat-mini-item" style="text-align: center;">
           <span class="stat-mini-label">Net Holdings</span>
-          <span class="stat-mini-value" style="color: ${cardData.netShares <= 0 ? 'var(--text-muted)' : 'var(--success)'}">
-            ${cardData.netShares <= 0 ? 'Closed' : `${cardData.netShares} ${qtyLabel}`}
+          <span class="stat-mini-value" style="color: ${listType === 'active' ? 'var(--success)' : 'var(--text-muted)'}">
+            ${listType === 'active' ? `${cardData.netShares}` : `Sold ${cardData.sellQty}`}
           </span>
         </div>
         <div class="stat-mini-item">
-          <span class="stat-mini-label">Sell Average</span>
-          <span class="stat-mini-value">${sellAvgStr}${isOption ? ' <span class="option-multiplier-hint">×100</span>' : ''}</span>
+          ${rightColumnHTML}
         </div>
       </div>
 
-      <div class="pnl-tier-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; font-size: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main);">
-        <div><span style="color: var(--text-muted);">Realized:</span> <strong class="realized-val ${realizedClass}">${realizedSign}$${Math.abs(realizedPL).toFixed(2)}</strong></div>
-        <div><span style="color: var(--text-muted);">Unrealized:</span> <strong class="unrealized-val ${unrealizedClass}">${unrealizedSign}$${Math.abs(unrealizedPL).toFixed(2)}</strong></div>
-        <div><span style="color: var(--text-muted);">Total P&L:</span> <strong class="total-pnl-val ${totalClass}">${totalSign}$${Math.abs(totalPL).toFixed(2)}</strong></div>
-      </div>
+      ${pnlDisplayHTML}
       
       <!-- Expandable Chronological Timeline -->
       <div class="timeline-wrapper">
         <div class="timeline-container">
           ${timelineHTML}
         </div>
-        ${notesHTML}
+        ${tickerTimelineHTML}
       </div>
     </div>
   `;
@@ -697,6 +875,14 @@ function createMasterCardHTML(cardData, listType) {
  * Groups, formats, and renders Master Cards into Active vs Completed sections
  */
 function renderLedger(rangeType, startDate, endDate) {
+  currentRangeType = rangeType;
+  currentStartDate = startDate;
+  currentEndDate = endDate;
+
+  // Add skeleton pulse loading state to metric cards
+  const metricCards = document.querySelectorAll('.metric-card');
+  metricCards.forEach(card => card.classList.add('loading'));
+
   const activeList = document.getElementById('active-ledger-list');
   const completedList = document.getElementById('completed-ledger-list');
 
@@ -705,8 +891,71 @@ function renderLedger(rangeType, startDate, endDate) {
   const allTxs = getAllTransactions();
   const grouped = groupTransactionsByTicker(allTxs, startDate, endDate);
 
-  const activeCards = grouped.filter(g => g.netShares > 0);
-  const completedCards = grouped.filter(g => g.hasSellInRange);
+  const activeCards = [];
+  const completedCards = [];
+
+  grouped.forEach(g => {
+    // Determine netSharesAsOfEndDate
+    let netSharesAsOfEndDate = 0;
+    let runningSharesTemp = 0;
+    g.transactions.forEach(tx => {
+      const txDate = new Date(tx.date);
+      const sharesNum = parseFloat(tx.shares) || 0;
+      const action = tx.action || 'BUY';
+      if (action === 'BUY') {
+        runningSharesTemp += sharesNum;
+      } else if (action === 'SELL') {
+        runningSharesTemp = Math.max(0, runningSharesTemp - sharesNum);
+      }
+      if (txDate <= endDate) {
+        netSharesAsOfEndDate = runningSharesTemp;
+      }
+    });
+
+    const badge = getAssetStateBadge(g, startDate, endDate);
+
+    // Make sure card's netShares reflects the state at the end of the period
+    g.netShares = netSharesAsOfEndDate;
+
+    if (badge && badge.type === 'partial') {
+      // Partially closed: split into active (remaining) and completed (sold)
+      const activePortion = {
+        ...g,
+        badgeOverride: null // No badge under active positions
+      };
+      activeCards.push(activePortion);
+
+      const completedPortion = {
+        ...g,
+        netShares: 0,
+        badgeOverride: {
+          type: 'partial',
+          label: 'Partially Closed',
+          class: 'badge-partial',
+          icon: '🔵'
+        }
+      };
+      completedCards.push(completedPortion);
+    } else if (badge && badge.type === 'sold_later') {
+      // Sold later: active at the time, closed later
+      const activePortion = {
+        ...g,
+        badgeOverride: badge
+      };
+      activeCards.push(activePortion);
+    } else if (badge && badge.type === 'closed') {
+      // Closed during the period: only in completed list
+      const completedPortion = {
+        ...g,
+        netShares: 0,
+        badgeOverride: badge
+      };
+      completedCards.push(completedPortion);
+    } else if (netSharesAsOfEndDate > 0) {
+      // Regular active position (no sells in range): only in active list
+      activeCards.push(g);
+    }
+  });
 
   // Render 🟢 Active Positions
   if (activeCards.length === 0) {
@@ -724,6 +973,62 @@ function renderLedger(rangeType, startDate, endDate) {
 
   // Calculate and update Section 1 metrics
   calculateSection1Metrics(rangeType, startDate, endDate);
+
+  // Sync timeframe data packets from the backend skeleton route
+  fetch(`http://localhost:5001/api/reports?filter=${rangeType}`)
+    .then(res => {
+      if (res.ok) return res.json();
+      throw new Error(`Server returned status ${res.status}`);
+    })
+    .then(data => {
+      // Remove skeleton loading state
+      const cards = document.querySelectorAll('.metric-card');
+      cards.forEach(card => card.classList.remove('loading'));
+
+      console.log(`[Reports Endpoint Sync] Successfully loaded timeframe packet for filter="${rangeType}":`, data);
+      
+      const containerEl = document.getElementById('ledger-scroll-container');
+      const tableSection = document.querySelector('.table-section');
+      let existingPlaceholder = document.getElementById('reports-empty-state-placeholder');
+
+      if (data.trades && data.trades.length === 0) {
+        // Hide the empty table structure
+        if (containerEl) {
+          containerEl.style.display = 'none';
+        }
+        
+        // Inject a beautifully styled placeholder message
+        if (!existingPlaceholder) {
+          existingPlaceholder = document.createElement('div');
+          existingPlaceholder.id = 'reports-empty-state-placeholder';
+          existingPlaceholder.innerHTML = `
+            <div style="text-align: center; padding: 48px 24px; color: var(--text-muted); font-family: var(--font-main); font-size: 14px;">
+              <div style="font-size: 28px; margin-bottom: 12px; filter: grayscale(1); opacity: 0.5;">📊</div>
+              <div style="font-weight: 550; letter-spacing: 0.3px;">No transaction history logged for this interval.</div>
+            </div>
+          `;
+          if (tableSection) {
+            tableSection.parentNode.insertBefore(existingPlaceholder, tableSection);
+          }
+        } else {
+          existingPlaceholder.style.display = 'block';
+        }
+      } else {
+        // Show table layout, hide placeholder
+        if (containerEl) {
+          containerEl.style.display = 'block';
+        }
+        if (existingPlaceholder) {
+          existingPlaceholder.style.display = 'none';
+        }
+      }
+    })
+    .catch(err => {
+      // Remove skeleton loading state
+      const cards = document.querySelectorAll('.metric-card');
+      cards.forEach(card => card.classList.remove('loading'));
+      console.error(`[Reports Endpoint Sync Error] Failed to fetch reports timeframe packet:`, err);
+    });
 
   // Fetch and update AI Journal Digest summary
   const filteredTxs = getFilteredTransactions(startDate, endDate);
@@ -1104,7 +1409,7 @@ async function pullCloudData() {
         const shares = parseInt(getVal(tx, 'Shares') || tx.shares || tx.quantity || 0, 10);
         const costBasis = parseFloat(getVal(tx, 'Price') || getVal(tx, 'CostBasis') || getVal(tx, 'Avg Price') || tx.price || 0);
         const rawCurrentPrice = parseFloat(getVal(tx, 'CurrentPrice') || tx.currentPrice || 0);
-        const currentPrice = (rawCurrentPrice && rawCurrentPrice > 0) ? rawCurrentPrice : costBasis;
+        const hasRealPrice = rawCurrentPrice && rawCurrentPrice > 0;
         const rawDate = getVal(tx, 'Date') || tx.date;
         const date = (rawDate && String(rawDate).trim()) ? String(rawDate).trim() : '2026-01-01T00:00:00.000Z';
         const comment = String(getVal(tx, 'Trade Journal Note') || tx.comment || tx.note || '');
@@ -1121,20 +1426,54 @@ async function pullCloudData() {
         }
 
         if (ticker && assetType !== 'CASH') {
-          marketPrices[ticker] = {
+          const priceEntry = {
             name: name,
-            currentPrice: currentPrice,
             change24h: parseFloat(getVal(tx, 'change24h') || tx.change24h || 0),
             icon: getVal(tx, 'Icon') || tx.icon || ticker.slice(0, 2).toUpperCase(),
             stopLoss: stopLoss
           };
+          if (hasRealPrice) {
+            priceEntry.currentPrice = rawCurrentPrice;
+          }
+          // Preserve existing live price if we already have one in cache
+          const existing = marketPrices[ticker];
+          if (existing && existing.currentPrice && !hasRealPrice) {
+            priceEntry.currentPrice = existing.currentPrice;
+          }
+          marketPrices[ticker] = priceEntry;
+
+          const queryTicker = assetType === 'options' ? ticker.split(/[\s$@]/)[0].toUpperCase() : ticker;
+          if (!marketPrices[queryTicker] || !marketPrices[queryTicker].name || marketPrices[queryTicker].name === queryTicker) {
+            fetchTickerNameFromInternet(queryTicker).then(fetchedName => {
+              if (fetchedName) {
+                let mp = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+                if (!mp[queryTicker]) mp[queryTicker] = {};
+                mp[queryTicker].name = fetchedName;
+                localStorage.setItem('portfolio_market_prices', JSON.stringify(mp));
+                renderLedger(currentRangeType, currentStartDate, currentEndDate);
+              }
+            });
+          }
         }
 
-        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss };
+        const expiryDate = tx['Expiry Date'] || tx.expiryDate || tx.expiry || '';
+        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss, expiryDate };
       }).filter(tx => tx.ticker !== '');
 
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
+
+      // Fetch and save cash transactions
+      try {
+        const cashUrl = url.replace('/trades', '/cash');
+        const cashResponse = await fetch(cashUrl, { method: 'GET' });
+        if (cashResponse.ok) {
+          const cashData = await cashResponse.json();
+          localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashData));
+        }
+      } catch (cashErr) {
+        console.warn('Failed to fetch cash ledger from server:', cashErr);
+      }
 
       // Re-render ledger with the current range
       renderLedger(currentRangeType, currentStartDate, currentEndDate);
@@ -1159,6 +1498,51 @@ function isTxBeforeRange(tx, startDate) {
  * Calculates Section 1 metrics and updates DOM snapshot card plus sparkline
  */
 function calculateSection1Metrics(rangeType, startDate, endDate) {
+  // ── CASH (buying power) CALCULATIONS ──
+  let cashTxs = [];
+  try {
+    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+  } catch (e) {
+    cashTxs = [];
+  }
+
+  let dynamicCash = 0;
+  cashTxs.forEach(tx => {
+    if (!tx) return;
+    const action = String(tx.action || '').toUpperCase();
+    const amount = parseFloat(tx.price) || 0;
+    if (action === 'DEPOSIT') {
+      dynamicCash += amount;
+    } else if (action === 'WITHDRAWAL') {
+      dynamicCash -= amount;
+    }
+  });
+
+  const rawTxs = getAllTransactions();
+  rawTxs.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+    const action = String(tx.action || '').toUpperCase();
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const priceNum = parseFloat(tx.price) || 0;
+    const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+    const multiplier = isOpt ? 100 : 1;
+    const cost = sharesNum * priceNum * multiplier;
+
+    if (action === 'BUY') {
+      dynamicCash -= cost;
+    } else if (action === 'SELL') {
+      dynamicCash += cost;
+    }
+  });
+
+  let buyingPower = Math.max(0, dynamicCash);
+
+  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
+  if (isUserSet) {
+    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+  }
+
   const allTxs = getAllTransactions().filter(tx => tx.ticker !== 'CASH' && tx.assetType !== 'CASH');
 
   const intervalTimes = [];
@@ -1237,26 +1621,89 @@ function calculateSection1Metrics(rangeType, startDate, endDate) {
 
     // Active P&L
     if (pos.netShares > 0) {
-      const marketEntry = marketPrices[pos.ticker] || defaultAssetData[pos.ticker] || {};
-      const currentPrice = parseFloat(marketEntry.currentPrice) || pos.buyAvg || 0;
-      const unrealizedPL = pos.netShares * (currentPrice - pos.buyAvg) * multiplier;
+      const marketEntry = getVal(marketPrices, pos.ticker) || {};
+      const costBasis = pos.avgBuyAsOfEndDate || pos.buyAvg || 0;
+      let currentPrice = parseFloat(marketEntry.currentPrice);
+      if (isNaN(currentPrice)) {
+        const defaultAsset = getDefaultAsset(pos.ticker) || {};
+        currentPrice = parseFloat(defaultAsset.currentPrice) || costBasis || 0;
+      }
+      const unrealizedPL = (pos.netShares * currentPrice - pos.netShares * costBasis) * multiplier;
       activePL += unrealizedPL;
     }
   });
 
+  let totalAssetValue = 0;
+  allGroups.forEach(pos => {
+    if (pos.netShares > 0) {
+      const marketEntry = getVal(marketPrices, pos.ticker) || {};
+      const costBasis = pos.avgBuyAsOfEndDate || pos.buyAvg || 0;
+      let currentPrice = parseFloat(marketEntry.currentPrice);
+      if (isNaN(currentPrice)) {
+        const defaultAsset = getDefaultAsset(pos.ticker) || {};
+        currentPrice = parseFloat(defaultAsset.currentPrice) || costBasis || 0;
+      }
+      const isOption = pos.assetType === 'options' || (/\$\d/.test(pos.ticker) && /\b(call|put)\b/i.test(pos.ticker));
+      const multiplier = isOption ? 100 : 1;
+      totalAssetValue += pos.netShares * currentPrice * multiplier;
+    }
+  });
+
+  const totalPortfolioValue = buyingPower + totalAssetValue;
+  const totalValueEl = document.getElementById('summary-total-value');
+  if (totalValueEl) {
+    totalValueEl.textContent = '$' + totalPortfolioValue.toFixed(2);
+  }
+
   const totalPerformance = closedPL + activePL;
   const perfEl = document.getElementById('total-performance-value');
   if (perfEl) {
-    perfEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral');
+    perfEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral', 'text-profit', 'text-loss');
     if (totalPerformance > 0) {
       perfEl.textContent = `+$${totalPerformance.toFixed(2)}`;
-      perfEl.classList.add('pnl-up');
+      perfEl.classList.add('pnl-up', 'text-profit');
     } else if (totalPerformance < 0) {
       perfEl.textContent = `-$${Math.abs(totalPerformance).toFixed(2)}`;
-      perfEl.classList.add('pnl-down');
+      perfEl.classList.add('pnl-down', 'text-loss');
     } else {
       perfEl.textContent = `$0.00`;
       perfEl.classList.add('pnl-neutral');
+    }
+  }
+
+  // Update the Realized, Unrealized, and Total P&L elements
+  const summaryRealizedEl = document.getElementById('summary-realized-pnl');
+  const summaryUnrealizedEl = document.getElementById('summary-unrealized-pnl');
+  const summaryTotalEl = document.getElementById('summary-total-pnl');
+
+  const updatePnLElement = (el, val) => {
+    if (!el) return;
+    el.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral', 'neutral', 'text-profit', 'text-loss');
+    if (val > 0) {
+      el.textContent = `+$${val.toFixed(2)}`;
+      el.classList.add('pnl-up', 'text-profit');
+    } else if (val < 0) {
+      el.textContent = `-$${Math.abs(val).toFixed(2)}`;
+      el.classList.add('pnl-down', 'text-loss');
+    } else {
+      el.textContent = `$0.00`;
+      el.classList.add('pnl-neutral');
+    }
+  };
+
+  updatePnLElement(summaryRealizedEl, closedPL);
+  updatePnLElement(summaryUnrealizedEl, activePL);
+  updatePnLElement(summaryTotalEl, totalPerformance);
+
+  const accountValueOverride = localStorage.getItem('portfolio_value_override');
+  if (accountValueOverride && accountValueOverride.trim() !== '') {
+    const trimmedOverride = accountValueOverride.trim();
+    if (perfEl) {
+      perfEl.textContent = trimmedOverride;
+      perfEl.className = 'pnl-neutral';
+    }
+    if (totalValueEl) {
+      totalValueEl.textContent = trimmedOverride;
     }
   }
 
@@ -1356,30 +1803,74 @@ async function fetchAIJournalSummary(transactions, currentRange) {
   const briefTextEl = document.getElementById('snap-ai-brief-text');
   if (!briefTextEl) return;
 
-  const notes = transactions
-    .map(tx => (tx.comment || '').trim())
-    .filter(note => note.length > 0);
+  // 1. Load notes from portfolio_notes
+  let allNotes = [];
+  try {
+    allNotes = JSON.parse(localStorage.getItem('portfolio_notes') || '[]');
+  } catch (e) {
+    allNotes = [];
+  }
 
-  if (notes.length === 0) {
+  // 2. Filter comments that match the current date range
+  const matchedNotes = [];
+  
+  allNotes.forEach(n => {
+    if (!n.date) return;
+    const timeStr = n.time || '00:00:00';
+    const noteDate = new Date(`${n.date}T${timeStr}`);
+    if (noteDate >= currentStartDate && noteDate <= currentEndDate) {
+      if (n.text && n.text.trim().length > 0) {
+        matchedNotes.push(n.text.trim());
+      }
+    }
+  });
+
+  // Also include transaction comments in the period
+  transactions.forEach(tx => {
+    if (tx.comment && tx.comment.trim().length > 0) {
+      matchedNotes.push(tx.comment.trim());
+    }
+  });
+
+  if (matchedNotes.length === 0) {
     briefTextEl.textContent = "No journal notes logged for this reporting period.";
     return;
   }
 
   briefTextEl.textContent = "Generating AI Summary...";
 
+  const compileLocalSummary = (notesList, range) => {
+    // Unique notes
+    const unique = [...new Set(notesList)];
+    if (unique.length === 0) return "No journal notes logged for this reporting period.";
+    return `Compiled Trades & Notes: ${unique.join(' ')}`;
+  };
+
+  const enforceLineLimit = (text, range) => {
+    if (!text) return '';
+    let cleanText = text.replace(/^(📝\s*)?Compiled\s+Journal\s+Digest\s*(\([^)]*\))?:?\s*\n?/i, '').trim();
+    const lines = cleanText.split('\n').filter(l => l.trim().length > 0);
+    const maxLines = (range === 'daily' || range === 'weekly') ? 5 : 10;
+    if (lines.length > maxLines) {
+      return lines.slice(0, maxLines).join('\n');
+    }
+    return cleanText;
+  };
+
   const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL") || url.includes("localhost") || url.includes("127.0.0.1")) {
-    briefTextEl.textContent = "AI Summary unavailable (Local Mode).";
+    briefTextEl.textContent = compileLocalSummary(matchedNotes, currentRange);
     return;
   }
 
   try {
     const response = await fetch(url, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       redirect: 'follow',
       body: JSON.stringify({
         action: 'getAIJournalSummary',
-        notes: notes,
+        notes: matchedNotes,
         range: currentRange
       })
     });
@@ -1388,7 +1879,6 @@ async function fetchAIJournalSummary(transactions, currentRange) {
     }
     const data = await response.text();
 
-    // Check if the response is JSON (which means the Apps Script web app is not updated)
     let isJson = false;
     let jsonParsed = null;
     try {
@@ -1403,17 +1893,232 @@ async function fetchAIJournalSummary(transactions, currentRange) {
 
     if (isJson && jsonParsed) {
       if (jsonParsed.summary) {
-        briefTextEl.textContent = jsonParsed.summary;
-      } else if (jsonParsed.status === 'success' || jsonParsed.message) {
-        briefTextEl.innerHTML = `<span style="color: var(--danger, #ef4444); font-weight: 600;">Deployment Error:</span> Your Google Apps Script web app is running an older version and returned a spreadsheet status response instead of the Gemini AI digest. Please copy the updated code from the local file <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace;">google_apps_script.gs</code> into your Google Apps Script editor, and click <b>Deploy > New Deployment</b> (Web App, Everyone access) to deploy the updated endpoint.`;
+        briefTextEl.textContent = enforceLineLimit(jsonParsed.summary, currentRange);
       } else {
-        briefTextEl.textContent = JSON.stringify(jsonParsed);
+        briefTextEl.textContent = compileLocalSummary(matchedNotes, currentRange);
       }
     } else {
-      briefTextEl.textContent = data || "No summary returned.";
+      briefTextEl.textContent = enforceLineLimit(data, currentRange) || compileLocalSummary(matchedNotes, currentRange);
     }
   } catch (err) {
     console.error('AI Journal summary fetch failed:', err);
-    briefTextEl.textContent = "AI Summary failed to load. (Offline Mode)";
+    briefTextEl.textContent = compileLocalSummary(matchedNotes, currentRange);
   }
 }
+
+function getAssetStateBadge(cardData, startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  let runningShares = 0;
+  let liquidationDate = null;
+
+  // Transactions are already sorted chronologically in cardData.transactions
+  cardData.transactions.forEach(tx => {
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const action = tx.action || 'BUY';
+    
+    if (action === 'BUY') {
+      runningShares += sharesNum;
+    } else if (action === 'SELL') {
+      runningShares = Math.max(0, runningShares - sharesNum);
+      if (runningShares === 0) {
+        liquidationDate = new Date(tx.date);
+      } else {
+        liquidationDate = null;
+      }
+    }
+  });
+
+  const currentSharesToday = runningShares;
+  const hasSellInRange = cardData.hasSellInRange;
+
+  // Calculate netSharesAsOfEndDate
+  let netSharesAsOfEndDate = 0;
+  let runningSharesTemp = 0;
+  cardData.transactions.forEach(tx => {
+    const txDate = new Date(tx.date);
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const action = tx.action || 'BUY';
+    if (action === 'BUY') {
+      runningSharesTemp += sharesNum;
+    } else if (action === 'SELL') {
+      runningSharesTemp = Math.max(0, runningSharesTemp - sharesNum);
+    }
+    if (txDate <= end) {
+      netSharesAsOfEndDate = runningSharesTemp;
+    }
+  });
+
+  if (netSharesAsOfEndDate > 0) {
+    if (currentSharesToday === 0 && liquidationDate && liquidationDate > end) {
+      return {
+        type: 'sold_later',
+        label: 'Sold Later',
+        class: 'badge-sold-later',
+        icon: '🟡'
+      };
+    }
+    if (hasSellInRange) {
+      return {
+        type: 'partial',
+        label: 'Partial Close',
+        class: 'badge-partial',
+        icon: '🔵'
+      };
+    }
+    return null;
+  } else {
+    if (liquidationDate && liquidationDate >= start && liquidationDate <= end) {
+      return {
+        type: 'closed',
+        label: 'Closed',
+        class: 'badge-closed',
+        icon: '⚪'
+      };
+    }
+    return null;
+  }
+}
+
+function getOptionExpiryDate(ticker, name) {
+  const expiryStr = getOptionExpiry(ticker, name);
+  if (!expiryStr) return null;
+  const match = expiryStr.match(/Exp\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i);
+  if (!match) return null;
+  const month = parseInt(match[1], 10) - 1;
+  const day = parseInt(match[2], 10);
+  let year = match[3] ? parseInt(match[3], 10) : null;
+  if (year === null) {
+    year = (typeof SIMULATED_TODAY !== 'undefined' ? SIMULATED_TODAY : new Date()).getFullYear();
+  } else if (year < 100) {
+    year += 2000;
+  }
+  const dateObj = new Date(year, month, day);
+  dateObj.setHours(0, 0, 0, 0);
+  return dateObj;
+}
+
+function calculateTradeStatus(trade) {
+  if (!trade) return null;
+
+  const sharesRemaining = typeof trade.shares_remaining !== 'undefined'
+    ? parseFloat(trade.shares_remaining)
+    : (typeof trade.netShares !== 'undefined' ? parseFloat(trade.netShares) : 0);
+
+  const isOption = trade.assetType === 'options'
+    || (trade.ticker && /\$\d/.test(trade.ticker) && /\b(call|put)\b/i.test(trade.ticker));
+
+  if (isOption) {
+    const isExercised = trade.exercised === true
+      || (trade.transactions && trade.transactions.some(tx => tx && tx.action && tx.action.toUpperCase() === 'EXERCISE'));
+
+    if (isExercised) {
+      return {
+        class: 'badge-exercised',
+        icon: '🔵',
+        label: 'Exercised'
+      };
+    }
+
+    const rawAssetName = typeof getAssetName === 'function' ? getAssetName(trade.ticker) : '';
+    const expiryDate = getOptionExpiryDate(trade.ticker, rawAssetName);
+    if (expiryDate) {
+      const currentDate = new Date((typeof SIMULATED_TODAY !== 'undefined' ? SIMULATED_TODAY : new Date()).getTime());
+      currentDate.setHours(0, 0, 0, 0);
+
+      if (currentDate > expiryDate) {
+        return {
+          class: 'badge-expired',
+          icon: '🔴',
+          label: 'Expired'
+        };
+      }
+    }
+  }
+
+  if (sharesRemaining > 0) {
+    return {
+      class: 'badge-active',
+      icon: '🟢',
+      label: 'Active'
+    };
+  } else {
+    return {
+      class: 'badge-closed',
+      icon: '⚪',
+      label: 'Closed'
+    };
+  }
+}
+
+function initAINotesCollapsible() {
+  const openBtn = document.getElementById('open-ai-modal-btn');
+  const container = document.getElementById('ai-digest-container');
+  const header = document.getElementById('ai-digest-header');
+  const body = document.getElementById('ai-digest-body');
+  const dismissBtn = document.getElementById('dismiss-ai-digest-btn');
+  const toggleIcon = document.getElementById('ai-digest-toggle-icon');
+
+  if (!container || !header || !body || !dismissBtn || !toggleIcon) return;
+
+  // Toggle expand/collapse when clicking header (excluding dismiss button click)
+  header.addEventListener('click', (e) => {
+    if (e.target.closest('#dismiss-ai-digest-btn')) {
+      return; // Handled by dismiss button listener
+    }
+    
+    const isCollapsed = body.style.display === 'none';
+    if (isCollapsed) {
+      body.style.display = 'block';
+      toggleIcon.textContent = '▼';
+      container.classList.remove('collapsed');
+    } else {
+      body.style.display = 'none';
+      toggleIcon.textContent = '▶';
+      container.classList.add('collapsed');
+    }
+  });
+
+  // Dismiss button hides container entirely
+  dismissBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    container.style.display = 'none';
+  });
+
+  // Open button displays and expands container
+  if (openBtn) {
+    openBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      container.style.display = 'block';
+      body.style.display = 'block';
+      toggleIcon.textContent = '▼';
+      container.classList.remove('collapsed');
+      
+      // Auto-scroll to show the container
+      container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
+}
+
+async function fetchTickerNameFromInternet(ticker) {
+  try {
+    const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      const wrapper = await res.json();
+      if (wrapper && wrapper.contents) {
+        const json = JSON.parse(wrapper.contents);
+        if (json && json.quotes && json.quotes[0]) {
+          const name = json.quotes[0].longname || json.quotes[0].shortname;
+          if (name) return name;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(`Failed to fetch ticker name for ${ticker} from internet:`, e);
+  }
+  return null;
+}
+

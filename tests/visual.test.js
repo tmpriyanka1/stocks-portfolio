@@ -66,8 +66,8 @@ describe('Visual Regression UI Tests', () => {
     page = await browser.newPage();
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
-    // Use standard high-definition viewport for rendering UI pages
-    await page.setViewportSize({ width: 1200, height: 1200 });
+    // Use standard mobile viewport for rendering UI pages (phone resolution)
+    await page.setViewportSize({ width: 390, height: 844 });
 
     // Mock Google Apps Script endpoint fetches to be deterministic and offline-safe
     await page.route('**/macros/s/**', route => {
@@ -151,6 +151,9 @@ describe('Visual Regression UI Tests', () => {
 
       // Clear local storage for a clean and deterministic start
       localStorage.clear();
+
+      // Inject a valid admin session token to bypass auth-guard.js during visual tests
+      sessionStorage.setItem('portfolio_session', JSON.stringify({ username: 'Admin', role: 'admin' }));
 
       // Inject style to hide scrollbars globally to prevent visual test flakiness
       const style = document.createElement('style');
@@ -312,10 +315,11 @@ describe('Visual Regression UI Tests', () => {
       throw new Error(result.message);
     }
 
-    // 2. Expand all accordions (Color Accent, Preferences, Portfolio Overrides, System Actions)
+    // 2. Expand all accordions (Color Accent, Preferences, Portfolio Overrides, Profit & Loss, System Actions)
     await page.click('#themeAccordion .accordion-header');
     await page.click('#preferencesAccordion .accordion-header');
     await page.click('#portfolioOverridesCard .accordion-header');
+    await page.click('#pnlGraphAccordion .accordion-header');
     await page.click('#systemActionsCard .accordion-header');
     // Wait for accordion expansion animation to complete (longer duration to ensure full settling)
     await page.waitForTimeout(1000);
@@ -433,7 +437,7 @@ describe('Visual Regression UI Tests', () => {
     // Verify window.open was triggered with correct URL & sizing features
     const openedList = await page.evaluate(() => window.openedWindows);
     expect(openedList.length).toBe(1);
-    expect(openedList[0].url).toContain('https://www.google.com/finance/quote/');
+    expect(openedList[0].url).toContain('https://finance.yahoo.com/quote/');
     expect(openedList[0].features).toContain('width=800');
     expect(openedList[0].features).toContain('height=600');
     expect(openedList[0].features).toContain('resizable=yes');

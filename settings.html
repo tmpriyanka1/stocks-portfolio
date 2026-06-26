@@ -13,6 +13,76 @@
   <link rel="stylesheet" href="styles.css?v=2.2">
   <!-- Screen-specific Styles -->
   <link rel="stylesheet" href="settings.css?v=2.2">
+  <style>
+    /* P&L Graph Styles */
+    .pnl-bar-positive {
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .pnl-bar-negative {
+      background: linear-gradient(180deg, #dc2626 0%, #ef4444 100%) !important;
+      border-radius: 0 0 4px 4px;
+      transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .pnl-bar-positive:hover, .pnl-bar-negative:hover {
+      filter: brightness(1.2);
+    }
+    .pnl-bar-positive:hover .bar-tooltip, .pnl-bar-negative:hover .bar-tooltip {
+      opacity: 1 !important;
+      transform: translateX(-50%) scale(1) !important;
+    }
+    .bar-tooltip {
+      position: absolute;
+      left: 50%;
+      background: rgba(15, 23, 42, 0.95);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateX(-50%) scale(0.9);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .bar-tooltip-up {
+      bottom: 110%;
+    }
+    .bar-tooltip-down {
+      top: 110%;
+    }
+    .pnl-filter-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.25s ease;
+      font-family: var(--font-main);
+    }
+    .pnl-filter-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .pnl-filter-btn.active {
+      border-color: var(--accent) !important;
+      background: var(--accent-glow) !important;
+      color: var(--accent) !important;
+      font-weight: 600;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+  </style>
 </head>
 
 <body>
@@ -50,17 +120,158 @@
       <!-- Settings Content Scrollable Area -->
       <div class="settings-content">
         <!-- Profile Panel -->
-        <div class="settings-card">
-          <h2 class="settings-title">User Profile</h2>
-          <div class="form-group">
-            <label for="usernameInput">Profile Name</label>
-            <input type="text" id="usernameInput" value="Vanai" autocomplete="off">
+        <div class="settings-card accordion-card">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">User Profile</span>
+              <span class="pref-desc">Manage profile name and email address</span>
+            </div>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="emailInput">Email Address</label>
-            <input type="email" id="emailInput" value="vanai@portfolio.com" autocomplete="off">
+          <div class="accordion-content">
+            <div class="form-group">
+              <label for="usernameInput">Profile Name</label>
+              <input type="text" id="usernameInput" value="Vanai" autocomplete="off" required>
+            </div>
+            <div class="form-group">
+              <label for="emailInput">Email Address</label>
+              <input type="email" id="emailInput" value="vanai@portfolio.com" autocomplete="off" required>
+            </div>
+            <div class="form-group">
+              <label for="phoneInput">Phone Number</label>
+              <input type="text" id="phoneInput" placeholder="Enter phone number..." autocomplete="off" required>
+            </div>
+            <div class="change-password-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.08);">
+              <h3 style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; letter-spacing: 0.5px;">Update Password</h3>
+              <div class="form-group">
+                <label for="changePasswordInput">New Password</label>
+                <div class="password-input-container">
+                  <input type="password" id="changePasswordInput" placeholder="Enter new password" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn" tabindex="-1">Show</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="confirmPasswordInput">Confirm Password</label>
+                <div class="password-input-container">
+                  <input type="password" id="confirmPasswordInput" placeholder="Confirm new password" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn" tabindex="-1">Show</button>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+              <button type="button" class="action-btn save-btn" id="profileSaveBtn" style="margin-bottom: 0;">Save</button>
+              <button type="button" class="action-btn" id="profileCancelBtn" style="background: rgba(255,255,255,0.05); color: #fff; border-color: rgba(255,255,255,0.1);">Cancel</button>
+            </div>
           </div>
         </div>
+
+        <!-- Add New User Panel -->
+        <div class="settings-card accordion-card">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">Add New User Account</span>
+              <span class="pref-desc">Register new user account credentials and roles</span>
+            </div>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div class="accordion-content">
+            <form id="addUserForm" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="form-group">
+                <label for="addUsername">Username</label>
+                <input type="text" id="addUsername" placeholder="Enter username..." required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="addRole">Role Selection</label>
+                <select id="addRole" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); color: white;">
+                  <option value="member" style="background: var(--bg-secondary); color: white;">Member</option>
+                  <option value="admin" style="background: var(--bg-secondary); color: white;">Admin</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="addUserEmail">Email Address</label>
+                <input type="email" id="addUserEmail" placeholder="Enter email address..." required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="addUserPhone">Phone Number</label>
+                <input type="text" id="addUserPhone" placeholder="Enter phone number..." required autocomplete="off">
+              </div>
+               <div class="form-group">
+                <label for="addUserPassword">Password</label>
+                <div class="password-input-container">
+                  <input type="password" id="addUserPassword" placeholder="Enter password..." required>
+                  <button type="button" class="password-toggle-btn" tabindex="-1">Show</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="addUserConfirmPassword">Confirm Password</label>
+                <div class="password-input-container">
+                  <input type="password" id="addUserConfirmPassword" placeholder="Confirm password..." required>
+                  <button type="button" class="password-toggle-btn" tabindex="-1">Show</button>
+                </div>
+              </div>
+              <button type="submit" class="action-btn save-btn" style="margin-top: 4px;">➕ Add New User</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Security Settings Panel -->
+        <div class="settings-card accordion-card">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">Security & Password Management</span>
+              <span class="pref-desc">Change password and secure system console</span>
+            </div>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div class="accordion-content">
+            <form id="securityForm" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="form-group">
+                <label for="currentPassword">Current Password</label>
+                <div class="password-input-container">
+                  <input type="password" id="currentPassword" placeholder="Enter current password..." required>
+                  <button type="button" class="password-toggle-btn" tabindex="-1">Show</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="newPassword">New Password</label>
+                <div class="password-input-container">
+                  <input type="password" id="newPassword" placeholder="Enter new password..." required>
+                  <button type="button" class="password-toggle-btn" tabindex="-1">Show</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <div class="password-input-container">
+                  <input type="password" id="confirmPassword" placeholder="Confirm new password..." required>
+                  <button type="button" class="password-toggle-btn" tabindex="-1">Show</button>
+                </div>
+              </div>
+              <button type="submit" class="action-btn save-btn" style="margin-top: 4px;">🔑 Update Password</button>
+            </form>
+          </div>
+        </div>
+
 
         <!-- Color Accent Theme Panel (Collapsible Accordion) -->
         <div class="settings-card accordion-card" id="themeAccordion">
@@ -124,16 +335,6 @@
               </label>
             </div>
 
-            <div class="pref-row">
-              <div class="pref-info">
-                <span class="pref-label">Daily Email Alerts</span>
-                <span class="pref-desc">Receive portfolio digest on market close</span>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" id="toggleEmails" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
 
             <div class="pref-row">
               <div class="pref-info">
@@ -149,21 +350,11 @@
         </div>
 
         <!-- API Integration Panel -->
-        <div class="settings-card">
-          <h2 class="settings-title">Broker API Sync</h2>
-          <div class="form-group">
-            <label for="apiKeyInput">Broker API Token</label>
-            <input type="password" id="apiKeyInput" value="••••••••••••••••••••••••"
-              placeholder="Enter API sync token...">
-          </div>
-        </div>
-
-        <!-- Portfolio Overrides Panel (Collapsible Accordion) -->
-        <div class="settings-card accordion-card" id="portfolioOverridesCard">
+        <div class="settings-card accordion-card">
           <div class="accordion-header">
             <div class="accordion-info">
-              <span class="pref-label">Portfolio Overrides</span>
-              <span class="pref-desc">Manually configure cash and portfolio equity</span>
+              <span class="pref-label">Broker API Sync</span>
+              <span class="pref-desc">Manage API credentials for broker sync</span>
             </div>
             <div class="accordion-actions">
               <span class="expand-caret">
@@ -175,47 +366,154 @@
             </div>
           </div>
           <div class="accordion-content">
-            <p class="settings-section-desc">Manually set your initial cash balance and override the portfolio equity display. Changes take effect immediately on the Portfolio screen.</p>
-
-            <div class="form-group override-group">
-              <label for="buyingPowerInput">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;opacity:.7"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                Buying Power (Cash Balance)
-              </label>
-              <div class="input-with-preview">
-                <span class="currency-prefix">$</span>
-                <input type="number" id="buyingPowerInput" min="0" step="0.01"
-                  placeholder="e.g. 12342.90" autocomplete="off">
-              </div>
-              <span class="override-preview" id="buyingPowerPreview"></span>
+            <div class="form-group">
+              <label for="apiKeyInput">Broker API Token</label>
+              <input type="password" id="apiKeyInput" value="••••••••••••••••••••••••"
+                placeholder="Enter API sync token...">
             </div>
-
-            <div class="form-group override-group">
-              <label for="portfolioValueInput">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;opacity:.7"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-                Total Portfolio Value Override
-              </label>
-              <div class="input-with-preview">
-                <span class="currency-prefix">$</span>
-                <input type="number" id="portfolioValueInput" min="0" step="0.01"
-                  placeholder="Leave blank to use live calculation" autocomplete="off">
-              </div>
-              <span class="override-preview" id="portfolioValuePreview"></span>
-              <span class="override-hint">⚠️ When set, this overrides the calculated equity total on the Portfolio screen. Clear the field to restore live math.</span>
-            </div>
-
-            <!-- Wallet & Capital Funds sub-panel -->
-            <div class="sub-panel-card">
-              <h3 class="settings-title" style="margin-bottom: 12px; font-size: 13px;">Wallet & Capital Funds</h3>
-              <div style="display: flex; gap: 12px;">
-                <button type="button" class="action-btn" id="depositFundsBtn">+ Add Cash Deposit</button>
-                <button type="button" class="action-btn" id="withdrawFundsBtn">- Log Cash Withdrawal</button>
-              </div>
-            </div>
-
-            <button type="button" class="action-btn save-btn" id="saveOverridesBtn">💾 Save Portfolio Overrides</button>
           </div>
         </div>
+
+        <!-- Profit & Loss Graph Section -->
+        <div class="settings-card accordion-card" id="pnlGraphAccordion">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">Profit & Loss</span>
+              <span class="pref-desc">Visualize your closed positions PNL over time</span>
+            </div>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div class="accordion-content">
+            <!-- Filter Pills Selection -->
+            <div class="pnl-filters" style="display: flex; gap: 8px; margin-bottom: 16px;">
+              <button type="button" class="pnl-filter-btn active" data-timeframe="weekly">Week</button>
+              <button type="button" class="pnl-filter-btn" data-timeframe="monthly">Month</button>
+              <button type="button" class="pnl-filter-btn" data-timeframe="yearly">Year</button>
+              <button type="button" class="pnl-filter-btn" data-timeframe="all">All Time</button>
+            </div>
+
+            <!-- Bar Chart Container -->
+            <div class="pnl-chart-container" style="position: relative; width: 100%; height: 200px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; background: rgba(255,255,255,0.02); padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">
+              <div id="pnlBarChart" style="display: flex; height: 130px; width: 100%; align-items: flex-end; gap: 8px; position: relative;">
+                <!-- Chart bars will be dynamically inserted here -->
+              </div>
+              <!-- Empty state message if no data -->
+              <div id="pnlEmptyState" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-muted); font-size: 12px; font-weight: 500;">No closed positions PNL data for this period.</div>
+              <!-- X axis / labels row -->
+              <div id="pnlChartLabels" style="display: flex; width: 100%; justify-content: space-between; font-size: 9px; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px; margin-top: 6px;">
+                <!-- Labels will be dynamically inserted here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Administrative Control Zone -->
+        <div class="admin-control-zone">
+          <!-- Portfolio Overrides Panel (Collapsible Accordion) -->
+          <div class="settings-card accordion-card" id="portfolioOverridesCard" style="margin-bottom: 0; border: none; background: transparent;">
+            <div class="accordion-header">
+              <div class="accordion-info">
+                <span class="pref-label">Portfolio Overrides</span>
+                <span class="pref-desc">Manually configure cash and portfolio equity</span>
+              </div>
+              <div class="accordion-actions">
+                <span class="expand-caret">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </div>
+            </div>
+            <div class="accordion-content">
+              <p class="settings-section-desc">Manually set your initial cash balance and override the portfolio equity display. Changes take effect immediately on the Portfolio screen.</p>
+
+              <div class="form-group override-group">
+                <label for="buyingPowerInput">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;opacity:.7"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  Override Buying Power (Set Absolute Cash Balance)
+                </label>
+                <div class="input-with-preview">
+                  <span class="currency-prefix">$</span>
+                  <input type="number" id="buyingPowerInput" min="0" step="0.01"
+                    placeholder="e.g. 12342.90" autocomplete="off">
+                </div>
+                <span class="override-preview" id="buyingPowerPreview"></span>
+              </div>
+
+              <div class="form-group override-group">
+                <label for="portfolioValueInput">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;opacity:.7"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                  Master Portfolio Value Override (Blank for Live Math)
+                </label>
+                <div class="input-with-preview">
+                  <input type="text" id="portfolioValueInput"
+                    placeholder="e.g. $150,000 or Forced Value" autocomplete="off" style="width: 100%; padding: 10px 10px 10px 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); color: white; outline: none; font-size: 13px;">
+                </div>
+                <span class="override-preview" id="portfolioValuePreview"></span>
+              </div>
+
+              <!-- Wallet & Capital Funds sub-panel -->
+              <div class="sub-panel-card">
+                <h3 class="settings-title" style="margin-bottom: 12px; font-size: 13px;">Wallet & Capital Funds</h3>
+                <div style="display: flex; gap: 12px;">
+                  <button type="button" class="action-btn" id="depositFundsBtn">+ Add Cash Deposit</button>
+                  <button type="button" class="action-btn" id="withdrawFundsBtn">- Log Cash Withdrawal</button>
+                </div>
+              </div>
+
+              <button type="button" class="action-btn save-btn" id="saveOverridesBtn">💾 Save Portfolio Overrides</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Transaction History (Collapsible Accordion) -->
+        <div class="settings-card accordion-card" id="historyAccordion">
+          <div class="accordion-header">
+            <div class="accordion-info">
+              <span class="pref-label">Transaction History</span>
+              <span class="pref-desc">View history of cash deposits and withdrawals</span>
+            </div>
+            <div class="accordion-actions">
+              <span class="expand-caret">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div class="accordion-content">
+            <div class="history-table-container">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Action</th>
+                    <th>Date & Time</th>
+                    <th>Amount</th>
+                    <th>Author</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-body">
+                  <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px 0;">
+                      Loading transaction history...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
 
         <!-- System Actions (Collapsible Accordion) -->
         <div class="settings-card accordion-card danger-zone" id="systemActionsCard">
@@ -238,6 +536,28 @@
             <button type="button" class="action-btn reset-btn" id="resetLedgerBtn">🗑️ Reset Local Ledger</button>
           </div>
         </div>
+
+        <!-- Session / Sign Out Card -->
+        <div class="settings-card" id="signOutCard" style="border-color: rgba(239, 68, 68, 0.15); background: rgba(239, 68, 68, 0.02);">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 0;">
+            <div>
+              <div class="pref-label" id="signedInLabel" style="margin-bottom: 2px;">Signed In</div>
+              <div class="pref-desc" id="signedInUsername">Loading...</div>
+            </div>
+            <button type="button" id="signOutBtn"
+              style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); color: #ef4444; font-size: 12.5px; font-weight: 600; font-family: var(--font-main); cursor: pointer; transition: all 0.2s ease; white-space: nowrap;"
+              aria-label="Sign out of Vanai">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              Sign Out
+            </button>
+          </div>
+        </div>
+
       </div>
     </main>
 
@@ -300,6 +620,7 @@
 
   </div>
 
+  <script src="auth-guard.js"></script>
   <script src="settings.js?v=2.2"></script>
 </body>
 

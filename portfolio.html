@@ -70,7 +70,7 @@
       <section class="balance-card">
         <div class="card-glow"></div>
         <div class="balance-details">
-          <span class="card-label">Total Portfolio Balance</span>
+          <span class="card-label">Total Portfolio Value</span>
           <h2 class="balance-amount">$142,580.42</h2>
           <div class="balance-change positive">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
@@ -323,10 +323,54 @@
         </div>
       </div>
     </div>
+    <!-- Edit Asset Modal Overlay -->
+    <div class="import-modal-overlay" id="editAssetModal">
+      <div class="import-modal-box" style="gap: 14px; max-width: 340px;">
+        <div class="import-modal-header">
+          <span class="import-modal-title" id="editAssetModalTitle">Edit Asset — TICKER</span>
+        </div>
+
+        <!-- Shares / Contracts -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label for="editSharesInput" id="editSharesLabel" style="font-size: 11px; color: var(--text-secondary); letter-spacing: 0.04em;">SHARES</label>
+          <input type="number" id="editSharesInput" min="1" step="1" placeholder="e.g. 10"
+            style="width: 100%; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; box-sizing: border-box;">
+        </div>
+
+        <!-- Average Price -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label for="editPriceInput" style="font-size: 11px; color: var(--text-secondary); letter-spacing: 0.04em;">AVERAGE PRICE ($)</label>
+          <input type="number" id="editPriceInput" min="0" step="0.01" placeholder="e.g. 485.00"
+            style="width: 100%; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; box-sizing: border-box;">
+        </div>
+
+        <!-- Stop Loss -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label for="editStopLossInput" style="font-size: 11px; color: var(--text-secondary); letter-spacing: 0.04em;">STOP LIMIT (SL) ($)</label>
+          <input type="number" id="editStopLossInput" min="0" step="0.01" placeholder="e.g. 400.00"
+            style="width: 100%; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; box-sizing: border-box;">
+        </div>
+
+        <!-- Expiry Date (Hidden for non-options) -->
+        <div id="editExpiryGroup" style="display: flex; flex-direction: column; gap: 4px;">
+          <label for="editExpiryInput" style="font-size: 11px; color: var(--text-secondary); letter-spacing: 0.04em;">EXPIRY DATE</label>
+          <input type="date" id="editExpiryInput"
+            style="width: 100%; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; box-sizing: border-box;">
+        </div>
+
+        <div class="import-btn-row" style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
+          <button class="import-action-btn secondary" id="closeEditAssetModalBtn"
+            style="padding: 8px 16px; font-size: 12px; border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">Cancel</button>
+          <button class="import-action-btn primary" id="submitEditAssetBtn"
+            style="padding: 8px 16px; font-size: 12px; border-radius: 8px; background: var(--accent); color: #fff; border: none; cursor: pointer;">Save Changes</button>
+        </div>
+      </div>
+    </div>
 
   </div>
 
-  <script src="portfolio.js?v=2.4" defer></script>
+  <script src="auth-guard.js"></script>
+  <script src="portfolio.js?v=2.5" defer></script>
 </body>
 
 </html>

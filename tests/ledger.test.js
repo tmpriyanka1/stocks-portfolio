@@ -105,7 +105,6 @@ function groupTransactionsByTicker(transactions, startDateOrRange, endDate) {
     g.transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     let runningShares = 0;
-    let runningAvgBuy = 0;
     let realizedPLInRange = 0;
     let buyQtyInRange = 0;
     let buyValInRange = 0;
@@ -113,6 +112,9 @@ function groupTransactionsByTicker(transactions, startDateOrRange, endDate) {
     let sellValInRange = 0;
     let hasSellInRange = false;
     const inRangeTransactions = [];
+
+    // Buy layers queue for FIFO calculations
+    const buyQueue = [];
 
     // Rolling balance as of end date
     let netSharesAsOfEndDate = 0;
@@ -127,26 +129,42 @@ function groupTransactionsByTicker(transactions, startDateOrRange, endDate) {
       const inRange = txDate >= start && txDate <= end;
 
       if (action === 'BUY') {
-        const newShares = runningShares + sharesNum;
-        if (newShares > 0) {
-          runningAvgBuy = (runningShares * runningAvgBuy + sharesNum * priceNum) / newShares;
-        }
-        runningShares = newShares;
+        runningShares += sharesNum;
+        buyQueue.push({ shares: sharesNum, price: priceNum });
+
         if (inRange) {
           buyQtyInRange += sharesNum;
           buyValInRange += sharesNum * priceNum;
           inRangeTransactions.push(tx);
         }
       } else if (action === 'SELL') {
-        const pnl = sharesNum * (priceNum - runningAvgBuy);
-        runningShares = Math.max(0, runningShares - sharesNum);
-        if (runningShares === 0) {
-          runningAvgBuy = 0;
+        let remainingToSell = sharesNum;
+        let sellPnL = 0;
+
+        while (remainingToSell > 0 && buyQueue.length > 0) {
+          const oldestLayer = buyQueue[0];
+          if (oldestLayer.shares <= remainingToSell) {
+            sellPnL += oldestLayer.shares * (priceNum - oldestLayer.price);
+            remainingToSell -= oldestLayer.shares;
+            buyQueue.shift();
+          } else {
+            sellPnL += remainingToSell * (priceNum - oldestLayer.price);
+            oldestLayer.shares -= remainingToSell;
+            remainingToSell = 0;
+          }
         }
+
+        // If there's short selling or no match, assume 0 P&L for excess
+        if (remainingToSell > 0) {
+          remainingToSell = 0;
+        }
+
+        runningShares = Math.max(0, runningShares - sharesNum);
+
         if (inRange) {
           sellQtyInRange += sharesNum;
           sellValInRange += sharesNum * priceNum;
-          realizedPLInRange += pnl;
+          realizedPLInRange += sellPnL;
           hasSellInRange = true;
           inRangeTransactions.push(tx);
         }
@@ -154,7 +172,15 @@ function groupTransactionsByTicker(transactions, startDateOrRange, endDate) {
 
       if (isBeforeOrOnEnd) {
         netSharesAsOfEndDate = runningShares;
-        avgBuyAsOfEndDate = runningAvgBuy;
+        
+        // Compute average cost of remaining layers in buyQueue
+        let totalRemainingCost = 0;
+        let totalRemainingShares = 0;
+        buyQueue.forEach(layer => {
+          totalRemainingCost += layer.shares * layer.price;
+          totalRemainingShares += layer.shares;
+        });
+        avgBuyAsOfEndDate = totalRemainingShares > 0 ? (totalRemainingCost / totalRemainingShares) : 0;
       }
     });
 
@@ -905,6 +931,51 @@ function calculateSection1Metrics(filteredTransactionsOrRangeType, rangeTypeOrSt
     }
   }
 
+  // ── CASH (buying power) CALCULATIONS ──
+  let cashTxs = [];
+  try {
+    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+  } catch (e) {
+    cashTxs = [];
+  }
+
+  let dynamicCash = 0;
+  cashTxs.forEach(tx => {
+    if (!tx) return;
+    const action = String(tx.action || '').toUpperCase();
+    const amount = parseFloat(tx.price) || 0;
+    if (action === 'DEPOSIT') {
+      dynamicCash += amount;
+    } else if (action === 'WITHDRAWAL') {
+      dynamicCash -= amount;
+    }
+  });
+
+  const rawTxs = getAllTransactions();
+  rawTxs.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+    const action = String(tx.action || '').toUpperCase();
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const priceNum = parseFloat(tx.price) || 0;
+    const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+    const multiplier = isOpt ? 100 : 1;
+    const cost = sharesNum * priceNum * multiplier;
+
+    if (action === 'BUY') {
+      dynamicCash -= cost;
+    } else if (action === 'SELL') {
+      dynamicCash += cost;
+    }
+  });
+
+  let buyingPower = Math.max(0, dynamicCash);
+
+  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
+  if (isUserSet) {
+    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+  }
+
   const allTxs = getAllTransactions().filter(tx => tx.ticker !== 'CASH' && tx.assetType !== 'CASH');
 
   const intervalTimes = [];
@@ -997,9 +1068,13 @@ function calculateSection1Metrics(filteredTransactionsOrRangeType, rangeTypeOrSt
     
     // Active P&L
     if (pos.netShares > 0) {
-      const marketEntry = marketPrices[pos.ticker] || defaultAssetDataForTests[pos.ticker] || {};
-      const currentPrice = parseFloat(marketEntry.currentPrice) || pos.buyAvg || 0;
-      const unrealizedPL = pos.netShares * (currentPrice - pos.buyAvg) * multiplier;
+      const marketEntry = marketPrices[pos.ticker] || {};
+      let currentPrice = parseFloat(marketEntry.currentPrice);
+      if (isNaN(currentPrice)) {
+        const defaultAsset = defaultAssetDataForTests[pos.ticker] || {};
+        currentPrice = parseFloat(defaultAsset.currentPrice) || pos.buyAvg || 0;
+      }
+      const unrealizedPL = (pos.netShares * currentPrice - pos.netShares * pos.buyAvg) * multiplier;
       activePL += unrealizedPL;
     }
   });
@@ -1007,16 +1082,49 @@ function calculateSection1Metrics(filteredTransactionsOrRangeType, rangeTypeOrSt
   const totalPerformance = closedPL + activePL;
   const perfEl = document.getElementById('total-performance-value');
   if (perfEl) {
-    perfEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral');
+    perfEl.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral', 'text-profit', 'text-loss');
     if (totalPerformance > 0) {
       perfEl.textContent = `+$${totalPerformance.toFixed(2)}`;
-      perfEl.classList.add('pnl-up');
+      perfEl.classList.add('pnl-up', 'text-profit');
     } else if (totalPerformance < 0) {
       perfEl.textContent = `-$${Math.abs(totalPerformance).toFixed(2)}`;
-      perfEl.classList.add('pnl-down');
+      perfEl.classList.add('pnl-down', 'text-loss');
     } else {
       perfEl.textContent = `$0.00`;
       perfEl.classList.add('pnl-neutral');
+    }
+  }
+
+  // Update the Realized, Unrealized, and Total P&L elements
+  const summaryRealizedEl = document.getElementById('summary-realized-pnl');
+  const summaryUnrealizedEl = document.getElementById('summary-unrealized-pnl');
+  const summaryTotalEl = document.getElementById('summary-total-pnl');
+
+  const updatePnLElement = (el, val) => {
+    if (!el) return;
+    el.classList.remove('pnl-up', 'pnl-down', 'pnl-neutral', 'neutral', 'text-profit', 'text-loss');
+    if (val > 0) {
+      el.textContent = `+$${val.toFixed(2)}`;
+      el.classList.add('pnl-up', 'text-profit');
+    } else if (val < 0) {
+      el.textContent = `-$${Math.abs(val).toFixed(2)}`;
+      el.classList.add('pnl-down', 'text-loss');
+    } else {
+      el.textContent = `$0.00`;
+      el.classList.add('pnl-neutral');
+    }
+  };
+
+  updatePnLElement(summaryRealizedEl, closedPL);
+  updatePnLElement(summaryUnrealizedEl, activePL);
+  updatePnLElement(summaryTotalEl, totalPerformance);
+
+  const accountValueOverride = localStorage.getItem('portfolio_value_override');
+  if (accountValueOverride && accountValueOverride.trim() !== '') {
+    const trimmedOverride = accountValueOverride.trim();
+    if (perfEl) {
+      perfEl.textContent = trimmedOverride;
+      perfEl.className = 'pnl-neutral';
     }
   }
 
@@ -1236,6 +1344,250 @@ describe('isTxBeforeRange & calculateSection1Metrics', () => {
 
     expect(document.getElementById('total-performance-value').textContent).toBe('+$227.50');
     expect(document.getElementById('total-performance-value').classList.contains('pnl-up')).toBe(true);
+  });
+
+  test('calculateSection1Metrics enforces portfolio_value_override verbatim', () => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div id="summary-realized-pnl" class="metric-value"></div>
+      <div id="summary-unrealized-pnl" class="metric-value"></div>
+      <div id="summary-total-pnl" class="metric-value"></div>
+    `;
+    document.body.appendChild(div);
+
+    localStorage.setItem('portfolio_value_override', 'OVERRIDE_VAL');
+
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 10, price: 150, date: daysAgoISO(3) + 'T10:00:00' }
+    ];
+    calculateSection1Metrics(txs, 'weekly');
+
+    expect(document.getElementById('summary-realized-pnl').textContent).toBe('$0.00');
+    expect(document.getElementById('summary-realized-pnl').className).toBe('metric-value pnl-neutral');
+    expect(document.getElementById('summary-unrealized-pnl').textContent).toBe('$0.00');
+    expect(document.getElementById('summary-unrealized-pnl').className).toBe('metric-value pnl-neutral');
+    expect(document.getElementById('summary-total-pnl').textContent).toBe('$0.00');
+    expect(document.getElementById('summary-total-pnl').className).toBe('metric-value pnl-neutral');
+    expect(document.getElementById('total-performance-value').textContent).toBe('OVERRIDE_VAL');
+    expect(document.getElementById('total-performance-value').className).toBe('pnl-neutral');
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('calculateTradeStatus and getOptionExpiryDate tests', () => {
+  const defaultAssetData = {
+    'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
+    'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
+    'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
+    'SPY': { name: 'SPDR S&P 500 ETF Trust', currentPrice: 512.42, stopLoss: 490.00, change24h: 0.45, icon: 'SP' },
+    'SPX': { name: 'S&P 500 Index', currentPrice: 5120.30, stopLoss: 5000.00, change24h: 0.52, icon: 'SX' },
+    'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open', currentPrice: 18.50, stopLoss: 12.00, change24h: 20.31, icon: 'OC' },
+    'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
+  };
+
+  function getDefaultAsset(ticker) {
+    if (!ticker) return {};
+    const upper = ticker.trim().toUpperCase();
+    if (defaultAssetData[upper]) return defaultAssetData[upper];
+    for (const key in defaultAssetData) {
+      if (key.trim().toUpperCase() === upper) {
+        return defaultAssetData[key];
+      }
+    }
+    return {};
+  }
+
+  function getOptionExpiry(ticker, name) {
+    const tickerDateMatch = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+    if (tickerDateMatch) return `Exp ${tickerDateMatch[1]}`;
+
+    const defaultAsset = getDefaultAsset(ticker);
+    if (defaultAsset && defaultAsset.name) {
+      const nameMatch = defaultAsset.name.match(/Exp\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+      if (nameMatch) return `Exp ${nameMatch[1]}`;
+    }
+
+    if (name) {
+      const nameMatch = name.match(/Exp\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+      if (nameMatch) return `Exp ${nameMatch[1]}`;
+    }
+    return '';
+  }
+
+  function getOptionExpiryDate(ticker, name) {
+    const expiryStr = getOptionExpiry(ticker, name);
+    if (!expiryStr) return null;
+    const match = expiryStr.match(/Exp\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i);
+    if (!match) return null;
+    const month = parseInt(match[1], 10) - 1;
+    const day = parseInt(match[2], 10);
+    let year = match[3] ? parseInt(match[3], 10) : null;
+    if (year === null) {
+      year = (typeof SIMULATED_TODAY !== 'undefined' ? SIMULATED_TODAY : new Date()).getFullYear();
+    } else if (year < 100) {
+      year += 2000;
+    }
+    const dateObj = new Date(year, month, day);
+    dateObj.setHours(0, 0, 0, 0);
+    return dateObj;
+  }
+
+  function calculateTradeStatus(trade) {
+    if (!trade) return null;
+
+    const sharesRemaining = typeof trade.shares_remaining !== 'undefined'
+      ? parseFloat(trade.shares_remaining)
+      : (typeof trade.netShares !== 'undefined' ? parseFloat(trade.netShares) : 0);
+
+    const isOption = trade.assetType === 'options'
+      || (trade.ticker && /\$\d/.test(trade.ticker) && /\b(call|put)\b/i.test(trade.ticker));
+
+    if (isOption) {
+      const isExercised = trade.exercised === true
+        || (trade.transactions && trade.transactions.some(tx => tx && tx.action && tx.action.toUpperCase() === 'EXERCISE'));
+
+      if (isExercised) {
+        return {
+          class: 'badge-exercised',
+          icon: '🔵',
+          label: 'Exercised'
+        };
+      }
+
+      const rawAssetName = '';
+      const expiryDate = getOptionExpiryDate(trade.ticker, rawAssetName);
+      if (expiryDate) {
+        const currentDate = new Date((typeof SIMULATED_TODAY !== 'undefined' ? SIMULATED_TODAY : new Date()).getTime());
+        currentDate.setHours(0, 0, 0, 0);
+
+        if (currentDate > expiryDate) {
+          return {
+            class: 'badge-expired',
+            icon: '🔴',
+            label: 'Expired'
+          };
+        }
+      }
+    }
+
+    if (sharesRemaining > 0) {
+      return {
+        class: 'badge-active',
+        icon: '🟢',
+        label: 'Active'
+      };
+    } else {
+      return {
+        class: 'badge-closed',
+        icon: '⚪',
+        label: 'Closed'
+      };
+    }
+  }
+
+  test('marks active position with shares_remaining > 0 as Active', () => {
+    const status = calculateTradeStatus({ ticker: 'NVDA', shares_remaining: 10 });
+    expect(status.label).toBe('Active');
+    expect(status.class).toBe('badge-active');
+  });
+
+  test('marks closed position with shares_remaining == 0 as Closed', () => {
+    const status = calculateTradeStatus({ ticker: 'NVDA', shares_remaining: 0 });
+    expect(status.label).toBe('Closed');
+    expect(status.class).toBe('badge-closed');
+  });
+
+  test('handles option expiry date comparison (Expired)', () => {
+    const pastDate = new Date(SIMULATED_TODAY.getTime() - 5 * 24 * 60 * 60 * 1000);
+    const mm = pastDate.getMonth() + 1;
+    const dd = pastDate.getDate();
+    const yy = pastDate.getFullYear();
+    const ticker = `SPY $723 CALL ${mm}/${dd}/${yy}`;
+    const status = calculateTradeStatus({
+      ticker: ticker,
+      assetType: 'options',
+      shares_remaining: 1
+    });
+    expect(status.label).toBe('Expired');
+    expect(status.class).toBe('badge-expired');
+  });
+
+  test('handles active option not expired', () => {
+    const futureDate = new Date(SIMULATED_TODAY.getTime() + 5 * 24 * 60 * 60 * 1000);
+    const mm = futureDate.getMonth() + 1;
+    const dd = futureDate.getDate();
+    const yy = futureDate.getFullYear();
+    const ticker = `SPY $723 CALL ${mm}/${dd}/${yy}`;
+    const status = calculateTradeStatus({
+      ticker: ticker,
+      assetType: 'options',
+      shares_remaining: 1
+    });
+    expect(status.label).toBe('Active');
+    expect(status.class).toBe('badge-active');
+  });
+
+  test('handles option exercised state (Exercised)', () => {
+    const status = calculateTradeStatus({
+      ticker: 'AAPL $180 Call',
+      assetType: 'options',
+      shares_remaining: 0,
+      exercised: true
+    });
+    expect(status.label).toBe('Exercised');
+    expect(status.class).toBe('badge-exercised');
+  });
+
+  test('handles option exercised action in transactions list', () => {
+    const status = calculateTradeStatus({
+      ticker: 'AAPL $180 Call',
+      assetType: 'options',
+      shares_remaining: 0,
+      transactions: [{ action: 'EXERCISE' }]
+    });
+    expect(status.label).toBe('Exercised');
+    expect(status.class).toBe('badge-exercised');
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('FIFO cost basis and P&L calculations', () => {
+  test('standard FIFO realized P&L with multiple layers', () => {
+    const txs = [
+      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 100, date: '2026-06-01T10:00:00' },
+      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 200, date: '2026-06-02T10:00:00' },
+      { ticker: 'NVDA', assetType: 'stocks', action: 'SELL', shares: 15, price: 150, date: '2026-06-03T10:00:00' },
+    ];
+    // We expect the first 10 shares @ 100 to be sold at 150 -> P&L = 10 * 50 = 500
+    // We expect 5 of the second layer @ 200 to be sold at 150 -> P&L = 5 * -50 = -250
+    // Total realized P&L = 500 - 250 = 250
+    const start = new Date('2026-05-01');
+    const end = new Date('2026-07-01');
+    const result = groupTransactionsByTicker(txs, start, end);
+    expect(result[0].realizedPL).toBe(250);
+    // Net remaining shares should be 5
+    expect(result[0].netShares).toBe(5);
+    // Remaining layer cost basis should be 200
+    expect(result[0].avgBuyAsOfEndDate).toBe(200);
+  });
+
+  test('FIFO queue partial close and cost basis tracking', () => {
+    const txs = [
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 50, price: 150, date: '2026-06-01T10:00:00' },
+      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 50, price: 160, date: '2026-06-02T10:00:00' },
+      { ticker: 'AAPL', assetType: 'stocks', action: 'SELL', shares: 30, price: 155, date: '2026-06-03T10:00:00' },
+    ];
+    // 30 shares @ 150 sold @ 155 -> P&L = 30 * 5 = 150
+    // Remaining layers: 20 @ 150, 50 @ 160. Total cost = 3000 + 8000 = 11000. Total shares = 70.
+    // Cost basis = 11000 / 70 = 157.14
+    const start = new Date('2026-05-01');
+    const end = new Date('2026-07-01');
+    const result = groupTransactionsByTicker(txs, start, end);
+    expect(result[0].realizedPL).toBe(150);
+    expect(result[0].netShares).toBe(70);
+    expect(result[0].avgBuyAsOfEndDate).toBeCloseTo(157.14, 2);
   });
 });
 

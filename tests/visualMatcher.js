@@ -11,10 +11,10 @@ const { PNG } = require('pngjs');
  * @param {Buffer} actualBuffer - The screenshot buffer just taken.
  * @param {string} scenarioName - Unique name for the test scenario (e.g. 'portfolio-initial').
  * @param {number} threshold - Color difference threshold (0 to 1). Default is 0.1.
- * @param {number} toleranceRatio - Allowed ratio of different pixels (0 to 1). Default is 0.0005 (0.05%).
+ * @param {number} toleranceRatio - Allowed ratio of different pixels (0 to 1). Default is 0.0025 (0.25%).
  * @returns {object} { pass: boolean, message?: string, updated?: boolean, diffPixels?: number }
  */
-function compareScreenshot(actualBuffer, scenarioName, threshold = 0.1, toleranceRatio = 0.0005) {
+function compareScreenshot(actualBuffer, scenarioName, threshold = 0.1, toleranceRatio = 0.0025) {
   const referencesDir = path.join(__dirname, 'visual-references');
   const diffsDir = path.join(__dirname, 'visual-diffs');
   

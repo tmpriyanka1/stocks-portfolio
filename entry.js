@@ -80,7 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
     applyAccentColor(savedAccent);
   }
 
-  // 1. Initialize Default Date Input to Current Local Date
+  // Initialize form toggle modes selector
+  initFormModeToggle();
+
+  // 1. Initialize Default Date Input to Current Local Date & Time
   initDefaultDate();
 
   // 2. Wire up Tab Redirect Handlers
@@ -116,7 +119,7 @@ function applyAccentColor(hexColor) {
 }
 
 /**
- * Automatically populates the transaction date selector to today's local date
+ * Automatically populates the transaction date selector to today's local date and time
  */
 function initDefaultDate() {
   const dateInput = document.getElementById('inputDate');
@@ -126,6 +129,14 @@ function initDefaultDate() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     dateInput.value = `${year}-${month}-${day}`;
+  }
+  const timeInput = document.getElementById('inputTime');
+  if (timeInput) {
+    const today = new Date();
+    const hours = String(today.getHours()).padStart(2, '0');
+    const minutes = String(today.getMinutes()).padStart(2, '0');
+    const seconds = String(today.getSeconds()).padStart(2, '0');
+    timeInput.value = `${hours}:${minutes}:${seconds}`;
   }
 }
 
@@ -266,17 +277,88 @@ function initFormSubmit() {
   tradeForm.addEventListener('submit', async (e) => {
     e.preventDefault(); // Stop default form navigation
 
-    const ticker = document.getElementById('inputTicker').value.trim().toUpperCase();
+    const mode = document.getElementById('formMode').value;
+
+    if (mode === 'cash') {
+      const cashAction = document.getElementById('inputCashAction').value;
+      const amount = document.getElementById('inputPrice').value;
+      const date = document.getElementById('inputDate').value;
+      const time = document.getElementById('inputTime').value;
+
+      if (!cashAction || !amount || !date || !time) {
+        showToast('⚠️ Please fill out all required cash ledger fields.', true);
+        return;
+      }
+
+      const amountFloat = parseFloat(amount);
+      if (isNaN(amountFloat) || amountFloat <= 0) {
+        showToast('⚠️ Amount must be a positive number.', true);
+        return;
+      }
+
+      const txDate = `${date}T${time}`;
+      const tx = {
+        ticker: 'CASH',
+        assetType: 'CASH',
+        action: cashAction,
+        shares: 0,
+        price: amountFloat,
+        date: txDate,
+        comment: '',
+        stopLoss: 0
+      };
+
+      // 1. Immediately append to local transactions
+      saveTransactionLocally(tx);
+
+      // Also save to cash ledger locally
+      let cashTxs = [];
+      try {
+        cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+      } catch (e) {
+        cashTxs = [];
+      }
+      cashTxs.push(tx);
+      localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
+
+      // Deduct or add to buying power locally
+      let bp = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
+      if (cashAction === 'DEPOSIT') {
+        bp += amountFloat;
+      } else if (cashAction === 'WITHDRAWAL') {
+        bp -= amountFloat;
+      }
+      localStorage.setItem('portfolio_buying_power', bp.toFixed(2));
+
+      resetFormAndNotifications();
+      pushCashToCloud(tx);
+      return;
+    }
+
+    let ticker = document.getElementById('inputTicker').value.trim().toUpperCase();
     const type = document.getElementById('inputType').value;
-    const action = document.getElementById('inputAction').value;
+    if (mode === 'option') {
+      const optionType = document.getElementById('inputOptionType').value;
+      if (!/\b(call|put)\b/i.test(ticker)) {
+        ticker = `${ticker} ${optionType.charAt(0).toUpperCase() + optionType.slice(1).toLowerCase()}`;
+      }
+    }
+    const action = 'BUY';
     const shares = document.getElementById('inputShares').value;
     const price = document.getElementById('inputPrice').value;
     const date = document.getElementById('inputDate').value;
+    const time = document.getElementById('inputTime').value;
     const slInput = document.getElementById('inputSL').value;
     const comment = document.getElementById('inputComment').value.trim();
+    const expiryDate = document.getElementById('inputExpiry').value;
+
+    if (mode === 'option' && !expiryDate) {
+      showToast('⚠️ Please select an Expiry Date for the option.', true);
+      return;
+    }
 
     // Field verification loop
-    if (!ticker || !type || !action || !shares || !price || !date) {
+    if (!ticker || !type || !action || !shares || !price || !date || !time) {
       showToast('⚠️ Please fill out all required execution fields.', true);
       return;
     }
@@ -285,12 +367,16 @@ function initFormSubmit() {
     const priceFloat = parseFloat(price);
     const slValue = slInput ? parseFloat(slInput) : 0;
 
-    // Parse values into transaction object
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const txDate = `${date}T${hours}:${minutes}:${seconds}`;
+    if (isNaN(sharesInt) || sharesInt <= 0) {
+      showToast('⚠️ Quantity must be a positive number.', true);
+      return;
+    }
+    if (isNaN(priceFloat) || priceFloat <= 0) {
+      showToast('⚠️ Price must be a positive number.', true);
+      return;
+    }
+
+    const txDate = `${date}T${time}`;
 
     const tx = {
       ticker: ticker,
@@ -302,6 +388,9 @@ function initFormSubmit() {
       comment: comment,
       stopLoss: slValue
     };
+    if (mode === 'option') {
+      tx.expiryDate = expiryDate;
+    }
 
     const actionColor = action === 'BUY' ? 'Bought' : 'Sold';
     const typeName = type === 'options' ? 'CON' : 'SHR';
@@ -347,11 +436,21 @@ function initFormSubmit() {
 
     function resetFormAndNotifications() {
       // Send native system push notification if enabled
-      if (localStorage.getItem('portfolio_notifications_enabled') === 'true') {
+      if (mode !== 'cash' && localStorage.getItem('portfolio_notifications_enabled') === 'true') {
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           try {
             new Notification(`📈 Trade Executed: ${ticker}`, {
               body: `${actionColor} ${shares} ${typeName} @ $${priceFloat.toFixed(2)} logged to ledger.`,
+            });
+          } catch (err) {
+            console.error('Push notification failed:', err);
+          }
+        }
+      } else if (mode === 'cash' && localStorage.getItem('portfolio_notifications_enabled') === 'true') {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            new Notification(`💰 Cash Flow: ${cashAction}`, {
+              body: `${cashAction} of $${amountFloat.toFixed(2)} logged to ledger.`,
             });
           } catch (err) {
             console.error('Push notification failed:', err);
@@ -365,6 +464,8 @@ function initFormSubmit() {
       document.getElementById('inputPrice').value = '';
       document.getElementById('inputSL').value = '';
       document.getElementById('inputComment').value = '';
+      const expiryInput = document.getElementById('inputExpiry');
+      if (expiryInput) expiryInput.value = '';
 
       // Reset action pill selection
       if (document.getElementById('inputAction')) {
@@ -379,6 +480,12 @@ function initFormSubmit() {
         }
       });
 
+      // Reset cash action selector to DEPOSIT
+      const cashActionSelect = document.getElementById('inputCashAction');
+      if (cashActionSelect) {
+        cashActionSelect.value = 'DEPOSIT';
+      }
+
       initDefaultDate();
     }
   });
@@ -391,22 +498,27 @@ async function pushTradeToCloud(tx, resolvedName) {
     return;
   }
 
+  const bodyData = {
+    ticker: tx.ticker,
+    action: tx.action,
+    quantity: Number(tx.shares),
+    price: Number(tx.price),
+    date: tx.date,
+    stopLimit: tx.stopLoss ? Number(tx.stopLoss) : 0,
+    note: tx.comment,
+    assetType: tx.assetType
+  };
+  if (tx.assetType === 'options') {
+    bodyData['Expiry Date'] = tx.expiryDate || '';
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        ticker: tx.ticker,
-        action: tx.action,
-        quantity: Number(tx.shares),
-        price: Number(tx.price),
-        date: tx.date,
-        stopLimit: tx.stopLoss ? Number(tx.stopLoss) : 0,
-        note: tx.comment,
-        assetType: tx.assetType
-      })
+      body: JSON.stringify(bodyData)
     });
     if (!response.ok) throw new Error('Network response not ok');
     showToast("🟢 Trade Synced to Local Server!");
@@ -627,4 +739,111 @@ async function saveNoteToLocalServer(ticker, text) {
     body: JSON.stringify(payload)
   });
   return response;
+}
+
+function initFormModeToggle() {
+  const toggleBtns = document.querySelectorAll('.toggle-btn');
+  const modeInput = document.getElementById('formMode');
+  const typeInput = document.getElementById('inputType');
+
+  const groupTicker = document.getElementById('group-ticker');
+  const groupAction = document.getElementById('group-action');
+  const groupCashAction = document.getElementById('group-cash-action');
+  const groupShares = document.getElementById('group-shares');
+  const labelPrice = document.getElementById('labelPrice');
+  const inputPrice = document.getElementById('inputPrice');
+  const groupExpiry = document.getElementById('group-expiry');
+  const groupOptionType = document.getElementById('group-option-type');
+  const groupSl = document.getElementById('group-sl');
+  const groupComment = document.getElementById('group-comment');
+
+  const inputTicker = document.getElementById('inputTicker');
+  const inputShares = document.getElementById('inputShares');
+  const inputExpiry = document.getElementById('inputExpiry');
+
+  toggleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      toggleBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const mode = btn.getAttribute('data-mode');
+      modeInput.value = mode;
+
+      if (mode === 'stock') {
+        typeInput.value = 'stocks';
+        groupTicker.classList.remove('hidden');
+        groupAction.classList.add('hidden');
+        groupCashAction.classList.add('hidden');
+        groupShares.classList.remove('hidden');
+        labelPrice.textContent = 'Price ($)';
+        inputPrice.placeholder = 'e.g. 485.00';
+        groupExpiry.classList.add('hidden');
+        if (groupOptionType) groupOptionType.classList.add('hidden');
+        groupSl.classList.remove('hidden');
+        groupComment.classList.remove('hidden');
+
+        // Toggle required attributes
+        inputTicker.required = true;
+        inputShares.required = true;
+        inputExpiry.required = false;
+      } else if (mode === 'option') {
+        typeInput.value = 'options';
+        groupTicker.classList.remove('hidden');
+        groupAction.classList.add('hidden');
+        groupCashAction.classList.add('hidden');
+        groupShares.classList.remove('hidden');
+        labelPrice.textContent = 'Price ($)';
+        inputPrice.placeholder = 'e.g. 18.50';
+        groupExpiry.classList.remove('hidden');
+        if (groupOptionType) groupOptionType.classList.remove('hidden');
+        groupSl.classList.remove('hidden');
+        groupComment.classList.remove('hidden');
+
+        // Toggle required attributes
+        inputTicker.required = true;
+        inputShares.required = true;
+        inputExpiry.required = true;
+      } else if (mode === 'cash') {
+        typeInput.value = 'CASH';
+        groupTicker.classList.add('hidden');
+        groupAction.classList.add('hidden');
+        groupCashAction.classList.remove('hidden');
+        groupShares.classList.add('hidden');
+        labelPrice.textContent = 'Amount ($)';
+        inputPrice.placeholder = 'e.g. 1000.00';
+        groupExpiry.classList.add('hidden');
+        if (groupOptionType) groupOptionType.classList.add('hidden');
+        groupSl.classList.add('hidden');
+        groupComment.classList.add('hidden');
+
+        // Toggle required attributes
+        inputTicker.required = false;
+        inputShares.required = false;
+        inputExpiry.required = false;
+      }
+    });
+  });
+}
+
+async function pushCashToCloud(tx) {
+  try {
+    const activeUser = typeof window.getSessionUser === 'function' ? window.getSessionUser() : 'Admin';
+    const response = await fetch('http://localhost:5001/api/cash', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        action: tx.action,
+        amount: Number(tx.price),
+        date: tx.date.split('T')[0],
+        time: tx.date.split('T')[1] || '12:00:00',
+        author: activeUser || 'Admin'
+      })
+    });
+    if (!response.ok) throw new Error('Network response not ok');
+    showToast("🟢 Cash Transaction Synced!");
+  } catch (err) {
+    console.error('Local server cash post failed:', err);
+    showToast("Cash transaction saved locally (Offline)", true);
+  }
 }

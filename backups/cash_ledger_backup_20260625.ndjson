@@ -1,0 +1,3 @@
+{"ticker":"CASH","shares":0,"price":10000,"action":"DEPOSIT","assetType":"CASH","date":"2026-06-25T14:26:28","comment":""}
+{"ticker":"CASH","shares":0,"price":10000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-06-25T14:27:23","comment":""}
+{"ticker":"CASH","shares":0,"price":5000,"action":"DEPOSIT","assetType":"CASH","date":"2026-06-25T16:47:00","comment":"","author":"Admin"}

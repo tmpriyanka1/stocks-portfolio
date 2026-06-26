@@ -86,9 +86,8 @@
   overflow: hidden;
   transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, margin-top 0.25s ease;
 }
-
 .accordion-card.expanded .accordion-content {
-  max-height: 500px;
+  max-height: 1500px;
   opacity: 1;
   margin-top: 14px;
   border-top: 1px dashed rgba(255, 255, 255, 0.06);
@@ -566,5 +565,141 @@
 #withdrawFundsBtn:active {
   transform: scale(0.98);
 }
+
+/* ==========================================================================
+   ADMINISTRATIVE CONTROL ZONE STYLES
+   ========================================================================== */
+.admin-control-zone {
+  border: 2px solid rgba(239, 68, 68, 0.25);
+  border-radius: 26px;
+  padding: 4px;
+  background: rgba(239, 68, 68, 0.02);
+  position: relative;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.05);
+}
+
+.admin-control-zone::before {
+  content: "Administrative Control Zone";
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #ef4444;
+  letter-spacing: 0.8px;
+  padding: 10px 20px 4px 20px;
+}
+
+/* ==========================================================================
+   TRANSACTION HISTORY TABLE STYLES
+   ========================================================================== */
+.history-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.history-table th {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.8px;
+  padding: 10px 12px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.08);
+}
+
+.history-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.history-table tr:last-child td {
+  border-bottom: none;
+}
+
+.history-amount {
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+}
+
+.history-amount.deposit {
+  color: #10b981;
+}
+
+.history-amount.withdrawal {
+  color: #ef4444;
+}
+
+.history-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.history-badge.deposit {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.history-badge.withdrawal {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.history-date {
+  color: var(--text-secondary);
+}
+
+.history-author {
+  font-weight: 550;
+  color: var(--text-primary);
+}
+
+/* Password input field visibility toggles styling */
+.password-input-container {
+  position: relative;
+  width: 100%;
+}
+.password-input-container input {
+  padding-right: 50px !important;
+}
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #64748b);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 10;
+  transition: color 0.2s ease;
+  user-select: none;
+  padding: 4px;
+}
+.password-toggle-btn:hover {
+  color: var(--text-primary, #f8fafc);
+}
+
+
+
 
 

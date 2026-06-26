@@ -42,21 +42,25 @@
       <!-- Glassmorphic Input Form Container -->
       <div class="entry-form-container">
         <form id="tradeForm">
-          <div class="form-group">
+          <!-- Three-Way UI Selector Toggle -->
+          <div class="form-toggle-container">
+            <button type="button" class="toggle-btn active" data-mode="stock">Stock</button>
+            <button type="button" class="toggle-btn" data-mode="option">Option</button>
+            <button type="button" class="toggle-btn" data-mode="cash">Cash</button>
+          </div>
+          <input type="hidden" id="formMode" value="stock">
+          <input type="hidden" id="inputType" value="stocks">
+
+          <!-- Ticker Symbol (Hidden for Cash) -->
+          <div class="form-group" id="group-ticker">
             <label for="inputTicker">Ticker Symbol</label>
             <input type="text" id="inputTicker" placeholder="e.g. NVDA" required autocomplete="off">
           </div>
 
-          <div class="form-row">
-            <div class="form-group half-width">
-              <label for="inputType">Asset Type</label>
-              <select id="inputType" required>
-                <option value="stocks">Stock Share</option>
-                <option value="options">Option Contract</option>
-              </select>
-            </div>
-
-            <div class="form-group half-width">
+          <!-- Action / Cash Action Row -->
+          <div class="form-row" id="group-action-row">
+            <!-- Action (Buy/Sell) (Hidden for Cash) -->
+            <div class="form-group half-width hidden" id="group-action">
               <label>Action Type</label>
               <div class="action-desk">
                 <button type="button" class="action-pill active" data-action="BUY">BUY</button>
@@ -64,33 +68,71 @@
               </div>
               <input type="hidden" id="inputAction" value="BUY" required>
             </div>
+
+            <!-- Cash Action (Deposit/Withdrawal) (Hidden for Stock/Option) -->
+            <div class="form-group half-width hidden" id="group-cash-action">
+              <label for="inputCashAction">Cash Action</label>
+              <select id="inputCashAction">
+                <option value="DEPOSIT">Deposit</option>
+                <option value="WITHDRAWAL">Withdrawal</option>
+              </select>
+            </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group half-width">
+          <!-- Quantity / Amount & Price Row -->
+          <div class="form-row" id="group-qty-price">
+            <!-- Quantity (Shares) (Hidden for Cash) -->
+            <div class="form-group half-width" id="group-shares">
               <label for="inputShares">Quantity</label>
               <input type="number" id="inputShares" min="1" placeholder="e.g. 10" required>
             </div>
 
-            <div class="form-group half-width">
-              <label for="inputPrice">Price ($)</label>
+            <!-- Price / Amount ($) (Label updates dynamically to Amount ($) for Cash) -->
+            <div class="form-group half-width" id="group-price">
+              <label for="inputPrice" id="labelPrice">Price ($)</label>
               <input type="number" id="inputPrice" min="0.01" step="0.01" placeholder="e.g. 485.00" required>
             </div>
           </div>
 
+          <!-- Date & Time Row -->
           <div class="form-row">
             <div class="form-group half-width">
-              <label for="inputDate">Transaction Date</label>
+              <label for="inputDate">Date</label>
               <input type="date" id="inputDate" required>
             </div>
 
             <div class="form-group half-width">
+              <label for="inputTime">Time</label>
+              <input type="time" id="inputTime" step="1" required>
+            </div>
+          </div>
+
+          <!-- Expiry Date & Stop Loss Row -->
+          <div class="form-row" id="group-expiry-sl">
+            <!-- Expiry Date (Hidden for Stock/Cash) -->
+            <div class="form-group half-width hidden" id="group-expiry">
+              <label for="inputExpiry">Expiry Date</label>
+              <input type="date" id="inputExpiry">
+            </div>
+
+            <!-- Stop Limit (SL) (Hidden for Cash) -->
+            <div class="form-group half-width" id="group-sl">
               <label for="inputSL">STOP LIMIT (SL)</label>
               <input type="number" id="inputSL" min="0.01" step="0.01" placeholder="Optional (e.g. 430.00)">
             </div>
           </div>
 
-          <div class="form-group">
+          <!-- Option Type (Hidden for Stock/Cash) -->
+          <div class="form-group hidden" id="group-option-type">
+            <label for="inputOptionType">Option Type</label>
+            <select id="inputOptionType">
+              <option value="CALL">Call</option>
+              <option value="PUT">Put</option>
+            </select>
+          </div>
+
+          <!-- Trade Journal Note (Hidden for Cash) -->
+          <div class="form-group" id="group-comment">
             <label for="inputComment">Trade Journal Note</label>
             <textarea id="inputComment" placeholder="Add adviser evaluation notes..." rows="3"></textarea>
           </div>
@@ -145,6 +187,7 @@
 
   </div>
 
+  <script src="auth-guard.js"></script>
   <script src="entry.js?v=2.2" defer></script>
 </body>
 

@@ -34,7 +34,10 @@
           <div class="avatar logo-vr">VR</div>
           <div class="greeting-info">
             <span class="sub-title">History & Transactions</span>
-            <h1 class="user-title">Reports</h1>
+            <h1 class="user-title" style="display: flex; align-items: center; gap: 8px;">
+              Reports
+              <button id="open-ai-modal-btn" class="ai-symbol-btn" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #a855f7; font-size: 14px; transition: all 0.2s;" title="AI Journal Digest">⚡</button>
+            </h1>
           </div>
         </div>
       </header>
@@ -72,18 +75,41 @@
 
       <!-- Section 1: Dynamic performance snapshot card -->
       <section class="snapshot-overview-section" id="snapshot-section1" style="margin: 0 24px 20px 24px;">
-        <div class="snapshot-card-container" style="padding: 16px 20px;">
-          <div id="reporting-context-label" style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; font-family: var(--font-main);">Reporting for: </div>
-          <div class="portfolio-performance-card" style="margin-top: 8px;">
-            <span class="performance-title" style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;">Portfolio Performance</span>
-            <div id="total-performance-value" class="performance-value" style="font-size: 24px; font-weight: 700; margin: 4px 0 12px 0;">$0.00</div>
-            
-            <div class="snap-ai-notes-container">
-              <div class="ai-notes-header" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                <span style="font-size: 10px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚡ AI Journal Digest</span>
-              </div>
-              <div id="snap-ai-brief-text" class="ai-notes-content">Gathering trading notes for summary...</div>
+        <div class="snapshot-card-container" style="padding: 16px 20px; display: flex; flex-direction: column; width: 100%; box-sizing: border-box; border-radius: 24px; border: 1px solid var(--glass-border); background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 12px 32px var(--glass-shadow);">
+          <div class="pnl-header" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; text-shadow: 0 0 10px var(--accent-glow); text-align: left;">Portfolio performance</div>
+          <span class="card-label" style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; text-align: left;">Performance</span>
+          <h2 class="balance-amount" id="total-performance-value" style="font-size: 32px; font-weight: 700; margin: 4px 0 12px 0; text-align: left;">$0.00</h2>
+          
+          <div class="pnl-breakdown-row" style="display: flex; gap: 32px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 12px; margin-top: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 2px; text-align: left;">
+              <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-main);">Unrealized P&L</span>
+              <span id="summary-unrealized-pnl" style="font-size: 15px; font-weight: 600; font-family: var(--font-main); color: var(--text-primary);">$0.00</span>
             </div>
+            <div style="display: flex; flex-direction: column; gap: 2px; text-align: left;">
+              <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-main);">Realized P&L</span>
+              <span id="summary-realized-pnl" style="font-size: 15px; font-weight: 600; font-family: var(--font-main); color: var(--text-primary);">$0.00</span>
+            </div>
+          </div>
+          <!-- Hidden fields for test compatibility -->
+          <div id="summary-total-pnl" style="display: none;">$0.00</div>
+        </div>
+      </section>
+
+      <!-- Section 1.5: Collapsible AI Journal Digest Container -->
+      <section class="ai-digest-section" id="ai-digest-container" style="margin: 0 24px 20px 24px; display: none;">
+        <div class="ai-digest-card" style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 12px; overflow: hidden; transition: all 0.3s ease;">
+          <div class="ai-digest-header" id="ai-digest-header" style="padding: 12px 16px; background: rgba(168, 85, 247, 0.08); display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: #a855f7; font-size: 16px;">⚡</span>
+              <span style="font-weight: 600; font-size: 13px; color: #a855f7; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-main);">AI Journal Digest</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="ai-digest-toggle-icon" style="font-size: 12px; color: #a855f7; transition: transform 0.3s ease;">▼</span>
+              <button id="dismiss-ai-digest-btn" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0;" title="Dismiss">&times;</button>
+            </div>
+          </div>
+          <div class="ai-digest-body" id="ai-digest-body" style="padding: 16px; transition: all 0.3s ease;">
+            <div id="snap-ai-brief-text" class="ai-notes-content" style="margin: 0; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px; font-family: var(--font-main); font-size: 13px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; text-align: left;">Gathering trading notes for summary...</div>
           </div>
         </div>
       </section>
@@ -161,7 +187,8 @@
 
   </div>
 
-  <script src="ledger.js?v=2.2" defer></script>
+  <script src="auth-guard.js"></script>
+  <script src="ledger.js?v=2.3" defer></script>
 </body>
 
 </html>

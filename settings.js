@@ -5,11 +5,64 @@ document.addEventListener('DOMContentLoaded', () => {
     applyAccentColor(savedAccent);
   }
 
+  // ── Session Awareness ──────────────────────────────────────────────────────
+  // auth-guard.js runs first and sets window.__session. Wire up UI accordingly.
+  const sessionRole = (typeof window.getSessionRole === 'function')
+    ? window.getSessionRole()
+    : 'admin'; // Fallback: if guard is bypassed (e.g. tests), default to admin
+
+  const sessionUsername = (typeof window.getSessionUser === 'function')
+    ? window.getSessionUser()
+    : '';
+
+  // Enforce admin-only visibility on the Administrative Control Zone
+  const adminZone = document.querySelector('.admin-control-zone');
+  if (adminZone) {
+    if (sessionRole !== 'admin') {
+      adminZone.style.display = 'none';
+    }
+  }
+
+  // Populate the "Signed In" card
+  const signedInUsername = document.getElementById('signedInUsername');
+  if (signedInUsername && sessionUsername) {
+    const roleLabel = sessionRole === 'admin' ? '🔑 Admin' : '👤 Member';
+    signedInUsername.textContent = `${sessionUsername} · ${roleLabel}`;
+  }
+
+  // Wire Sign Out button
+  const signOutBtn = document.getElementById('signOutBtn');
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', () => {
+      if (typeof window.logoutSession === 'function') {
+        window.logoutSession();
+      } else {
+        sessionStorage.removeItem('portfolio_session');
+        window.location.replace('login.html');
+      }
+    });
+    // Hover effect
+    signOutBtn.addEventListener('mouseenter', () => {
+      signOutBtn.style.background = 'rgba(239,68,68,0.15)';
+      signOutBtn.style.borderColor = 'rgba(239,68,68,0.5)';
+    });
+    signOutBtn.addEventListener('mouseleave', () => {
+      signOutBtn.style.background = 'rgba(239,68,68,0.08)';
+      signOutBtn.style.borderColor = 'rgba(239,68,68,0.3)';
+    });
+  }
+  // ── End Session Awareness ──────────────────────────────────────────────────
+
   initProfileForm();
   initThemeAccordion();
   initPreferences();
   initPortfolioOverrides();
+  initUserManagement();
+  initTransactionHistory();
+  initSecuritySettings();
   initNavigation();
+  initPasswordToggles();
+  initPnLGraph();
 });
 
 function applyAccentColor(hexColor) {
@@ -26,21 +79,26 @@ function applyAccentColor(hexColor) {
 function initProfileForm() {
   const usernameInput = document.getElementById('usernameInput');
   const emailInput = document.getElementById('emailInput');
+  const phoneInput = document.getElementById('phoneInput');
   const apiKeyInput = document.getElementById('apiKeyInput');
   const saveBtn = document.getElementById('saveProfileBtn');
+  const profileSaveBtn = document.getElementById('profileSaveBtn');
+  const profileCancelBtn = document.getElementById('profileCancelBtn');
+
+  let initialUsername = localStorage.getItem('portfolio_username') || 'Vanai';
+  let initialEmail = localStorage.getItem('portfolio_email') || 'vanai@portfolio.com';
+  let initialPhone = localStorage.getItem('portfolio_phone') || '';
 
   if (usernameInput) {
-    usernameInput.value = localStorage.getItem('portfolio_username') || 'Vanai';
-    usernameInput.addEventListener('blur', () => {
-      localStorage.setItem('portfolio_username', usernameInput.value);
-    });
+    usernameInput.value = initialUsername;
   }
 
   if (emailInput) {
-    emailInput.value = localStorage.getItem('portfolio_email') || 'vanai@portfolio.com';
-    emailInput.addEventListener('blur', () => {
-      localStorage.setItem('portfolio_email', emailInput.value);
-    });
+    emailInput.value = initialEmail;
+  }
+
+  if (phoneInput) {
+    phoneInput.value = initialPhone;
   }
 
   if (apiKeyInput) {
@@ -50,18 +108,174 @@ function initProfileForm() {
     });
   }
 
-  if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
+  if (profileSaveBtn) {
+    profileSaveBtn.addEventListener('click', () => {
+      const changePasswordInput = document.getElementById('changePasswordInput');
+      const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+      
+      const newUsername = usernameInput ? usernameInput.value.trim() : '';
+      const newEmail = emailInput ? emailInput.value.trim() : '';
+      const newPhone = phoneInput ? phoneInput.value.trim() : '';
+
+      if (!newUsername || !newEmail || !newPhone) {
+        showToast('⚠️ All fields are mandatory.', true);
+        return;
+      }
+
+      let passwordToUpdate = null;
+      if (changePasswordInput && confirmPasswordInput) {
+        const changeVal = changePasswordInput.value;
+        const confirmVal = confirmPasswordInput.value;
+        
+        if (changeVal || confirmVal) {
+          if (changeVal !== confirmVal) {
+            showToast('⚠️ Passwords do not match.', true);
+            return;
+          }
+          if (!validatePasswordStrength(changeVal)) {
+            showToast('⚠️ Password must contain more than 8 characters, including alphabets, numbers, and special characters.', true);
+            return;
+          }
+          passwordToUpdate = changeVal;
+        }
+      }
+
       showConfirmModal({
         icon: '👤',
         title: 'Save Profile Settings?',
-        message: 'Are you sure you want to save your username, email, and API key settings?'
-      }, () => {
-        if (usernameInput) localStorage.setItem('portfolio_username', usernameInput.value);
-        if (emailInput) localStorage.setItem('portfolio_email', emailInput.value);
-        if (apiKeyInput) localStorage.setItem('portfolio_api_key', apiKeyInput.value);
-        showToast('💾 Profile configurations saved!');
+        message: 'Are you sure you want to save your user profile details?'
+      }, async () => {
+        const oldUsername = localStorage.getItem('portfolio_username') || 'Vanai';
+        try {
+          const response = await fetch('http://localhost:5001/api/profile/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              oldUsername: oldUsername,
+              newUsername: newUsername,
+              email: newEmail,
+              phoneNumber: newPhone,
+              password: passwordToUpdate || ''
+            })
+          });
+          
+          if (response.ok) {
+            localStorage.setItem('portfolio_username', newUsername);
+            localStorage.setItem('portfolio_email', newEmail);
+            localStorage.setItem('portfolio_phone', newPhone);
+            if (passwordToUpdate) {
+              localStorage.setItem('portfolio_password', passwordToUpdate);
+            }
+            
+            // Sync to localUsers list
+            let localUsers = [];
+            try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch(e){}
+            let found = false;
+            localUsers = localUsers.map(u => {
+              if (u.username.toLowerCase() === oldUsername.toLowerCase()) {
+                u.username = newUsername;
+                u.email = newEmail;
+                u.phoneNumber = newPhone;
+                if (passwordToUpdate) u.password = passwordToUpdate;
+                found = true;
+              }
+              return u;
+            });
+            if (!found) {
+              localUsers.push({
+                username: newUsername,
+                role: window.getSessionRole() || 'member',
+                email: newEmail,
+                phoneNumber: newPhone,
+                password: passwordToUpdate || localStorage.getItem('portfolio_password') || 'Admin@123!'
+              });
+            }
+            localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
+
+            // Sync session
+            const sessionObj = JSON.parse(sessionStorage.getItem('portfolio_session') || '{}');
+            sessionObj.username = newUsername;
+            sessionStorage.setItem('portfolio_session', JSON.stringify(sessionObj));
+            
+            if (changePasswordInput) changePasswordInput.value = '';
+            if (confirmPasswordInput) confirmPasswordInput.value = '';
+            initialUsername = newUsername;
+            initialEmail = newEmail;
+            initialPhone = newPhone;
+            
+            showToast('💾 Profile configurations and password saved!');
+          } else {
+            const errData = await response.json().catch(() => ({}));
+            showToast(`⚠️ Error: ${errData.error || 'Failed to update profile.'}`, true);
+          }
+        } catch (err) {
+          console.error('Offline profile update fallback:', err);
+          localStorage.setItem('portfolio_username', newUsername);
+          localStorage.setItem('portfolio_email', newEmail);
+          localStorage.setItem('portfolio_phone', newPhone);
+          if (passwordToUpdate) {
+            localStorage.setItem('portfolio_password', passwordToUpdate);
+          }
+          
+          let localUsers = [];
+          try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch(e){}
+          let found = false;
+          localUsers = localUsers.map(u => {
+            if (u.username.toLowerCase() === oldUsername.toLowerCase()) {
+              u.username = newUsername;
+              u.email = newEmail;
+              u.phoneNumber = newPhone;
+              if (passwordToUpdate) u.password = passwordToUpdate;
+              found = true;
+            }
+            return u;
+          });
+          if (!found) {
+            localUsers.push({
+              username: newUsername,
+              role: window.getSessionRole() || 'member',
+              email: newEmail,
+              phoneNumber: newPhone,
+              password: passwordToUpdate || localStorage.getItem('portfolio_password') || 'Admin@123!'
+            });
+          }
+          localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
+
+          const sessionObj = JSON.parse(sessionStorage.getItem('portfolio_session') || '{}');
+          sessionObj.username = newUsername;
+          sessionStorage.setItem('portfolio_session', JSON.stringify(sessionObj));
+          
+          if (changePasswordInput) changePasswordInput.value = '';
+          if (confirmPasswordInput) confirmPasswordInput.value = '';
+          initialUsername = newUsername;
+          initialEmail = newEmail;
+          initialPhone = newPhone;
+          
+          showToast('💾 Profile configurations and password saved locally!');
+        }
       });
+    });
+  }
+
+  if (profileCancelBtn) {
+    profileCancelBtn.addEventListener('click', () => {
+      if (usernameInput) usernameInput.value = initialUsername;
+      if (emailInput) emailInput.value = initialEmail;
+      if (phoneInput) phoneInput.value = initialPhone;
+      
+      const changePasswordInput = document.getElementById('changePasswordInput');
+      const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+      if (changePasswordInput) changePasswordInput.value = '';
+      if (confirmPasswordInput) confirmPasswordInput.value = '';
+
+      showToast('ℹ️ Profile changes discarded.');
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      if (apiKeyInput) localStorage.setItem('portfolio_api_key', apiKeyInput.value);
+      showToast('💾 Profile configurations saved!');
     });
   }
 }
@@ -174,8 +388,14 @@ function initPreferences() {
   if (toggleBlur) {
     toggleBlur.checked = localStorage.getItem('portfolio_blur_enabled') !== 'false';
     toggleBlur.addEventListener('change', () => {
-      localStorage.setItem('portfolio_blur_enabled', toggleBlur.checked ? 'true' : 'false');
-      showToast(toggleBlur.checked ? '✨ Layout blur effects active!' : '⏹️ Layout blur effects disabled.');
+      const isEnabled = toggleBlur.checked;
+      localStorage.setItem('portfolio_blur_enabled', isEnabled ? 'true' : 'false');
+      if (isEnabled) {
+        document.body.classList.remove('disable-glass-blur');
+      } else {
+        document.body.classList.add('disable-glass-blur');
+      }
+      showToast(isEnabled ? '✨ Layout blur effects active!' : '⏹️ Layout blur effects disabled.');
     });
   }
 
@@ -219,13 +439,13 @@ function initPortfolioOverrides() {
   const savedBP = localStorage.getItem('portfolio_buying_power');
   if (savedBP !== null && bpInput) {
     bpInput.value = parseFloat(savedBP).toFixed(2);
-    if (bpPreview) bpPreview.textContent = 'Current: ' + fmt(parseFloat(savedBP));
+    if (bpPreview) bpPreview.textContent = 'Current Override: ' + fmt(parseFloat(savedBP));
   }
 
   const savedPV = localStorage.getItem('portfolio_value_override');
   if (savedPV !== null && pvInput) {
-    pvInput.value = parseFloat(savedPV).toFixed(2);
-    if (pvPreview) pvPreview.textContent = 'Override active: ' + fmt(parseFloat(savedPV));
+    pvInput.value = savedPV;
+    if (pvPreview) pvPreview.textContent = 'Master Override verbatim active: ' + savedPV;
   } else if (pvPreview) {
     pvPreview.textContent = 'Live calculation active';
   }
@@ -246,9 +466,9 @@ function initPortfolioOverrides() {
 
   if (pvInput) {
     pvInput.addEventListener('input', () => {
-      const val = parseFloat(pvInput.value);
-      if (!isNaN(val) && pvPreview) {
-        pvPreview.textContent = 'Override: ' + fmt(val);
+      const val = pvInput.value.trim();
+      if (val !== '' && pvPreview) {
+        pvPreview.textContent = 'Verbatim preview: ' + val;
         pvPreview.classList.add('active');
       } else if (pvPreview) {
         pvPreview.textContent = 'Will restore live calculation';
@@ -279,7 +499,6 @@ function initPortfolioOverrides() {
             }
             saved = true;
           } else if (bpInput.value.trim() === '') {
-            // Clear — will fall back to default in portfolio.js
             localStorage.removeItem('portfolio_buying_power');
             localStorage.removeItem('portfolio_buying_power_user_set');
             if (bpPreview) bpPreview.textContent = 'Reset to default';
@@ -287,18 +506,17 @@ function initPortfolioOverrides() {
           }
         }
 
-        // Portfolio Value override
+        // Master Portfolio Value override verbatim
         if (pvInput) {
-          const pvVal = parseFloat(pvInput.value);
-          if (!isNaN(pvVal) && pvVal >= 0) {
-            localStorage.setItem('portfolio_value_override', pvVal.toFixed(2));
+          const pvVal = pvInput.value.trim();
+          if (pvVal !== '') {
+            localStorage.setItem('portfolio_value_override', pvVal);
             if (pvPreview) {
-              pvPreview.textContent = 'Override active: ' + fmt(pvVal);
+              pvPreview.textContent = 'Override verbatim active: ' + pvVal;
               pvPreview.classList.add('active');
             }
             saved = true;
-          } else if (pvInput.value.trim() === '') {
-            // Clear override → restore live calculation
+          } else {
             localStorage.removeItem('portfolio_value_override');
             if (pvPreview) pvPreview.textContent = 'Live calculation restored';
             saved = true;
@@ -306,9 +524,49 @@ function initPortfolioOverrides() {
         }
 
         if (saved) {
-          showToast('✅ Portfolio overrides saved! Refresh the Portfolio tab to see the updated values.');
+          const bpValStr = bpInput ? bpInput.value.trim() : '';
+          const pvOverVal = pvInput ? pvInput.value.trim() : '';
+
+          let startingCash = null;
+          if (bpValStr !== '') {
+            const bpVal = parseFloat(bpValStr);
+            let txs = [];
+            try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) {}
+            let cashTxs = [];
+            try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) {}
+            const netCash = calculateNetCash(txs, cashTxs);
+            startingCash = bpVal - netCash;
+            localStorage.setItem('portfolio_starting_cash', startingCash.toFixed(2));
+            localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
+            localStorage.setItem('portfolio_buying_power_user_set', 'true');
+          } else {
+            localStorage.removeItem('portfolio_starting_cash');
+            localStorage.removeItem('portfolio_buying_power');
+            localStorage.removeItem('portfolio_buying_power_user_set');
+          }
+
+          fetch('http://localhost:5001/api/overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              buyingPowerOverride: bpValStr !== '' ? parseFloat(bpValStr) : null,
+              portfolioValueOverride: pvOverVal,
+              startingCash: startingCash
+            })
+          }).then(res => {
+            if (res.ok) {
+              showToast('✅ Portfolio overrides saved and synced with server! Refresh the tabs to see the updated values.');
+            } else {
+              showToast('✅ Portfolio overrides saved locally!');
+            }
+          }).catch(err => {
+            console.error('Failed to sync overrides:', err);
+            showToast('✅ Portfolio overrides saved locally!');
+          });
+
+          recalculateBuyingPower();
         } else {
-          showToast('⚠️ Please enter valid positive numbers.', true);
+          showToast('⚠️ Please enter valid override values.', true);
         }
       });
     });
@@ -506,27 +764,18 @@ function saveTransactionLocally(tx) {
 }
 
 async function pushCashTransactionToCloud(tx, name) {
-  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
-  if (!url || url.includes("YOUR_API_URL")) {
-    showToast("Transaction saved locally (Offline Mode)", true);
-    return;
-  }
-
   try {
-    const response = await fetch(url, {
+    const response = await fetch('http://localhost:5001/api/cash', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        ticker: tx.ticker,
         action: tx.action,
-        quantity: Number(tx.shares),
-        price: Number(tx.price),
-        date: tx.date,
-        stopLimit: 0,
-        note: tx.comment || '',
-        assetType: tx.assetType
+        amount: Number(tx.price),
+        date: tx.date.split('T')[0],
+        time: tx.date.split('T')[1] || '12:00:00',
+        author: tx.author || 'Admin'
       })
     });
     if (!response.ok) throw new Error('Network response not ok');
@@ -535,6 +784,20 @@ async function pushCashTransactionToCloud(tx, name) {
     console.error('Local server cash post failed:', err);
     showToast("Transaction saved locally (Offline Mode)", true);
   }
+}
+
+function saveCashLocally(tx) {
+  let cashTxs = [];
+  const stored = localStorage.getItem('portfolio_cash_ledger');
+  if (stored) {
+    try {
+      cashTxs = JSON.parse(stored);
+    } catch (e) {
+      cashTxs = [];
+    }
+  }
+  cashTxs.push(tx);
+  localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
 }
 
 function executeCashAdjustment(actionType, amount) {
@@ -547,21 +810,311 @@ function executeCashAdjustment(actionType, amount) {
   const seconds = String(now.getSeconds()).padStart(2, '0');
   const txDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 
+  const activeUser = typeof window.getSessionUser === 'function' ? window.getSessionUser() : 'Admin';
+
   const tx = {
     ticker: "CASH",
     assetType: "CASH",
     action: actionType,
-    shares: 1,
+    shares: 0,
     price: amount,
     date: txDate,
     comment: "",
-    stopLoss: 0
+    stopLoss: 0,
+    author: activeUser || 'Admin'
   };
 
-  // 1. Save locally
-  saveTransactionLocally(tx);
+  // 1. Save locally in cash ledger
+  saveCashLocally(tx);
 
-  // 2. Recalculate Buying Power
+  // 2. Adjust local user override starting base if override is active
+  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
+  if (isUserSet) {
+    let startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
+    if (actionType === 'DEPOSIT') {
+      startingCash += amount;
+    } else {
+      startingCash -= amount;
+    }
+    localStorage.setItem('portfolio_starting_cash', startingCash.toFixed(2));
+    
+    // Sync new overrides to server
+    const currentBP = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+    const adjustedBP = currentBP + (actionType === 'DEPOSIT' ? amount : -amount);
+    localStorage.setItem('portfolio_buying_power', adjustedBP.toFixed(2));
+
+    fetch('http://localhost:5001/api/overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        buyingPowerOverride: adjustedBP,
+        portfolioValueOverride: localStorage.getItem('portfolio_value_override') || '',
+        startingCash: startingCash
+      })
+    }).catch(err => console.error('Failed to sync overrides:', err));
+  }
+
+  // 3. Recalculate dynamic buying power
+  recalculateBuyingPower();
+
+  // 4. Stream to cloud
+  const name = actionType === 'DEPOSIT' ? "Capital Bank Deposit" : "Capital Bank Withdrawal";
+  pushCashTransactionToCloud(tx, name);
+
+  // 5. Re-render transaction history
+  initTransactionHistory();
+}
+
+/**
+ * Password strength checker:
+ * Password should contain more than 8 characters which includes alphabets, numbers, and special characters.
+ */
+function validatePasswordStrength(password) {
+  if (password.length <= 8) {
+    return false;
+  }
+  const hasAlphabet = /[a-zA-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+  return hasAlphabet && hasNumber && hasSpecial;
+}
+
+/**
+ * User Ingestion Form Panel logic
+ */
+function initUserManagement() {
+  const form = document.getElementById('addUserForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const addUsernameEl = document.getElementById('addUsername');
+    const addRoleEl = document.getElementById('addRole');
+    const addUserEmailEl = document.getElementById('addUserEmail');
+    const addUserPhoneEl = document.getElementById('addUserPhone');
+    const addUserPasswordEl = document.getElementById('addUserPassword');
+    const addUserConfirmPasswordEl = document.getElementById('addUserConfirmPassword');
+    
+    if (!addUsernameEl || !addRoleEl || !addUserEmailEl || !addUserPhoneEl || !addUserPasswordEl || !addUserConfirmPasswordEl) return;
+
+    const username = addUsernameEl.value.trim();
+    const role = addRoleEl.value;
+    const email = addUserEmailEl.value.trim();
+    const phoneNumber = addUserPhoneEl.value.trim();
+    const password = addUserPasswordEl.value;
+    const confirmPassword = addUserConfirmPasswordEl.value;
+
+    if (!username || !role || !email || !phoneNumber || !password || !confirmPassword) {
+      showToast('⚠️ All fields are mandatory.', true);
+      return;
+    }
+
+    // Local duplicate username check
+    let localUsers = [];
+    try {
+      localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]');
+    } catch (e) {
+      localUsers = [];
+    }
+    const usernameExists = localUsers.some(u => u.username.toLowerCase() === username.toLowerCase()) || username.toLowerCase() === 'admin';
+    if (usernameExists) {
+      showToast('⚠️ User name already exist.', true);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showToast('⚠️ Passwords do not match.', true);
+      return;
+    }
+
+    if (!validatePasswordStrength(password)) {
+      showToast('⚠️ Password must contain more than 8 characters, including alphabets, numbers, and special characters.', true);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5001/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, role, email, phoneNumber, password })
+      });
+
+      if (response.ok) {
+        localUsers = localUsers.filter(u => u.username.toLowerCase() !== username.toLowerCase());
+        localUsers.push({ username, role, email, phoneNumber, password });
+        localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
+
+        showToast('✅ New user registered successfully!');
+        form.reset();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        showToast(`⚠️ Error: ${errData.error || 'Failed to register user.'}`, true);
+      }
+    } catch (err) {
+      console.error('Failed to register user:', err);
+      
+      // Fallback: save to localStorage (Offline Mode)
+      localUsers = localUsers.filter(u => u.username.toLowerCase() !== username.toLowerCase());
+      localUsers.push({ username, role, email, phoneNumber, password });
+      localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
+
+      showToast('✅ New user registered locally (Offline Mode)!');
+      form.reset();
+    }
+  });
+}
+
+/**
+ * Security Settings Password Update logic
+ */
+function initSecuritySettings() {
+  const form = document.getElementById('securityForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPasswordEl = document.getElementById('currentPassword');
+    const newPasswordEl = document.getElementById('newPassword');
+    const confirmPasswordEl = document.getElementById('confirmPassword');
+
+    if (!currentPasswordEl || !newPasswordEl || !confirmPasswordEl) return;
+
+    const currentPassword = currentPasswordEl.value;
+    const newPassword = newPasswordEl.value;
+    const confirmPassword = confirmPasswordEl.value;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showToast('⚠️ All fields are mandatory.', true);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showToast('⚠️ New passwords do not match.', true);
+      return;
+    }
+
+    if (!validatePasswordStrength(newPassword)) {
+      showToast('⚠️ Password must contain more than 8 characters, including alphabets, numbers, and special characters.', true);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5001/api/password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      if (response.ok) {
+        // Sync new password locally
+        const activeUser = localStorage.getItem('portfolio_username') || 'Vanai';
+        let localUsers = [];
+        try {
+          localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]');
+        } catch (e) {
+          localUsers = [];
+        }
+        let found = false;
+        localUsers = localUsers.map(u => {
+          if (u.username === activeUser) {
+            u.password = newPassword;
+            found = true;
+          }
+          return u;
+        });
+        if (!found) {
+          localUsers.push({ username: activeUser, role: 'member', password: newPassword });
+        }
+        localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
+        localStorage.setItem('portfolio_password', newPassword);
+
+        showToast('✅ Password updated successfully!');
+        form.reset();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        showToast(`⚠️ Error: ${errData.error || 'Failed to update password.'}`, true);
+      }
+    } catch (err) {
+      console.error('Failed to update password:', err);
+      
+      // Fallback: update password locally (Offline Mode)
+      const activeUser = localStorage.getItem('portfolio_username') || 'Vanai';
+      let localUsers = [];
+      try {
+        localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]');
+      } catch (e) {
+        localUsers = [];
+      }
+      let found = false;
+      localUsers = localUsers.map(u => {
+        if (u.username === activeUser) {
+          u.password = newPassword;
+          found = true;
+        }
+        return u;
+      });
+      if (!found) {
+        localUsers.push({ username: activeUser, role: 'member', password: newPassword });
+      }
+      localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
+      localStorage.setItem('portfolio_password', newPassword);
+
+      showToast('✅ Password updated locally (Offline Mode)!');
+      form.reset();
+    }
+  });
+}
+
+function calculateNetCash(txs, cashTxs) {
+  let cash = 0;
+  
+  // 1. Process cash ledger
+  cashTxs.forEach(t => {
+    if (!t) return;
+    const action = String(t.action || '').toUpperCase();
+    const amount = parseFloat(t.price) || 0;
+    if (action === 'DEPOSIT') {
+      cash += amount;
+    } else if (action === 'WITHDRAWAL') {
+      cash -= amount;
+    }
+  });
+
+  // 2. Process trades
+  txs.forEach(t => {
+    if (!t || !t.ticker) return;
+    const ticker = t.ticker.toUpperCase();
+    const action = String(t.action || '').toUpperCase();
+    if (ticker === 'CASH' || t.assetType === 'CASH') {
+      const amount = parseFloat(t.price) || 0;
+      if (action === 'DEPOSIT') {
+        cash += amount;
+      } else if (action === 'WITHDRAWAL') {
+        cash -= amount;
+      }
+      return;
+    }
+    const sharesNum = parseFloat(t.shares) || 0;
+    const priceNum = parseFloat(t.price) || 0;
+    const isOpt = t.assetType === 'options' || (/\$\d/.test(t.ticker) && /\b(call|put)\b/i.test(t.ticker));
+    const multiplier = isOpt ? 100 : 1;
+    const cost = sharesNum * priceNum * multiplier;
+
+    if (action === 'BUY') {
+      cash -= cost;
+    } else if (action === 'SELL') {
+      cash += cost;
+    }
+  });
+
+  return cash;
+}
+
+function recalculateBuyingPower() {
   let txs = [];
   try {
     txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
@@ -569,77 +1122,391 @@ function executeCashAdjustment(actionType, amount) {
     txs = [];
   }
 
-  let totalCashAdjustments = 0;
-  const openPositions = {};
-  txs.forEach(t => {
-    if (!t) return;
-    if (t.ticker === 'CASH' || t.assetType === 'CASH') {
-      if (t.action === 'DEPOSIT') {
-        totalCashAdjustments += Number(t.price);
-      } else if (t.action === 'WITHDRAWAL') {
-        totalCashAdjustments -= Number(t.price);
-      }
-      return;
-    }
-    // Aggregate open positions
-    if (!openPositions[t.ticker]) {
-      openPositions[t.ticker] = { shares: 0, assetType: t.assetType || 'stocks', avgCost: 0 };
-    }
-    const pos = openPositions[t.ticker];
-    const sharesNum = Number(t.shares) || 0;
-    const priceNum  = parseFloat(t.price) || 0;
-    if (t.action === 'BUY') {
-      const newShares = pos.shares + sharesNum;
-      if (newShares > 0) {
-        pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
-      }
-      pos.shares = newShares;
-    } else if (t.action === 'SELL') {
-      pos.shares = Math.max(0, pos.shares - sharesNum);
-    }
-  });
-
-  let totalInvestedCapital = 0;
-  for (const ticker in openPositions) {
-    const pos = openPositions[ticker];
-    if (pos.shares <= 0) continue;
-    const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
-    const multiplier = isOpt ? 100 : 1;
-    totalInvestedCapital += pos.shares * pos.avgCost * multiplier;
+  let cashTxs = [];
+  try {
+    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+  } catch (e) {
+    cashTxs = [];
   }
 
-  const INITIAL_CASH = 200000.00;
-  let cashFlow = INITIAL_CASH;
-  txs.forEach(t => {
-    if (!t || t.ticker === 'CASH' || t.assetType === 'CASH') return;
-    const cost = Number(t.shares) * parseFloat(t.price || 0);
-    if (t.action === 'BUY') {
-      cashFlow -= cost;
-    } else if (t.action === 'SELL') {
-      cashFlow += cost;
-    }
-  });
-  const buyingPowerBaseline = Math.max(0, cashFlow);
-
+  const netCash = calculateNetCash(txs, cashTxs);
   const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
-  const startingBase = isUserSet
-    ? parseFloat(localStorage.getItem('portfolio_buying_power') || '200000.00')
-    : (buyingPowerBaseline + totalInvestedCapital);
 
-  const calculatedBuyingPower = startingBase + totalCashAdjustments - totalInvestedCapital;
-
-  if (!isUserSet) {
-    localStorage.setItem('portfolio_buying_power', calculatedBuyingPower.toFixed(2));
-    // Update inputs
-    const bpInput  = document.getElementById('buyingPowerInput');
-    const bpPreview = document.getElementById('buyingPowerPreview');
-    if (bpInput) bpInput.value = calculatedBuyingPower.toFixed(2);
-    if (bpPreview) bpPreview.textContent = 'Current: $' + calculatedBuyingPower.toFixed(2);
+  let buyingPower = 0;
+  if (isUserSet) {
+    const startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
+    buyingPower = startingCash + netCash;
+  } else {
+    buyingPower = netCash;
   }
 
-  // 3. Stream to cloud
-  const name = actionType === 'DEPOSIT' ? "Capital Bank Deposit" : "Capital Bank Withdrawal";
-  pushCashTransactionToCloud(tx, name);
+  buyingPower = Math.max(0, buyingPower);
+
+  localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
+
+  // Update inputs on Settings page if present
+  const bpInput  = document.getElementById('buyingPowerInput');
+  const bpPreview = document.getElementById('buyingPowerPreview');
+  if (bpInput && !isUserSet) bpInput.value = buyingPower.toFixed(2);
+  if (bpPreview) {
+    const fmt = v => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
+    bpPreview.textContent = (isUserSet ? 'Current Override: ' : 'Current: ') + fmt(buyingPower);
+  }
 }
+
+async function initTransactionHistory() {
+  const tableBody = document.getElementById('history-table-body');
+  if (!tableBody) return;
+
+  let cashTxs = [];
+  try {
+    const res = await fetch('http://localhost:5001/api/cash');
+    if (res.ok) {
+      cashTxs = await res.json();
+      localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
+    } else {
+      cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+    }
+  } catch (err) {
+    console.warn('Failed to fetch cash ledger from server:', err);
+    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+  }
+
+  // Sort cash transactions chronologically descending (newest first)
+  cashTxs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (cashTxs.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px 0;">
+          No cash transactions found.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tableBody.innerHTML = cashTxs.map(tx => {
+    const action = String(tx.action || '').toUpperCase();
+    const amount = parseFloat(tx.price) || 0;
+    const author = tx.author || 'Admin';
+    
+    // Format date and time
+    let formattedDate = '';
+    if (tx.date) {
+      try {
+        const d = new Date(tx.date);
+        if (!isNaN(d.getTime())) {
+          formattedDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } else {
+          formattedDate = tx.date.replace('T', ' ');
+        }
+      } catch (e) {
+        formattedDate = tx.date;
+      }
+    }
+
+    const badgeClass = action === 'DEPOSIT' ? 'deposit' : 'withdrawal';
+    const amountClass = action === 'DEPOSIT' ? 'deposit' : 'withdrawal';
+    const amountSign = action === 'DEPOSIT' ? '+' : '-';
+    
+    return `
+      <tr>
+        <td>
+          <span class="history-badge ${badgeClass}">${action}</span>
+        </td>
+        <td class="history-date">${formattedDate}</td>
+        <td class="history-amount ${amountClass}">${amountSign}$${amount.toFixed(2)}</td>
+        <td class="history-author">${author}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function initPasswordToggles() {
+  const containers = document.querySelectorAll('.password-input-container');
+  containers.forEach(container => {
+    const input = container.querySelector('input');
+    const toggleBtn = container.querySelector('.password-toggle-btn');
+    if (!input || !toggleBtn) return;
+    
+    toggleBtn.textContent = input.type === 'password' ? 'Show' : 'Hide';
+    
+    toggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (input.type === 'password') {
+        input.type = 'text';
+        toggleBtn.textContent = 'Hide';
+      } else {
+        input.type = 'password';
+        toggleBtn.textContent = 'Show';
+      }
+    });
+  });
+}
+
+/**
+ * Profit & Loss graph section initialization and rendering
+ */
+async function initPnLGraph() {
+  const accordion = document.getElementById('pnlGraphAccordion');
+  if (!accordion) return;
+
+  const filterBtns = document.querySelectorAll('.pnl-filter-btn');
+  let activeTimeframe = 'weekly';
+
+  // Load all transactions
+  let allTxs = [];
+  try {
+    const res = await fetch('http://localhost:5001/api/trades');
+    if (res.ok) {
+      allTxs = await res.json();
+    } else {
+      throw new Error('Not OK');
+    }
+  } catch (e) {
+    console.warn('Offline: fallback to local portfolio_transactions', e);
+    try {
+      allTxs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
+    } catch (err) {
+      allTxs = [];
+    }
+  }
+
+  // Pre-calculate P&L events
+  const pnlEvents = getClosedPositionsPnLEvents(allTxs);
+
+  // Initial render
+  renderPnLChart(pnlEvents, activeTimeframe, allTxs);
+
+  // Setup click listeners for timeframe filters
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Avoid triggering accordion close/expand
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTimeframe = btn.getAttribute('data-timeframe');
+      renderPnLChart(pnlEvents, activeTimeframe, allTxs);
+    });
+  });
+}
+
+function getClosedPositionsPnLEvents(allTxs) {
+  // Sort all transactions chronologically (ascending)
+  const txs = allTxs
+    .filter(tx => tx && tx.ticker && tx.ticker !== 'CASH' && tx.assetType !== 'CASH')
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Group transactions by ticker
+  const groups = {};
+  txs.forEach(tx => {
+    if (!groups[tx.ticker]) {
+      groups[tx.ticker] = [];
+    }
+    groups[tx.ticker].push(tx);
+  });
+
+  const pnlEvents = [];
+
+  for (const ticker in groups) {
+    const tickerTxs = groups[ticker];
+    const buyQueue = [];
+
+    tickerTxs.forEach(tx => {
+      const sharesNum = parseFloat(tx.shares) || 0;
+      const priceNum = parseFloat(tx.price) || 0;
+      const action = tx.action || 'BUY';
+      const isOption = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+      const multiplier = isOption ? 100 : 1;
+
+      if (action === 'BUY') {
+        buyQueue.push({ shares: sharesNum, price: priceNum });
+      } else if (action === 'SELL') {
+        let remainingToSell = sharesNum;
+        let sellPnL = 0;
+
+        while (remainingToSell > 0 && buyQueue.length > 0) {
+          const oldestLayer = buyQueue[0];
+          if (oldestLayer.shares <= remainingToSell) {
+            sellPnL += oldestLayer.shares * (priceNum - oldestLayer.price) * multiplier;
+            remainingToSell -= oldestLayer.shares;
+            buyQueue.shift();
+          } else {
+            sellPnL += remainingToSell * (priceNum - oldestLayer.price) * multiplier;
+            oldestLayer.shares -= remainingToSell;
+            remainingToSell = 0;
+          }
+        }
+
+        pnlEvents.push({
+          date: new Date(tx.date),
+          pnl: sellPnL,
+          ticker: tx.ticker
+        });
+      }
+    });
+  }
+
+  return pnlEvents;
+}
+
+function renderPnLChart(pnlEvents, timeframe, allTxs) {
+  const pnlBarChart = document.getElementById('pnlBarChart');
+  const pnlChartLabels = document.getElementById('pnlChartLabels');
+  const pnlEmptyState = document.getElementById('pnlEmptyState');
+
+  if (!pnlBarChart || !pnlChartLabels || !pnlEmptyState) return;
+
+  pnlBarChart.innerHTML = '';
+  pnlChartLabels.innerHTML = '';
+
+  // Get dynamic refDate aligned with transaction history or today
+  let refDate = new Date();
+  if (allTxs && allTxs.length > 0) {
+    const dates = allTxs.map(t => new Date(t.date)).filter(d => !isNaN(d.getTime()));
+    if (dates.length > 0) {
+      const maxDate = new Date(Math.max(...dates));
+      if (Math.abs(Date.now() - maxDate.getTime()) > 30 * 24 * 60 * 60 * 1000) {
+        refDate = maxDate;
+      }
+    }
+  }
+
+  // Create segments
+  const segments = [];
+
+  if (timeframe === 'weekly') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate() - i);
+      segments.push({
+        start: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0),
+        end: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999),
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        pnl: 0
+      });
+    }
+  } else if (timeframe === 'monthly') {
+    for (let i = 3; i >= 0; i--) {
+      const startD = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate() - (i * 7 + 6));
+      const endD = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate() - (i * 7));
+      segments.push({
+        start: new Date(startD.getFullYear(), startD.getMonth(), startD.getDate(), 0, 0, 0),
+        end: new Date(endD.getFullYear(), endD.getMonth(), endD.getDate(), 23, 59, 59, 999),
+        label: `Wk ${4 - i}`,
+        pnl: 0
+      });
+    }
+  } else if (timeframe === 'yearly') {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(refDate.getFullYear(), refDate.getMonth() - i, 1);
+      const startD = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0);
+      const endD = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      segments.push({
+        start: startD,
+        end: endD,
+        label: d.toLocaleDateString('en-US', { month: 'short' }),
+        pnl: 0
+      });
+    }
+  } else if (timeframe === 'all') {
+    let minYear = refDate.getFullYear() - 1;
+    if (pnlEvents && pnlEvents.length > 0) {
+      const years = pnlEvents.map(e => e.date.getFullYear());
+      minYear = Math.min(...years);
+    }
+    const maxYear = refDate.getFullYear();
+    for (let yr = minYear; yr <= maxYear; yr++) {
+      segments.push({
+        start: new Date(yr, 0, 1, 0, 0, 0),
+        end: new Date(yr, 11, 31, 23, 59, 59, 999),
+        label: `${yr}`,
+        pnl: 0
+      });
+    }
+  }
+
+  // Populate segments
+  pnlEvents.forEach(e => {
+    const t = e.date.getTime();
+    segments.forEach(seg => {
+      if (t >= seg.start.getTime() && t <= seg.end.getTime()) {
+        seg.pnl += e.pnl;
+      }
+    });
+  });
+
+  const maxAbs = Math.max(...segments.map(s => Math.abs(s.pnl)), 0);
+
+  if (maxAbs === 0) {
+    pnlEmptyState.style.display = 'block';
+    pnlBarChart.style.opacity = '0';
+    // Still render blank labels
+    segments.forEach(seg => {
+      const labelEl = document.createElement('span');
+      labelEl.style.cssText = 'flex: 1; text-align: center;';
+      labelEl.textContent = seg.label;
+      pnlChartLabels.appendChild(labelEl);
+    });
+  } else {
+    pnlEmptyState.style.display = 'none';
+    pnlBarChart.style.opacity = '1';
+
+    segments.forEach(seg => {
+      const col = document.createElement('div');
+      col.className = 'chart-col';
+      col.style.cssText = 'flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative;';
+
+      // Baseline dot
+      const baselineDot = document.createElement('div');
+      baselineDot.style.cssText = 'position: absolute; bottom: 50%; transform: translateY(50%); width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.25);';
+      col.appendChild(baselineDot);
+
+      if (seg.pnl > 0) {
+        const upperHalf = document.createElement('div');
+        upperHalf.style.cssText = 'position: absolute; bottom: 50%; width: 18px; height: 50%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;';
+
+        const bar = document.createElement('div');
+        bar.className = 'pnl-bar-positive';
+        const pct = (seg.pnl / maxAbs) * 100;
+        bar.style.cssText = `height: ${pct}%; width: 100%; position: relative;`;
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'bar-tooltip bar-tooltip-up';
+        tooltip.textContent = `+$${seg.pnl.toFixed(2)}`;
+        bar.appendChild(tooltip);
+
+        upperHalf.appendChild(bar);
+        col.appendChild(upperHalf);
+      } else if (seg.pnl < 0) {
+        const lowerHalf = document.createElement('div');
+        lowerHalf.style.cssText = 'position: absolute; top: 50%; width: 18px; height: 50%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;';
+
+        const bar = document.createElement('div');
+        bar.className = 'pnl-bar-negative';
+        const pct = (Math.abs(seg.pnl) / maxAbs) * 100;
+        bar.style.cssText = `height: ${pct}%; width: 100%; position: relative;`;
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'bar-tooltip bar-tooltip-down';
+        tooltip.textContent = `-$${Math.abs(seg.pnl).toFixed(2)}`;
+        bar.appendChild(tooltip);
+
+        lowerHalf.appendChild(bar);
+        col.appendChild(lowerHalf);
+      }
+
+      pnlBarChart.appendChild(col);
+
+      // Add Label
+      const labelEl = document.createElement('span');
+      labelEl.style.cssText = 'flex: 1; text-align: center;';
+      labelEl.textContent = seg.label;
+      pnlChartLabels.appendChild(labelEl);
+    });
+  }
+}
+
+
 
 

@@ -41,21 +41,47 @@ function getVal(obj, key) {
   return undefined;
 }
 
+function getDefaultAsset(ticker) {
+  if (!ticker) return undefined;
+  const upper = ticker.trim().toUpperCase();
+  for (const k in defaultAssetData) {
+    if (k.toUpperCase() === upper) {
+      return defaultAssetData[k];
+    }
+  }
+  return undefined;
+}
+
 function resolveAssetName(ticker) {
   const capitalized = ticker.trim().toUpperCase();
-  if (defaultAssetData[capitalized] && defaultAssetData[capitalized].name) {
-    return defaultAssetData[capitalized].name;
+
+  let marketPrices = {};
+  try {
+    marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+  } catch (e) { }
+
+  if (marketPrices[capitalized] && marketPrices[capitalized].name && marketPrices[capitalized].name !== capitalized) {
+    return marketPrices[capitalized].name;
+  }
+
+  const defaultEntry = getDefaultAsset(capitalized);
+  if (defaultEntry && defaultEntry.name) {
+    return defaultEntry.name;
   }
   if (tickersDb && tickersDb[capitalized]) {
     return tickersDb[capitalized];
   }
 
   // Try matching option underlying ticker
-  const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
+  const isOption = ticker.includes('@') || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
   if (isOption) {
-    const underlying = ticker.split(' ')[0].toUpperCase();
-    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
-      return defaultAssetData[underlying].name;
+    const underlying = ticker.split(/[\s$@]/)[0].toUpperCase();
+    if (marketPrices[underlying] && marketPrices[underlying].name) {
+      return marketPrices[underlying].name;
+    }
+    const underlyingEntry = getDefaultAsset(underlying);
+    if (underlyingEntry && underlyingEntry.name) {
+      return underlyingEntry.name;
     }
     if (tickersDb && tickersDb[underlying]) {
       return tickersDb[underlying];
@@ -66,8 +92,12 @@ function resolveAssetName(ticker) {
   const underlyingMatch = ticker.match(/^([A-Za-z]+)/);
   if (underlyingMatch) {
     const underlying = underlyingMatch[1].toUpperCase();
-    if (defaultAssetData[underlying] && defaultAssetData[underlying].name) {
-      return defaultAssetData[underlying].name;
+    if (marketPrices[underlying] && marketPrices[underlying].name) {
+      return marketPrices[underlying].name;
+    }
+    const underlyingEntry = getDefaultAsset(underlying);
+    if (underlyingEntry && underlyingEntry.name) {
+      return underlyingEntry.name;
     }
     if (tickersDb && tickersDb[underlying]) {
       return tickersDb[underlying];
@@ -180,6 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize quick trade (Buy/Sell) popup modal
   initQuickTradeModal();
 
+  // Initialize edit asset popup modal
+  initEditAssetModal();
+
   // Background Cloud Spreadsheet Pull
   pullCloudData().then(() => {
     startLivePriceEngine();
@@ -248,77 +281,72 @@ async function pullCloudData() {
           marketPrices[ticker] = priceEntry;
         }
 
-        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss };
+        const expiryDate = tx['Expiry Date'] || tx.expiryDate || tx.expiry || '';
+        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss, expiryDate };
       }).filter(tx => tx.ticker !== '');
 
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
 
-      // ── BUYING POWER BASELINE: derive from BUY/SELL flows in cloud schema ─
-      const INITIAL_CASH = 200000.00;
-      let cashFlow = INITIAL_CASH;
-      parsedTxs.forEach(tx => {
-        if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
-        const cost = Number(tx.shares) * parseFloat(tx.price || 0);
-        if (tx.action === 'BUY') {
-          cashFlow -= cost;
-        } else if (tx.action === 'SELL') {
-          cashFlow += cost;
+      // ── BUYING POWER BASELINE: derive from cash ledger and trades ─
+      // Fetch and save cash transactions
+      let cashTxs = [];
+      try {
+        const cashUrl = url.replace('/trades', '/cash');
+        const cashResponse = await fetch(cashUrl, { method: 'GET' });
+        if (cashResponse.ok) {
+          cashTxs = await cashResponse.json();
+          localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
+        }
+      } catch (cashErr) {
+        console.warn('Failed to fetch cash ledger from server:', cashErr);
+        try {
+          cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+        } catch (e) {
+          cashTxs = [];
+        }
+      }
+
+      let dynamicCash = 0;
+      cashTxs.forEach(tx => {
+        if (!tx) return;
+        const action = String(tx.action || '').toUpperCase();
+        const amount = parseFloat(tx.price) || 0;
+        if (action === 'DEPOSIT') {
+          dynamicCash += amount;
+        } else if (action === 'WITHDRAWAL') {
+          dynamicCash -= amount;
         }
       });
-      const buyingPowerBaseline = Math.max(0, cashFlow);
 
-      // ── CASH ADJUSTMENTS ──
-      let totalCashAdjustments = 0;
-      parsedTxs.forEach(tx => {
-        if (tx.action === 'WITHDRAWAL') {
-          totalCashAdjustments -= Number(tx.price);
-        } else if (tx.assetType === 'CASH' || tx.action === 'DEPOSIT') {
-          totalCashAdjustments += Number(tx.price);
-        }
-      });
-
-      // ── TOTAL INVESTED CAPITAL ──
-      const openPositions = {};
       parsedTxs.forEach(tx => {
         if (!tx || !tx.ticker) return;
         if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
-        if (!openPositions[tx.ticker]) {
-          openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0 };
-        }
-        const pos = openPositions[tx.ticker];
-        const sharesNum = Number(tx.shares) || 0;
+        const action = String(tx.action || '').toUpperCase();
+        const sharesNum = parseFloat(tx.shares) || 0;
         const priceNum = parseFloat(tx.price) || 0;
-        if (tx.action === 'BUY') {
-          const newShares = pos.shares + sharesNum;
-          if (newShares > 0) {
-            pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
-          }
-          pos.shares = newShares;
-        } else if (tx.action === 'SELL') {
-          pos.shares = Math.max(0, pos.shares - sharesNum);
+        const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+        const multiplier = isOpt ? 100 : 1;
+        const cost = sharesNum * priceNum * multiplier;
+
+        if (action === 'BUY') {
+          dynamicCash -= cost;
+        } else if (action === 'SELL') {
+          dynamicCash += cost;
         }
       });
 
-      let totalInvestedCapital = 0;
-      for (const ticker in openPositions) {
-        const pos = openPositions[ticker];
-        if (pos.shares <= 0) continue;
-        const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
-        const multiplier = isOpt ? 100 : 1;
-        totalInvestedCapital += pos.shares * pos.avgCost * multiplier;
-      }
-
       const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
-      const startingBase = isUserSet
-        ? parseFloat(localStorage.getItem('portfolio_buying_power') || '200000.00')
-        : (buyingPowerBaseline + totalInvestedCapital);
-
-      const calculatedBuyingPower = startingBase + totalCashAdjustments - totalInvestedCapital;
-
-      if (!isUserSet) {
-        localStorage.setItem('portfolio_buying_power', calculatedBuyingPower.toFixed(2));
+      let buyingPower = 0;
+      if (isUserSet) {
+        const startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
+        buyingPower = startingCash + dynamicCash;
+      } else {
+        buyingPower = dynamicCash;
       }
+
+      buyingPower = Math.max(0, buyingPower);
+      localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
       // ─────────────────────────────────────────────────────────────────────
 
       // Re-render using the currently-active filter pill to preserve the user's view
@@ -534,11 +562,19 @@ function refreshPortfolioAssets() {
         type: tx.assetType,
         shares: 0,
         avgCost: 0,
-        lastPrice: tx.price
+        lastPrice: tx.price,
+        expiryDate: tx.expiryDate || tx['Expiry Date'] || '',
+        comment: tx.comment || ''
       };
     }
     const g = groups[tx.ticker];
     g.lastPrice = tx.price;
+    if (tx.expiryDate || tx['Expiry Date']) {
+      g.expiryDate = tx.expiryDate || tx['Expiry Date'];
+    }
+    if (tx.comment) {
+      g.comment = tx.comment;
+    }
     if (tx.action === 'BUY') {
       const newShares = g.shares + tx.shares;
       if (newShares > 0) {
@@ -571,7 +607,7 @@ function refreshPortfolioAssets() {
       }
       const customDetails = customPrices[ticker] || {};
 
-      let assetDetails = defaultAssetData[ticker];
+      let assetDetails = getDefaultAsset(ticker);
       if (assetDetails) {
         assetDetails = { ...assetDetails, ...customDetails };
       } else {
@@ -603,7 +639,9 @@ function refreshPortfolioAssets() {
         currentPrice: Number(assetDetails.currentPrice) || Number(g.lastPrice) || 0,
         stopLoss: Number(stopLossVal) || 0,
         change24h: Number(assetDetails.change24h) || 0,
-        icon: assetDetails.icon || g.ticker.slice(0, 2).toUpperCase()
+        icon: assetDetails.icon || g.ticker.slice(0, 2).toUpperCase(),
+        expiryDate: g.expiryDate || '',
+        comment: g.comment || ''
       });
     }
   }
@@ -676,7 +714,7 @@ function updateBalanceMetrics() {
     if (pos.shares <= 0) continue;
 
     // Resolve live price: cloud marketPrices → defaultAssetData → avgCost fallback
-    const marketEntry = marketPrices[ticker] || defaultAssetData[ticker] || {};
+    const marketEntry = marketPrices[ticker] || getDefaultAsset(ticker) || {};
     const currentPrice = parseFloat(marketEntry.currentPrice) || pos.avgCost || 0;
     const change24h = parseFloat(marketEntry.change24h) || 0;
 
@@ -696,57 +734,118 @@ function updateBalanceMetrics() {
   }
 
   // ── 4. NET PORTFOLIO VALUE = CASH (buying power) + OPEN POSITION EQUITY ──
-  let totalCashAdjustments = 0;
-  localTransactions.forEach(tx => {
-    if (tx.action === 'WITHDRAWAL') {
-      totalCashAdjustments -= Number(tx.price);
-    } else if (tx.assetType === 'CASH' || tx.action === 'DEPOSIT') {
-      totalCashAdjustments += Number(tx.price);
-    }
-  });
-
-  let totalInvestedCapital = 0;
-  for (const ticker in openPositions) {
-    const pos = openPositions[ticker];
-    if (pos.shares <= 0) continue;
-    if (ticker === 'CASH') continue;
-    const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
-    const multiplier = isOpt ? 100 : 1;
-    totalInvestedCapital += pos.shares * pos.avgCost * multiplier;
+  let cashTxs = [];
+  try {
+    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+  } catch (e) {
+    cashTxs = [];
   }
 
-  // Calculate base cash baseline
-  const INITIAL_CASH = 200000.00;
-  let cashFlow = INITIAL_CASH;
-  localTransactions.forEach(tx => {
-    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
-    const cost = Number(tx.shares) * parseFloat(tx.price || 0);
-    if (tx.action === 'BUY') {
-      cashFlow -= cost;
-    } else if (tx.action === 'SELL') {
-      cashFlow += cost;
+  let dynamicCash = 0;
+  cashTxs.forEach(tx => {
+    if (!tx) return;
+    const action = String(tx.action || '').toUpperCase();
+    const amount = parseFloat(tx.price) || 0;
+    if (action === 'DEPOSIT') {
+      dynamicCash += amount;
+    } else if (action === 'WITHDRAWAL') {
+      dynamicCash -= amount;
     }
   });
-  const buyingPowerBaseline = Math.max(0, cashFlow);
+
+  localTransactions.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+    const action = String(tx.action || '').toUpperCase();
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const priceNum = parseFloat(tx.price) || 0;
+    const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+    const multiplier = isOpt ? 100 : 1;
+    const cost = sharesNum * priceNum * multiplier;
+
+    if (action === 'BUY') {
+      dynamicCash -= cost;
+    } else if (action === 'SELL') {
+      dynamicCash += cost;
+    }
+  });
 
   const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
-  const startingBase = isUserSet
-    ? parseFloat(localStorage.getItem('portfolio_buying_power') || '200000.00')
-    : (buyingPowerBaseline + totalInvestedCapital);
-
-  let buyingPower = startingBase + totalCashAdjustments - totalInvestedCapital;
+  let buyingPower = 0;
   if (isUserSet) {
-    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+    const startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
+    buyingPower = startingCash + dynamicCash;
+  } else {
+    buyingPower = dynamicCash;
   }
+
+  buyingPower = Math.max(0, buyingPower);
+  localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
+
+  // Calculate Unrealized P&L and Realized P&L (FIFO queue method)
+  let unrealizedPL = 0;
+  for (const ticker in openPositions) {
+    if (ticker === 'CASH') continue;
+    const pos = openPositions[ticker];
+    if (pos.shares <= 0) continue;
+    const marketEntry = marketPrices[ticker] || getDefaultAsset(ticker) || {};
+    const currentPrice = parseFloat(marketEntry.currentPrice) || pos.avgCost || 0;
+    const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
+    const multiplier = isOpt ? 100 : 1;
+    unrealizedPL += pos.shares * (currentPrice - pos.avgCost) * multiplier;
+  }
+
+  let realizedPL = 0;
+  const buyQueues = {}; // ticker -> array of { shares, price }
+  const sortedTxs = localTransactions.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  sortedTxs.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+
+    const ticker = tx.ticker.toUpperCase();
+    const action = tx.action ? tx.action.toUpperCase() : 'BUY';
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const priceNum = parseFloat(tx.price) || 0;
+    const isOpt = tx.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
+    const multiplier = isOpt ? 100 : 1;
+
+    if (!buyQueues[ticker]) {
+      buyQueues[ticker] = [];
+    }
+
+    if (action === 'BUY') {
+      buyQueues[ticker].push({ shares: sharesNum, price: priceNum });
+    } else if (action === 'SELL') {
+      let remainingToSell = sharesNum;
+      let sellPnL = 0;
+
+      while (remainingToSell > 0 && buyQueues[ticker].length > 0) {
+        const oldestLayer = buyQueues[ticker][0];
+        if (oldestLayer.shares <= remainingToSell) {
+          sellPnL += oldestLayer.shares * (priceNum - oldestLayer.price) * multiplier;
+          remainingToSell -= oldestLayer.shares;
+          buyQueues[ticker].shift();
+        } else {
+          sellPnL += remainingToSell * (priceNum - oldestLayer.price) * multiplier;
+          oldestLayer.shares -= remainingToSell;
+          remainingToSell = 0;
+        }
+      }
+      realizedPL += sellPnL;
+    }
+  });
 
   // If the user has manually overridden the display value in Settings, use it.
   const portfolioValueOverride = localStorage.getItem('portfolio_value_override');
-  const netPortfolioValue = portfolioValueOverride !== null
-    ? parseFloat(portfolioValueOverride)
+  const hasValueOverride = portfolioValueOverride !== null && portfolioValueOverride.trim() !== '';
+  const netPortfolioValue = hasValueOverride
+    ? parseFloat(portfolioValueOverride.trim())
     : buyingPower + totalAssetEquity;
 
   // ── 5. RENDER BALANCE CARD ────────────────────────────────────────────────
-  const formattedBalance = '$' + netPortfolioValue.toFixed(2);
+  const formattedBalance = hasValueOverride
+    ? portfolioValueOverride.trim()
+    : '$' + netPortfolioValue.toFixed(2);
   const formattedBP = '$' + buyingPower.toFixed(2);
 
   balanceAmountEl.textContent = formattedBalance;
@@ -756,7 +855,8 @@ function updateBalanceMetrics() {
   }
 
   const totalChange = totalAssetEquity - totalPrevEquity;
-  const totalChangePct = totalPrevEquity > 0 ? (totalChange / totalPrevEquity) * 100 : 0;
+  const denominator = totalPrevEquity + buyingPower;
+  const totalChangePct = denominator > 0 ? (totalChange / denominator) * 100 : 0;
   const isPositive = totalChange >= 0;
 
   balanceChangeEl.className = `balance-change ${isPositive ? 'positive' : 'negative'}`;
@@ -806,8 +906,9 @@ function cleanAssetName(name) {
     const rootMatch = name.match(/^([A-Za-z]+)/);
     if (rootMatch) {
       const root = rootMatch[1].toUpperCase();
-      if (defaultAssetData[root] && defaultAssetData[root].name) {
-        return defaultAssetData[root].name
+      const rootEntry = getDefaultAsset(root);
+      if (rootEntry && rootEntry.name) {
+        return rootEntry.name
           .replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co)\b\.?/gi, '')
           .trim();
       }
@@ -839,12 +940,32 @@ function formatOptionTicker(ticker) {
  * Returns a formatted string like "Exp 07/16/26" or empty string.
  */
 function getOptionExpiry(ticker, name) {
-  // 1. Try to extract date from ticker string FIRST (most reliable)
+  // 1. Try to find from local storage transactions
+  try {
+    const stored = localStorage.getItem('portfolio_transactions');
+    if (stored) {
+      const txs = JSON.parse(stored);
+      const matchTx = txs.find(tx => tx.ticker === ticker && (tx.expiryDate || tx['Expiry Date'] || tx.expiry));
+      if (matchTx) {
+        const exp = matchTx.expiryDate || matchTx['Expiry Date'] || matchTx.expiry;
+        let formattedExp = exp;
+        const ymdMatch = exp.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (ymdMatch) {
+          formattedExp = `${parseInt(ymdMatch[2], 10)}/${parseInt(ymdMatch[3], 10)}/${ymdMatch[1].slice(-2)}`;
+        }
+        return `Exp ${formattedExp}`;
+      }
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+
+  // 2. Try to extract date from ticker string FIRST (most reliable)
   // Handles patterns like "SPY $723 CALL 6/11", "AAPL $180 Call 06/20/26", "NVDA $490 CALL 7/16/26"
   const tickerDateMatch = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
   if (tickerDateMatch) return `Exp ${tickerDateMatch[1]}`;
 
-  // 2. Fallback: try name field if it contains "Exp MM/DD/YY" (defaultAssetData entries)
+  // 3. Fallback: try name field if it contains "Exp MM/DD/YY" (defaultAssetData entries)
   // asset.name is often the company name from resolveAssetName(), so this is secondary
   if (name) {
     const nameMatch = name.match(/Exp\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
@@ -948,19 +1069,32 @@ function renderAssetsTable(filterMode) {
       }
     }
 
-    const subTicker = cleanAssetName(asset.name);
+    let subTicker = cleanAssetName(asset.name);
+    let optionExpiry = '';
 
     // Resolve underlying asset price
     const underlyingMatch = asset.ticker.match(/^([A-Za-z]+)/);
     const underlyingTicker = underlyingMatch ? underlyingMatch[1].toUpperCase() : mainTicker;
-    const underlyingEntry = marketPrices[underlyingTicker] || defaultAssetData[underlyingTicker] || {};
+    const underlyingEntry = marketPrices[underlyingTicker] || getDefaultAsset(underlyingTicker) || {};
     const underlyingPrice = parseFloat(underlyingEntry.currentPrice) || parseFloat(underlyingEntry.price) || (underlyingTicker === 'SPX' ? 5120.30 : (underlyingTicker === 'SPY' ? 512.42 : 100.00));
+
+    if (isOption) {
+      const underlyingCompany = resolveAssetName(underlyingTicker);
+      subTicker = cleanAssetName(underlyingCompany);
+      optionExpiry = getOptionExpiry(asset.ticker, asset.name);
+    }
+
+    let colorPillarHTML = '';
+    if (isOption) {
+      const contractType = /\bcall\b/i.test(asset.ticker) ? 'call'
+        : /\bput\b/i.test(asset.ticker) ? 'put' : null;
+      if (contractType) {
+        colorPillarHTML = `<span class="color-pillar ${contractType}" title="${contractType.toUpperCase()}"></span>`;
+      }
+    }
 
     const slDisplay = (asset.stopLoss && asset.stopLoss > 0) ? `$${asset.stopLoss.toFixed(2)}` : '—';
     const changeText = asset.change24h >= 0 ? `up ${asset.change24h.toFixed(2)}%` : `down ${Math.abs(asset.change24h).toFixed(2)}%`;
-
-    // Extract expiry date for options
-    const optionExpiry = isOption ? getOptionExpiry(asset.ticker, asset.name) : '';
 
     const rowHTML = `
       <div class="asset-row" data-ticker="${asset.ticker}" role="button" tabindex="0">
@@ -968,7 +1102,10 @@ function renderAssetsTable(filterMode) {
         <div class="asset-col-ticker">
           <div class="ticker-text-container" style="align-items: flex-start;">
             <span class="asset-ticker">${displayTicker}</span>
-            ${subTicker ? `<span class="asset-sub-ticker">${subTicker}</span>` : ''}
+            <div style="display: flex; align-items: center; gap: 4px;">
+              ${colorPillarHTML}
+              ${subTicker ? `<span class="asset-sub-ticker">${subTicker}</span>` : ''}
+            </div>
             ${optionExpiry ? `<span class="asset-sub-ticker" style="color: var(--text-muted); font-size: 10px;">${optionExpiry}</span>` : ''}
             ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
           </div>
@@ -1007,9 +1144,9 @@ function renderAssetsTable(filterMode) {
             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
               <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
               <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
+              <button class="edit-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600; transition: all 0.2s;">Edit</button>
               <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
               <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
-              <button class="asset-drawer-close-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;" onclick="event.stopPropagation();">Close</button>
             </div>
           </div>
         </div>
@@ -1080,6 +1217,26 @@ function renderAssetsTable(filterMode) {
         });
       }
 
+      // Edit button
+      const editBtn = drawer.querySelector('.edit-asset-trigger-btn');
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ticker = row.getAttribute('data-ticker');
+          openEditAssetModal(ticker);
+        });
+      }
+
+      // Delete button
+      const deleteBtn = drawer.querySelector('.delete-asset-trigger-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ticker = row.getAttribute('data-ticker');
+          deleteAsset(ticker);
+        });
+      }
+
       // Add comment trigger button click (opens popup modal)
       const triggerBtn = drawer.querySelector('.add-comment-trigger-btn');
       if (triggerBtn) {
@@ -1097,7 +1254,7 @@ function renderAssetsTable(filterMode) {
           e.stopPropagation();
           const ticker = row.getAttribute('data-ticker');
           const baseTicker = ticker.split(' ')[0].toUpperCase();
-          const newsUrl = `https://www.google.com/finance/quote/${baseTicker}:NASDAQ`;
+          const newsUrl = `https://finance.yahoo.com/quote/${baseTicker}`;
           window.open(newsUrl, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
         });
       }
@@ -1306,9 +1463,12 @@ function initNotificationToggle() {
   const bellBtn = document.getElementById('notification-bell');
   const badge = document.getElementById('notification-badge');
 
-  // Load and apply initial state on boot
-  const isEnabled = localStorage.getItem('portfolio_notifications_enabled') === 'true';
+  // Load and apply initial state on boot (default to true)
+  const isEnabled = localStorage.getItem('portfolio_notifications_enabled') !== 'false';
   syncNotificationUI(isEnabled);
+  if (isEnabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 
   // Bell click quick toggle
   if (bellBtn) {
@@ -1447,15 +1607,55 @@ async function updateLivePrices() {
     const ticker = asset.ticker;
     if (!ticker) continue;
 
-    const isOption = asset.type === 'options' || ticker.includes('$') || ticker.includes('Call') || ticker.includes('Put');
+    const isOption = asset.type === 'options' || ticker.includes('@') || ticker.includes('$') || ticker.includes('Call') || ticker.includes('Put');
 
-    // For options, strip to base symbol (e.g. "NVDA $490 Call" → "NVDA")
+    // For options, strip to base symbol (e.g. "NVDA $490 Call" or "SPY@735" → "NVDA" / "SPY")
     // so we can fetch the real live underlying price from Yahoo Finance.
-    const queryTicker = isOption ? ticker.split(' ')[0] : ticker;
+    const queryTicker = isOption ? ticker.split(/[\s$@]/)[0].toUpperCase() : ticker.toUpperCase();
+
+    // Fetch name from internet if not cached
+    if (!marketPrices[queryTicker] || !marketPrices[queryTicker].name || marketPrices[queryTicker].name === queryTicker) {
+      const fetchedName = await fetchTickerNameFromInternet(queryTicker);
+      if (fetchedName) {
+        if (!marketPrices[queryTicker]) marketPrices[queryTicker] = {};
+        marketPrices[queryTicker].name = fetchedName;
+        updatedAny = true;
+      }
+    }
 
     let price = asset.currentPrice;
     let change24h = asset.change24h;
     let success = false;
+
+    // Try fetching option premium if option Yahoo symbol is resolved
+    let optionYahooSymbol = null;
+    if (isOption) {
+      optionYahooSymbol = getYahooOptionSymbol(ticker, asset.expiryDate, asset.comment, asset.type);
+      if (optionYahooSymbol) {
+        try {
+          const optionTargetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${optionYahooSymbol}`;
+          const optionProxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(optionTargetUrl)}`;
+          const optionRes = await fetch(optionProxyUrl);
+          if (optionRes.ok) {
+            const wrapper = await optionRes.json();
+            if (wrapper && wrapper.contents) {
+              const json = JSON.parse(wrapper.contents);
+              if (json && json.chart && json.chart.result && json.chart.result[0]) {
+                const meta = json.chart.result[0].meta;
+                if (meta && meta.regularMarketPrice !== undefined) {
+                  price = meta.regularMarketPrice;
+                  const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+                  change24h = ((price - prevClose) / prevClose) * 100;
+                  success = true;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn(`Failed to fetch live premium for ${optionYahooSymbol}:`, e);
+        }
+      }
+    }
 
     try {
       // Fetch real market quote for both stocks AND options (using underlying for options)
@@ -1477,17 +1677,17 @@ async function updateLivePrices() {
                 // Save underlying stock price separately so underlying price pills are accurate
                 if (!marketPrices[queryTicker]) {
                   marketPrices[queryTicker] = {
-                    name: (defaultAssetData[queryTicker] ? defaultAssetData[queryTicker].name : queryTicker),
+                    name: (getDefaultAsset(queryTicker) ? getDefaultAsset(queryTicker).name : queryTicker),
                     icon: queryTicker.slice(0, 2).toUpperCase()
                   };
                 }
                 marketPrices[queryTicker].currentPrice = fetchedPrice;
                 marketPrices[queryTicker].change24h = fetchedChange;
 
-                // For options: keep the option premium price as-is (from server/storage).
-                // Do NOT drift or overwrite — the option premium is user-entered or cloud-synced.
-                // price stays at asset.currentPrice (already set above before the try block)
-                success = true;
+                // Only if option premium fetch did NOT succeed do we leave the premium as-is.
+                if (!success) {
+                  success = true;
+                }
               } else {
                 price = fetchedPrice;
                 change24h = fetchedChange;
@@ -1503,7 +1703,6 @@ async function updateLivePrices() {
 
     // Fallback: keep last known price (no random drift)
     if (!success) {
-      // price remains asset.currentPrice — stable, no artificial drift
       success = true;
     }
 
@@ -1520,6 +1719,27 @@ async function updateLivePrices() {
         stopLoss: asset.stopLoss
       };
     }
+
+    // Stop Loss Alert Notification Evaluation
+    if (asset.stopLoss && asset.stopLoss > 0 && price <= asset.stopLoss) {
+      const alertKey = `portfolio_sl_alert_fired_${ticker}_${asset.stopLoss}`;
+      if (!sessionStorage.getItem(alertKey)) {
+        sessionStorage.setItem(alertKey, 'true');
+
+        const title = `⚠️ Stop Limit Hit for ${ticker}!`;
+        const body = `${asset.name || ticker} live price is $${price.toFixed(2)}, which has met your Stop Limit of $${asset.stopLoss.toFixed(2)}.`;
+
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            new Notification(title, { body });
+          } catch (e) {
+            console.warn('Failed to fire browser Notification:', e);
+          }
+        }
+        showToast(`🚨 ${title} ${body}`, true);
+      }
+    }
+
     updatedAny = true;
 
     // Sync the updated live price back to the Google Sheet (throttled)
@@ -1808,3 +2028,236 @@ function initQuickTradeModal() {
     });
   }
 }
+
+function openEditAssetModal(ticker) {
+  const modal = document.getElementById('editAssetModal');
+  const titleEl = document.getElementById('editAssetModalTitle');
+  const sharesInput = document.getElementById('editSharesInput');
+  const priceInput = document.getElementById('editPriceInput');
+  const stopLossInput = document.getElementById('editStopLossInput');
+  const expiryInput = document.getElementById('editExpiryInput');
+  const expiryGroup = document.getElementById('editExpiryGroup');
+  const sharesLabel = document.getElementById('editSharesLabel');
+
+  if (!modal) return;
+
+  const asset = portfolioAssets.find(a => a.ticker === ticker);
+  if (!asset) return;
+
+  modal.setAttribute('data-current-ticker', ticker);
+  if (titleEl) titleEl.textContent = `Edit Asset — ${ticker}`;
+
+  if (sharesInput) sharesInput.value = asset.shares;
+  if (priceInput) priceInput.value = asset.avgCost;
+  if (stopLossInput) stopLossInput.value = asset.stopLoss || '';
+
+  const isOption = asset.type === 'options' || ticker.includes('@') || ticker.includes('$') || ticker.includes('Call') || ticker.includes('Put');
+
+  if (isOption) {
+    if (sharesLabel) sharesLabel.textContent = 'CONTRACTS';
+    if (expiryGroup) expiryGroup.style.display = 'flex';
+    if (expiryInput) {
+      expiryInput.value = asset.expiryDate || '';
+    }
+  } else {
+    if (sharesLabel) sharesLabel.textContent = 'SHARES';
+    if (expiryGroup) expiryGroup.style.display = 'none';
+  }
+
+  modal.classList.add('active');
+}
+
+function initEditAssetModal() {
+  const modal = document.getElementById('editAssetModal');
+  const closeBtn = document.getElementById('closeEditAssetModalBtn');
+  const submitBtn = document.getElementById('submitEditAssetBtn');
+  const sharesInput = document.getElementById('editSharesInput');
+  const priceInput = document.getElementById('editPriceInput');
+  const stopLossInput = document.getElementById('editStopLossInput');
+  const expiryInput = document.getElementById('editExpiryInput');
+
+  if (!modal) return;
+
+  const closeModal = () => {
+    modal.classList.remove('active');
+    if (sharesInput) sharesInput.value = '';
+    if (priceInput) priceInput.value = '';
+    if (stopLossInput) stopLossInput.value = '';
+    if (expiryInput) expiryInput.value = '';
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+      const ticker = modal.getAttribute('data-current-ticker');
+      if (!ticker) return;
+
+      const shares = parseFloat(sharesInput.value);
+      const price = parseFloat(priceInput.value);
+      const stopLoss = parseFloat(stopLossInput.value) || 0;
+      const expiryDate = expiryInput.value || '';
+
+      if (isNaN(shares) || shares <= 0) {
+        showToast('⚠️ Please enter a valid number of shares.', true);
+        return;
+      }
+      if (isNaN(price) || price <= 0) {
+        showToast('⚠️ Please enter a valid price.', true);
+        return;
+      }
+
+      const asset = portfolioAssets.find(a => a.ticker === ticker);
+      const assetType = asset ? (asset.type || 'stocks') : 'stocks';
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      try {
+        const response = await fetch(`http://localhost:5001/api/trades/ticker/${encodeURIComponent(ticker)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shares,
+            price,
+            stopLoss,
+            assetType,
+            expiryDate
+          })
+        });
+
+        if (!response.ok) throw new Error('Server error updating asset.');
+
+        // Re-fetch everything from backend to refresh cache and UI
+        await pullCloudData();
+        refreshPortfolioAssets();
+        updateBalanceMetrics();
+        renderAssetsTable(activeFilterMode);
+
+        closeModal();
+        showToast(`✅ Asset ${ticker} successfully updated!`);
+
+      } catch (err) {
+        console.error('Update asset error:', err);
+        showToast('⚠️ Failed to save changes on server.', true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Changes';
+      }
+    });
+  }
+}
+
+async function deleteAsset(ticker) {
+  if (!ticker) return;
+  if (!confirm(`Are you sure you want to completely delete all transaction records for ${ticker}? This action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:5001/api/trades/ticker/${encodeURIComponent(ticker)}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) throw new Error('Server error deleting asset.');
+
+    // Re-fetch everything from backend to refresh cache and UI
+    await pullCloudData();
+    refreshPortfolioAssets();
+    updateBalanceMetrics();
+    renderAssetsTable(activeFilterMode);
+
+    showToast(`✅ Asset ${ticker} has been completely deleted.`);
+  } catch (err) {
+    console.error('Delete asset error:', err);
+    showToast(`⚠️ Failed to delete asset ${ticker} on server.`, true);
+  }
+}
+
+function getYahooOptionSymbol(ticker, expiryStr, comment, assetType) {
+  // Underlying ticker
+  const rootMatch = ticker.match(/^([A-Za-z]+)/);
+  if (!rootMatch) return null;
+  const root = rootMatch[1].toUpperCase();
+
+  // Extract strike price
+  // Handles "$490", "@735", "735" etc.
+  const strikeMatch = ticker.match(/(?:[\$@])?(\d+(?:\.\d+)?)/);
+  if (!strikeMatch) return null;
+  const strikeVal = parseFloat(strikeMatch[1]);
+
+  // Extract expiry date
+  // Format MM/DD/YY or YYYY-MM-DD
+  let expiryDate = null;
+  if (expiryStr) {
+    // try YYYY-MM-DD
+    const ymd = expiryStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymd) {
+      expiryDate = new Date(parseInt(ymd[1], 10), parseInt(ymd[2], 10) - 1, parseInt(ymd[3], 10));
+    } else {
+      // try MM/DD/YY or MM/DD/YYYY
+      const mdy = expiryStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+      if (mdy) {
+        let y = parseInt(mdy[3], 10);
+        if (y < 100) y += 2000;
+        expiryDate = new Date(y, parseInt(mdy[1], 10) - 1, parseInt(mdy[2], 10));
+      }
+    }
+  }
+
+  // If still no expiry, try extracting from ticker
+  if (!expiryDate) {
+    const tickerDateMatch = ticker.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+    if (tickerDateMatch) {
+      let y = tickerDateMatch[3] ? parseInt(tickerDateMatch[3], 10) : null;
+      if (y === null) {
+        y = new Date().getFullYear();
+      } else if (y < 100) {
+        y += 2000;
+      }
+      expiryDate = new Date(y, parseInt(tickerDateMatch[1], 10) - 1, parseInt(tickerDateMatch[2], 10));
+    }
+  }
+
+  if (!expiryDate) return null;
+
+  // Format YYMMDD
+  const yy = String(expiryDate.getFullYear()).slice(-2);
+  const mm = String(expiryDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(expiryDate.getDate()).padStart(2, '0');
+  const yymmdd = `${yy}${mm}${dd}`;
+
+  // Determine Call or Put
+  const isPut = /\bput\b/i.test(ticker) || (comment && /\b(put|drop|down|below|short)\b/i.test(comment));
+  const optionTypeChar = isPut ? 'P' : 'C';
+
+  // Format Strike: 8 digits (5 integer, 3 fractional)
+  const integerPart = Math.floor(strikeVal);
+  const fractionalPart = Math.round((strikeVal - integerPart) * 1000);
+  const strikeFormatted = String(integerPart).padStart(5, '0') + String(fractionalPart).padEnd(3, '0');
+
+  return `${root}${yymmdd}${optionTypeChar}${strikeFormatted}`;
+}
+
+async function fetchTickerNameFromInternet(ticker) {
+  try {
+    const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      const wrapper = await res.json();
+      if (wrapper && wrapper.contents) {
+        const json = JSON.parse(wrapper.contents);
+        if (json && json.quotes && json.quotes[0]) {
+          const name = json.quotes[0].longname || json.quotes[0].shortname;
+          if (name) return name;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(`Failed to fetch ticker name for ${ticker} from internet:`, e);
+  }
+  return null;
+}
+
+

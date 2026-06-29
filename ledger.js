@@ -1,9 +1,9 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
+  endpointUrl: "http://localhost:5001/api/trades"
 };
 
-const CLOULD_ENDPOINT = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
+const CLOUD_ENDPOINT = {
+  endpointUrl: "http://localhost:5001/api/"
 };
 
 const defaultAssetData = {
@@ -979,7 +979,7 @@ function renderLedger(rangeType, startDate, endDate) {
   calculateSection1Metrics(rangeType, startDate, endDate);
 
   // Sync timeframe data packets from the backend skeleton route
-  fetch(CLOULD_ENDPOINT.endpointUrl + `reports?filter=${rangeType}`)
+  fetch(CLOUD_ENDPOINT.endpointUrl + `reports?filter=${rangeType}`)
     .then(res => {
       if (res.ok) return res.json();
       throw new Error(`Server returned status ${res.status}`);

@@ -1,9 +1,9 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
+  endpointUrl: "http://localhost:5001/api/trades"
 };
 
-const CLOULD_ENDPOINT = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
+const CLOUD_ENDPOINT = {
+  endpointUrl: "http://localhost:5001/api/"
 };
 
 
@@ -746,7 +746,7 @@ async function saveNoteToLocalServer(ticker, text) {
     text: text
   };
 
-  const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'notes', {
+  const response = await fetch(CLOUD_ENDPOINT.endpointUrl + 'notes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -840,7 +840,7 @@ function initFormModeToggle() {
 async function pushCashToCloud(tx) {
   try {
     const activeUser = typeof window.getSessionUser === 'function' ? window.getSessionUser() : 'Admin';
-    const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'cash', {
+    const response = await fetch(CLOUD_ENDPOINT.endpointUrl + 'cash', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -102,7 +102,7 @@ function initProfileForm() {
   if (phoneInput) phoneInput.value = initialPhone;
 
   // Retrieve updated details from backend
-  fetch(CLOULD_ENDPOINT.endpointUrl + `profile?username=${encodeURIComponent(activeUser)}`)
+  fetch(CLOUD_ENDPOINT.endpointUrl + `profile?username=${encodeURIComponent(activeUser)}`)
     .then(res => {
       if (res.ok) return res.json();
       throw new Error('Failed to fetch profile details');
@@ -183,7 +183,7 @@ function initProfileForm() {
         message: 'Are you sure you want to update your profile details?'
       }, async () => {
         try {
-          const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'profile/update', {
+          const response = await fetch(CLOUD_ENDPOINT.endpointUrl + 'profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -524,7 +524,7 @@ function initPortfolioOverrides() {
         }
 
         // Sync to server
-        fetch(CLOUDD_ENDPOINT.endpointUrl + 'overrides', {
+        fetch(CLOUD_ENDPOINT.endpointUrl + 'overrides', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -725,11 +725,11 @@ function showConfirmModal(options, onConfirm) {
 }
 
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
+  endpointUrl: "http://localhost:5001/api/trades"
 };
 
-const CLOULD_ENDPOINT = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
+const CLOUD_ENDPOINT = {
+  endpointUrl: "http://localhost:5001/api/"
 };
 
 function saveTransactionLocally(tx) {
@@ -748,7 +748,7 @@ function saveTransactionLocally(tx) {
 
 async function pushCashTransactionToCloud(tx, name) {
   try {
-    const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'cash', {
+    const response = await fetch(CLOUD_ENDPOINT.endpointUrl + 'cash', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -822,7 +822,7 @@ async function executeCashAdjustment(actionType, amount, reason) {
   localStorage.setItem('portfolio_buying_power_user_set', 'true');
 
   // Persist to server so portfolio tab loads the correct value on next visit
-  fetch(CLOULD_ENDPOINT.endpointUrl + 'overrides', {
+  fetch(CLOUD_ENDPOINT.endpointUrl + 'overrides', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -929,7 +929,7 @@ function initUserManagement() {
     }
 
     try {
-      const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'users', {
+      const response = await fetch(CLOUD_ENDPOINT.endpointUrl + 'users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -997,7 +997,7 @@ function initSecuritySettings() {
     }
 
     try {
-      const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'password', {
+      const response = await fetch(CLOUD_ENDPOINT.endpointUrl + 'password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1147,7 +1147,7 @@ async function initTransactionHistory() {
 
   let cashTxs = [];
   try {
-    const res = await fetch(CLOULD_ENDPOINT.endpointUrl + 'cash');
+    const res = await fetch(CLOUD_ENDPOINT.endpointUrl + 'cash');
     if (res.ok) {
       cashTxs = await res.json();
       localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
@@ -1248,7 +1248,7 @@ async function initPnLGraph() {
   // Load all transactions
   let allTxs = [];
   try {
-    const res = await fetch(CLOULD_ENDPOINT.endpointUrl + 'trades');
+    const res = await fetch(CLOUD_ENDPOINT.endpointUrl + 'trades');
     if (res.ok) {
       allTxs = await res.json();
     } else {

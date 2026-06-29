@@ -666,97 +666,145 @@
 /* Mobile Stack Rules & Touch Target Scaling */
 @media (max-width: 768px) {
   .holdings-header {
-    display: none !important;
+    display: grid !important;
+    grid-template-columns: 2fr 1.3fr 0.9fr 1.3fr 1.5fr !important;
+    gap: 4px !important;
+    padding: 8px 10px !important;
+    font-size: 8px !important;
+    letter-spacing: 0.2px !important;
   }
   
   .asset-row {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px !important;
-    padding: 16px !important;
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    display: grid !important;
+    grid-template-columns: 2fr 1.3fr 0.9fr 1.3fr 1.5fr !important;
+    grid-template-rows: none !important;
+    gap: 4px !important;
+    padding: 10px !important;
+    align-items: center !important;
   }
   
+  /* Disable pseudo-headers */
+  .asset-col-ticker::before,
+  .asset-col-shares-avg::before,
+  .asset-col-sl::before,
+  .asset-col-live-price::before,
+  .asset-col-total-graph::before {
+    display: none !important;
+    content: "" !important;
+  }
+  
+  /* Ensure all columns behave as standard grid cells */
   .asset-row > div:not(.asset-details-drawer) {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    text-align: right;
+    display: flex !important;
+    flex-direction: column !important;
+    width: auto !important;
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .asset-col-ticker {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .asset-col-ticker .ticker-text-container {
+    align-items: flex-start !important;
+  }
+
+  .asset-col-ticker .asset-ticker {
+    font-size: 10px !important;
+  }
+
+  .asset-col-ticker .asset-sub-ticker {
+    font-size: 8px !important;
+    text-align: left !important;
+  }
+
+  .asset-col-ticker .option-badge {
+    font-size: 7px !important;
+    padding: 0px 3px !important;
+    line-height: 12px !important;
+  }
+
+  .asset-col-ticker .option-badges-row {
+    gap: 2px !important;
+    margin-top: 2px !important;
+    justify-content: flex-start !important;
   }
   
-  .asset-row .ticker-text-container {
+  .asset-col-shares-avg {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .asset-col-shares-avg .asset-shares-qty {
+    font-size: 10.5px !important;
+  }
+
+  .asset-col-shares-avg .asset-avg-cost {
+    font-size: 8px !important;
+  }
+
+  .asset-col-sl {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    font-size: 10.5px !important;
+  }
+
+  .asset-col-sl .sl-price-val {
+    font-size: 10.5px !important;
+  }
+
+  .asset-col-live-price {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    display: block !important;
+    text-align: left !important;
+    width: auto !important;
+  }
+
+  .asset-col-live-price .live-price-val {
+    font-size: 10.5px !important;
+    display: inline-block !important;
+  }
+
+  .asset-col-live-price .option-multiplier-hint-text {
+    font-size: 7px !important;
+    padding: 0px 2px !important;
+    line-height: 11px !important;
+    margin-left: 2px !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+  }
+
+  .asset-col-live-price .underlying-price-pill {
+    font-size: 7px !important;
+    padding: 1px 3px !important;
+    margin-top: 2px !important;
+    border-radius: 4px !important;
+    display: inline-flex !important;
+  }
+
+  .asset-col-total-graph {
+    grid-column: auto !important;
+    grid-row: auto !important;
     align-items: flex-end !important;
-  }
-  
-  .asset-row .asset-sub-ticker {
     text-align: right !important;
+    width: 100% !important;
   }
-  
-  .asset-row .option-badges-row {
-    justify-content: flex-end !important;
+
+  .asset-col-total-graph .asset-total-val {
+    font-size: 11px !important;
   }
-  
-  .asset-row .asset-shares-qty {
-    text-align: right !important;
-  }
-  
-  .asset-row .asset-avg-cost {
-    text-align: right !important;
+
+  .asset-col-total-graph .asset-row-perf {
+    font-size: 8px !important;
   }
   
   .asset-row .total-value-row {
     align-items: flex-end !important;
   }
-  
-  /* Labeled Pseudo-headers */
-  .asset-col-ticker::before {
-    content: "Asset";
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .asset-col-shares-avg::before {
-    content: "Holdings";
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .asset-col-sl::before {
-    content: "Stop Limit";
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .asset-col-live-price::before {
-    content: "Live Price";
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .asset-col-total-graph::before {
-    content: "Market Value";
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
+
   /* Action Button Scaling: 44x44px Tap boundaries */
   .add-comment-trigger-btn,
   .latest-news-btn {

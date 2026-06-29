@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 
 // Enable CORS and JSON body parsing
 app.use(cors());
@@ -56,9 +56,9 @@ function bootstrapDataLayer() {
 
   // ── 2. Core NDJSON Ledger Files ──────────────────────────────────────────
   const coreFiles = [
-    { label: 'trades.ndjson     ', path: DB_PATH,          content: '' },
+    { label: 'trades.ndjson     ', path: DB_PATH, content: '' },
     { label: 'cash_ledger.ndjson', path: CASH_LEDGER_PATH, content: '' },
-    { label: 'journal_notes.ndjson', path: NOTES_DB_PATH,  content: '' },
+    { label: 'journal_notes.ndjson', path: NOTES_DB_PATH, content: '' },
   ];
 
   coreFiles.forEach(({ label, path: filePath, content }) => {
@@ -129,7 +129,7 @@ function ensureDbExists() {
   }
   const guards = [DB_PATH, NOTES_DB_PATH, CASH_LEDGER_PATH, USERS_DB_PATH];
   guards.forEach(p => { if (!fs.existsSync(p)) fs.writeFileSync(p, '', 'utf8'); });
-  if (!fs.existsSync(PRICES_PATH))   fs.writeFileSync(PRICES_PATH, '{}', 'utf8');
+  if (!fs.existsSync(PRICES_PATH)) fs.writeFileSync(PRICES_PATH, '{}', 'utf8');
   if (!fs.existsSync(OVERRIDES_PATH)) fs.writeFileSync(OVERRIDES_PATH, '{}', 'utf8');
 }
 
@@ -206,7 +206,7 @@ app.get('/api/trades', (req, res) => {
   try {
     ensureDbExists();
     const fileContent = fs.readFileSync(DB_PATH, 'utf8');
-    
+
     // Process line-by-line, filtering out empty lines
     const trades = fileContent
       .split('\n')
@@ -256,7 +256,7 @@ app.post('/api/trades', (req, res) => {
     }
 
     const { ticker, price, quantity, shares } = req.body;
-    
+
     // Support either 'quantity' or 'shares' (UI matching property name)
     const targetQuantity = quantity !== undefined ? quantity : shares;
 
@@ -313,7 +313,7 @@ app.post('/api/trades', (req, res) => {
 
     // Append to file in NDJSON format
     fs.appendFileSync(DB_PATH, JSON.stringify(tradeRecord) + '\n', 'utf8');
-    
+
     // Server Logs
     console.log(`Successfully saved sanitized trade record: Ticker=${tradeRecord.ticker}, Action=${tradeRecord.action}, Shares=${tradeRecord.shares}, Price=$${tradeRecord.price.toFixed(2)}, Date=${tradeRecord.date}`);
 
@@ -336,7 +336,7 @@ app.delete('/api/trades/ticker/:ticker', (req, res) => {
     const lines = fileContent.split('\n');
     const remainingLines = [];
     let deletedCount = 0;
-    
+
     for (const line of lines) {
       if (!line.trim()) continue;
       try {
@@ -350,7 +350,7 @@ app.delete('/api/trades/ticker/:ticker', (req, res) => {
         remainingLines.push(line);
       }
     }
-    
+
     fs.writeFileSync(DB_PATH, remainingLines.join('\n') + (remainingLines.length ? '\n' : ''), 'utf8');
     console.log(`Deleted ${deletedCount} trades for ticker ${tickerToDelete}`);
     res.status(200).json({ success: true, deletedCount });
@@ -387,7 +387,7 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
     const fileContent = fs.readFileSync(DB_PATH, 'utf8');
     const lines = fileContent.split('\n');
     const remainingLines = [];
-    
+
     for (const line of lines) {
       if (!line.trim()) continue;
       try {
@@ -434,7 +434,7 @@ app.get('/api/notes', (req, res) => {
   try {
     ensureDbExists();
     const fileContent = fs.readFileSync(NOTES_DB_PATH, 'utf8');
-    
+
     const notes = fileContent
       .split('\n')
       .map(line => line.trim())
@@ -503,7 +503,7 @@ app.post('/api/cash', (req, res) => {
   try {
     ensureDbExists();
 
-    const { action, amount, date, time, author } = req.body;
+    const { action, amount, date, time, author, reason } = req.body;
 
     // Explicit Data Validation
     if (!action || typeof action !== 'string' || !['DEPOSIT', 'WITHDRAWAL'].includes(action.toUpperCase())) {
@@ -543,7 +543,7 @@ app.post('/api/cash', (req, res) => {
       action: action.trim().toUpperCase(),
       assetType: 'CASH',
       date: `${finalDate.trim()}T${finalTime.trim()}`,
-      comment: '',
+      comment: (reason && typeof reason === 'string' && reason.trim()) ? reason.trim() : '',
       author: (author && typeof author === 'string' && author.trim()) ? author.trim() : 'Admin'
     };
 
@@ -572,7 +572,7 @@ app.get('/api/cash', (req, res) => {
         if (!trimmed) return;
         try {
           cash.push(JSON.parse(trimmed));
-        } catch (e) {}
+        } catch (e) { }
       });
     }
     res.status(200).json(cash);
@@ -594,7 +594,7 @@ function loadTrades() {
         if (!trimmed) return;
         try {
           trades.push(JSON.parse(trimmed));
-        } catch (e) {}
+        } catch (e) { }
       });
     }
   } catch (error) {
@@ -615,7 +615,7 @@ function loadCashLedger() {
         if (!trimmed) return;
         try {
           cash.push(JSON.parse(trimmed));
-        } catch (e) {}
+        } catch (e) { }
       });
     }
   } catch (err) {
@@ -816,8 +816,8 @@ app.get('/api/overrides', (req, res) => {
 app.post('/api/overrides', (req, res) => {
   try {
     ensureDbExists();
-    const { buyingPowerOverride, buyingPowerAdjust, portfolioValueOverride, startingCash } = req.body;
-    
+    const { buyingPowerOverride, buyingPowerAdjust, portfolioValueOverride } = req.body;
+
     let bpVal = null;
     if (buyingPowerOverride !== undefined) {
       bpVal = (buyingPowerOverride === null || buyingPowerOverride === '') ? null : parseFloat(buyingPowerOverride);
@@ -830,11 +830,10 @@ app.post('/api/overrides', (req, res) => {
 
     const overrides = {
       buyingPowerOverride: finalBuyingPowerOverride,
-      portfolioValueOverride: finalPortfolioValueOverride,
-      startingCash: (startingCash !== undefined && startingCash !== null) ? parseFloat(startingCash) : null
+      portfolioValueOverride: finalPortfolioValueOverride
     };
     fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(overrides, null, 2), 'utf8');
-    console.log(`[Overrides] Saved overrides: buyingPowerOverride=${overrides.buyingPowerOverride}, portfolioValueOverride=${overrides.portfolioValueOverride}, startingCash=${overrides.startingCash}`);
+    console.log(`[Overrides] Saved overrides: buyingPowerOverride=${overrides.buyingPowerOverride}, portfolioValueOverride=${overrides.portfolioValueOverride}`);
     res.status(200).json(overrides);
   } catch (error) {
     console.error('Failed to save overrides:', error);
@@ -848,10 +847,10 @@ app.post('/api/users', (req, res) => {
     ensureDbExists();
     const { username, role, email, phoneNumber, password } = req.body;
     if (!username || typeof username !== 'string' || username.trim() === '' ||
-        !role || !['admin', 'member'].includes(role.toLowerCase()) ||
-        !email || typeof email !== 'string' || email.trim() === '' ||
-        !phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim() === '' ||
-        !password || typeof password !== 'string') {
+      !role || !['admin', 'member'].includes(role.toLowerCase()) ||
+      !email || typeof email !== 'string' || email.trim() === '' ||
+      !phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim() === '' ||
+      !password || typeof password !== 'string') {
       return res.status(400).json({ error: "All fields are mandatory." });
     }
     if (password.length <= 8) {
@@ -967,7 +966,7 @@ app.post('/api/forgot-password/otp', (req, res) => {
       .map(line => JSON.parse(line));
 
     const queryVal = emailOrPhone.trim().toLowerCase();
-    const matchedUser = users.find(u => 
+    const matchedUser = users.find(u =>
       (u.email && u.email.trim().toLowerCase() === queryVal) ||
       (u.phoneNumber && u.phoneNumber.trim().toLowerCase() === queryVal)
     );
@@ -1027,16 +1026,49 @@ app.post('/api/forgot-password/login', (req, res) => {
   }
 });
 
+// GET /api/profile - Retrieve user profile details from backend
+app.get('/api/profile', (req, res) => {
+  try {
+    ensureDbExists();
+    const { username } = req.query;
+    if (!username || typeof username !== 'string' || username.trim() === '') {
+      return res.status(400).json({ error: "Username is required." });
+    }
+
+    const fileContent = fs.readFileSync(USERS_DB_PATH, 'utf8');
+    const users = fileContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => JSON.parse(line));
+
+    const matchedUser = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+    if (!matchedUser) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    res.status(200).json({
+      username: matchedUser.username,
+      displayName: matchedUser.displayName || '',
+      email: matchedUser.email || '',
+      phoneNumber: matchedUser.phoneNumber || ''
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Internal Server Error while retrieving profile.' });
+  }
+});
+
 // POST /api/profile/update - Update profile info & password on backend
 app.post('/api/profile/update', (req, res) => {
   try {
     ensureDbExists();
-    const { oldUsername, newUsername, email, phoneNumber, password } = req.body;
-    
-    if (!oldUsername || typeof oldUsername !== 'string' || oldUsername.trim() === '' ||
-        !newUsername || typeof newUsername !== 'string' || newUsername.trim() === '' ||
-        !email || typeof email !== 'string' || email.trim() === '' ||
-        !phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim() === '') {
+    const { username, displayName, email, phoneNumber, currentPassword, newPassword } = req.body;
+
+    if (!username || typeof username !== 'string' || username.trim() === '' ||
+      !displayName || typeof displayName !== 'string' || displayName.trim() === '' ||
+      !email || typeof email !== 'string' || email.trim() === '' ||
+      !phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.trim() === '') {
       return res.status(400).json({ error: "All fields are mandatory." });
     }
 
@@ -1047,48 +1079,44 @@ app.post('/api/profile/update', (req, res) => {
       .filter(line => line.length > 0)
       .map(line => JSON.parse(line));
 
-    // Check duplicate username if changing username
-    if (newUsername.trim().toLowerCase() !== oldUsername.trim().toLowerCase()) {
-      const usernameExists = users.some(u => u.username.toLowerCase() === newUsername.trim().toLowerCase());
-      if (usernameExists) {
-        return res.status(400).json({ error: "User name already exist." });
-      }
+    const matchedUser = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+    if (!matchedUser) {
+      return res.status(404).json({ error: "User not found." });
     }
 
-    // Password strength check if updating password
-    if (password && password.trim() !== '') {
-      if (password.length <= 8) {
+    // If password update is requested, check verification
+    if (newPassword && newPassword.trim() !== '') {
+      if (!currentPassword || currentPassword !== matchedUser.password) {
+        return res.status(400).json({ error: "Current Password is incorrect." });
+      }
+
+      // Password strength check
+      if (newPassword.length <= 8) {
         return res.status(400).json({ error: "Password must contain more than 8 characters." });
       }
-      const hasAlphabet = /[a-zA-Z]/.test(password);
-      const hasNumber = /[0-9]/.test(password);
-      const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+      const hasAlphabet = /[a-zA-Z]/.test(newPassword);
+      const hasNumber = /[0-9]/.test(newPassword);
+      const hasSpecial = /[^a-zA-Z0-9]/.test(newPassword);
       if (!hasAlphabet || !hasNumber || !hasSpecial) {
         return res.status(400).json({ error: "Password must include alphabets, numbers, and special characters." });
       }
     }
 
-    let userUpdated = false;
     const updatedLines = users.map(u => {
-      if (u.username.toLowerCase() === oldUsername.trim().toLowerCase()) {
-        u.username = newUsername.trim();
+      if (u.username.toLowerCase() === username.trim().toLowerCase()) {
+        u.displayName = displayName.trim();
         u.email = email.trim();
         u.phoneNumber = phoneNumber.trim();
-        if (password && password.trim() !== '') {
-          u.password = password;
+        if (newPassword && newPassword.trim() !== '') {
+          u.password = newPassword;
         }
-        userUpdated = true;
       }
       return JSON.stringify(u);
     });
 
-    if (!userUpdated) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
     fs.writeFileSync(USERS_DB_PATH, updatedLines.join('\n') + '\n', 'utf8');
-    console.log(`[User Profile] Updated profile details for user: ${oldUsername} -> ${newUsername}`);
-    res.status(200).json({ success: true, username: newUsername.trim() });
+    console.log(`[User Profile] Updated profile details for user: ${username}`);
+    res.status(200).json({ success: true, username: username.trim() });
   } catch (error) {
     console.error('Error updating user profile:', error);
     res.status(500).json({ error: 'Internal Server Error while updating profile.' });

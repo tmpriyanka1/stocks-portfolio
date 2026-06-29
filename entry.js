@@ -343,7 +343,8 @@ function initFormSubmit() {
         ticker = `${ticker} ${optionType.charAt(0).toUpperCase() + optionType.slice(1).toLowerCase()}`;
       }
     }
-    const action = 'BUY';
+    const actionInput = document.getElementById('inputAction');
+    const action = actionInput ? actionInput.value : 'BUY';
     const shares = document.getElementById('inputShares').value;
     const price = document.getElementById('inputPrice').value;
     const date = document.getElementById('inputDate').value;
@@ -395,14 +396,6 @@ function initFormSubmit() {
     const actionColor = action === 'BUY' ? 'Bought' : 'Sold';
     const typeName = type === 'options' ? 'CON' : 'SHR';
 
-    // 1. Fetch resolved asset name first
-    let resolvedName = ticker;
-    try {
-      resolvedName = await fetchAssetName(ticker);
-    } catch (err) {
-      console.warn('Failed to resolve asset name:', err);
-    }
-
     // 2. Immediately append the new trade to the local array so the app updates instantly.
     saveTransactionLocally(tx);
 
@@ -410,29 +403,44 @@ function initFormSubmit() {
     let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
     if (!marketPrices[ticker]) {
       marketPrices[ticker] = {
-        name: resolvedName,
+        name: ticker,
         currentPrice: priceFloat,
         change24h: 0.0,
         icon: ticker.slice(0, 2).toUpperCase(),
         stopLoss: slValue
       };
-    } else {
-      marketPrices[ticker].name = resolvedName;
     }
     localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
 
-    // Deduct buying power
+    // Deduct or add buying power
     if (action === 'BUY') {
       let bp = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
       bp -= sharesInt * priceFloat;
+      localStorage.setItem('portfolio_buying_power', bp.toFixed(2));
+    } else if (action === 'SELL') {
+      let bp = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
+      bp += sharesInt * priceFloat;
       localStorage.setItem('portfolio_buying_power', bp.toFixed(2));
     }
 
     // Reset fields and notification immediately
     resetFormAndNotifications();
 
-    // 3. In the background, execute asynchronous POST request
-    pushTradeToCloud(tx, resolvedName);
+    // 3. Resolve the asset name and push to cloud in the background asynchronously
+    (async () => {
+      let resolvedName = ticker;
+      try {
+        resolvedName = await fetchAssetName(ticker);
+        let prices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
+        if (prices[ticker]) {
+          prices[ticker].name = resolvedName;
+          localStorage.setItem('portfolio_market_prices', JSON.stringify(prices));
+        }
+      } catch (err) {
+        console.warn('Failed to resolve asset name in background:', err);
+      }
+      pushTradeToCloud(tx, resolvedName);
+    })();
 
     function resetFormAndNotifications() {
       // Send native system push notification if enabled

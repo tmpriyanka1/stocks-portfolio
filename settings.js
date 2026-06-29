@@ -74,32 +74,57 @@ function applyAccentColor(hexColor) {
 }
 
 /**
- * Loads user profile values from localStorage and sets blur events to save changes
+ * Loads user profile values from backend/localStorage and handles updates
  */
 function initProfileForm() {
-  const usernameInput = document.getElementById('usernameInput');
+  const loginUsername = document.getElementById('loginUsername');
+  const displayName = document.getElementById('displayName');
   const emailInput = document.getElementById('emailInput');
   const phoneInput = document.getElementById('phoneInput');
   const apiKeyInput = document.getElementById('apiKeyInput');
   const saveBtn = document.getElementById('saveProfileBtn');
   const profileSaveBtn = document.getElementById('profileSaveBtn');
-  const profileCancelBtn = document.getElementById('profileCancelBtn');
 
-  let initialUsername = localStorage.getItem('portfolio_username') || 'Vanai';
+  const activeUser = (typeof window.getSessionUser === 'function')
+    ? window.getSessionUser()
+    : (localStorage.getItem('portfolio_username') || 'Vanai');
+
+  if (loginUsername) {
+    loginUsername.value = activeUser;
+  }
+
+  let initialDisplayName = localStorage.getItem('portfolio_displayName') || activeUser;
   let initialEmail = localStorage.getItem('portfolio_email') || 'vanai@portfolio.com';
   let initialPhone = localStorage.getItem('portfolio_phone') || '';
 
-  if (usernameInput) {
-    usernameInput.value = initialUsername;
-  }
+  if (displayName) displayName.value = initialDisplayName;
+  if (emailInput) emailInput.value = initialEmail;
+  if (phoneInput) phoneInput.value = initialPhone;
 
-  if (emailInput) {
-    emailInput.value = initialEmail;
-  }
+  // Retrieve updated details from backend
+  fetch(`http://localhost:5001/api/profile?username=${encodeURIComponent(activeUser)}`)
+    .then(res => {
+      if (res.ok) return res.json();
+      throw new Error('Failed to fetch profile details');
+    })
+    .then(data => {
+      if (data) {
+        initialDisplayName = data.displayName || activeUser;
+        initialEmail = data.email || '';
+        initialPhone = data.phoneNumber || '';
 
-  if (phoneInput) {
-    phoneInput.value = initialPhone;
-  }
+        if (displayName) displayName.value = initialDisplayName;
+        if (emailInput) emailInput.value = initialEmail;
+        if (phoneInput) phoneInput.value = initialPhone;
+
+        localStorage.setItem('portfolio_displayName', initialDisplayName);
+        localStorage.setItem('portfolio_email', initialEmail);
+        localStorage.setItem('portfolio_phone', initialPhone);
+      }
+    })
+    .catch(err => {
+      console.warn('Could not retrieve profile from backend, using local/defaults:', err);
+    });
 
   if (apiKeyInput) {
     apiKeyInput.value = localStorage.getItem('portfolio_api_key') || '••••••••••••••••••••••••';
@@ -110,24 +135,35 @@ function initProfileForm() {
 
   if (profileSaveBtn) {
     profileSaveBtn.addEventListener('click', () => {
+      const currentPasswordInput = document.getElementById('currentPasswordInput');
       const changePasswordInput = document.getElementById('changePasswordInput');
       const confirmPasswordInput = document.getElementById('confirmPasswordInput');
-      
-      const newUsername = usernameInput ? usernameInput.value.trim() : '';
+
+      const dispName = displayName ? displayName.value.trim() : '';
       const newEmail = emailInput ? emailInput.value.trim() : '';
       const newPhone = phoneInput ? phoneInput.value.trim() : '';
 
-      if (!newUsername || !newEmail || !newPhone) {
+      if (!dispName || !newEmail || !newPhone) {
         showToast('⚠️ All fields are mandatory.', true);
         return;
       }
 
       let passwordToUpdate = null;
-      if (changePasswordInput && confirmPasswordInput) {
+      let currentPwVal = '';
+      if (currentPasswordInput && changePasswordInput && confirmPasswordInput) {
+        const currentVal = currentPasswordInput.value;
         const changeVal = changePasswordInput.value;
         const confirmVal = confirmPasswordInput.value;
-        
-        if (changeVal || confirmVal) {
+
+        if (currentVal || changeVal || confirmVal) {
+          if (!currentVal) {
+            showToast('⚠️ Current password is required to change password.', true);
+            return;
+          }
+          if (!changeVal || !confirmVal) {
+            showToast('⚠️ New password and confirm password are required.', true);
+            return;
+          }
           if (changeVal !== confirmVal) {
             showToast('⚠️ Passwords do not match.', true);
             return;
@@ -137,43 +173,44 @@ function initProfileForm() {
             return;
           }
           passwordToUpdate = changeVal;
+          currentPwVal = currentVal;
         }
       }
 
       showConfirmModal({
         icon: '👤',
-        title: 'Save Profile Settings?',
-        message: 'Are you sure you want to save your user profile details?'
+        title: 'Update Profile details?',
+        message: 'Are you sure you want to update your profile details?'
       }, async () => {
-        const oldUsername = localStorage.getItem('portfolio_username') || 'Vanai';
         try {
           const response = await fetch('http://localhost:5001/api/profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              oldUsername: oldUsername,
-              newUsername: newUsername,
+              username: activeUser,
+              displayName: dispName,
               email: newEmail,
               phoneNumber: newPhone,
-              password: passwordToUpdate || ''
+              currentPassword: currentPwVal,
+              newPassword: passwordToUpdate || ''
             })
           });
-          
+
           if (response.ok) {
-            localStorage.setItem('portfolio_username', newUsername);
+            localStorage.setItem('portfolio_displayName', dispName);
             localStorage.setItem('portfolio_email', newEmail);
             localStorage.setItem('portfolio_phone', newPhone);
             if (passwordToUpdate) {
               localStorage.setItem('portfolio_password', passwordToUpdate);
             }
-            
+
             // Sync to localUsers list
             let localUsers = [];
             try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch(e){}
             let found = false;
             localUsers = localUsers.map(u => {
-              if (u.username.toLowerCase() === oldUsername.toLowerCase()) {
-                u.username = newUsername;
+              if (u.username.toLowerCase() === activeUser.toLowerCase()) {
+                u.displayName = dispName;
                 u.email = newEmail;
                 u.phoneNumber = newPhone;
                 if (passwordToUpdate) u.password = passwordToUpdate;
@@ -183,7 +220,8 @@ function initProfileForm() {
             });
             if (!found) {
               localUsers.push({
-                username: newUsername,
+                username: activeUser,
+                displayName: dispName,
                 role: window.getSessionRole() || 'member',
                 email: newEmail,
                 phoneNumber: newPhone,
@@ -192,17 +230,13 @@ function initProfileForm() {
             }
             localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
 
-            // Sync session
-            const sessionObj = JSON.parse(sessionStorage.getItem('portfolio_session') || '{}');
-            sessionObj.username = newUsername;
-            sessionStorage.setItem('portfolio_session', JSON.stringify(sessionObj));
-            
+            if (currentPasswordInput) currentPasswordInput.value = '';
             if (changePasswordInput) changePasswordInput.value = '';
             if (confirmPasswordInput) confirmPasswordInput.value = '';
-            initialUsername = newUsername;
+            initialDisplayName = dispName;
             initialEmail = newEmail;
             initialPhone = newPhone;
-            
+
             showToast('💾 Profile configurations and password saved!');
           } else {
             const errData = await response.json().catch(() => ({}));
@@ -210,19 +244,19 @@ function initProfileForm() {
           }
         } catch (err) {
           console.error('Offline profile update fallback:', err);
-          localStorage.setItem('portfolio_username', newUsername);
+          localStorage.setItem('portfolio_displayName', dispName);
           localStorage.setItem('portfolio_email', newEmail);
           localStorage.setItem('portfolio_phone', newPhone);
           if (passwordToUpdate) {
             localStorage.setItem('portfolio_password', passwordToUpdate);
           }
-          
+
           let localUsers = [];
           try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch(e){}
           let found = false;
           localUsers = localUsers.map(u => {
-            if (u.username.toLowerCase() === oldUsername.toLowerCase()) {
-              u.username = newUsername;
+            if (u.username.toLowerCase() === activeUser.toLowerCase()) {
+              u.displayName = dispName;
               u.email = newEmail;
               u.phoneNumber = newPhone;
               if (passwordToUpdate) u.password = passwordToUpdate;
@@ -232,7 +266,8 @@ function initProfileForm() {
           });
           if (!found) {
             localUsers.push({
-              username: newUsername,
+              username: activeUser,
+              displayName: dispName,
               role: window.getSessionRole() || 'member',
               email: newEmail,
               phoneNumber: newPhone,
@@ -241,34 +276,16 @@ function initProfileForm() {
           }
           localStorage.setItem('portfolio_users', JSON.stringify(localUsers));
 
-          const sessionObj = JSON.parse(sessionStorage.getItem('portfolio_session') || '{}');
-          sessionObj.username = newUsername;
-          sessionStorage.setItem('portfolio_session', JSON.stringify(sessionObj));
-          
+          if (currentPasswordInput) currentPasswordInput.value = '';
           if (changePasswordInput) changePasswordInput.value = '';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
-          initialUsername = newUsername;
+          initialDisplayName = dispName;
           initialEmail = newEmail;
           initialPhone = newPhone;
-          
-          showToast('💾 Profile configurations and password saved locally!');
+
+          showToast('💾 Profile configurations saved locally (Offline Mode)!');
         }
       });
-    });
-  }
-
-  if (profileCancelBtn) {
-    profileCancelBtn.addEventListener('click', () => {
-      if (usernameInput) usernameInput.value = initialUsername;
-      if (emailInput) emailInput.value = initialEmail;
-      if (phoneInput) phoneInput.value = initialPhone;
-      
-      const changePasswordInput = document.getElementById('changePasswordInput');
-      const confirmPasswordInput = document.getElementById('confirmPasswordInput');
-      if (changePasswordInput) changePasswordInput.value = '';
-      if (confirmPasswordInput) confirmPasswordInput.value = '';
-
-      showToast('ℹ️ Profile changes discarded.');
     });
   }
 
@@ -480,94 +497,52 @@ function initPortfolioOverrides() {
   // ── Save handler ──────────────────────────────────────────────────────────
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
+      const bpVal = bpInput ? parseFloat(bpInput.value) : NaN;
+      const pvVal = pvInput ? pvInput.value.trim() : '';
+
+      const bpValid = !isNaN(bpVal) && bpVal >= 0;
+
+      if (!bpValid) {
+        showToast('⚠️ Please enter a valid buying power value.', true);
+        return;
+      }
+
       showConfirmModal({
         icon: '💾',
         title: 'Save Overrides?',
         message: 'Are you sure you want to save these custom cash and portfolio overrides?'
       }, () => {
-        let saved = false;
+        // Save buying power override
+        localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
+        localStorage.setItem('portfolio_buying_power_user_set', 'true');
 
-        // Buying Power override
-        if (bpInput) {
-          const bpVal = parseFloat(bpInput.value);
-          if (!isNaN(bpVal) && bpVal >= 0) {
-            localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
-            localStorage.setItem('portfolio_buying_power_user_set', 'true');
-            if (bpPreview) {
-              bpPreview.textContent = 'Saved: ' + fmt(bpVal);
-              bpPreview.classList.add('active');
-            }
-            saved = true;
-          } else if (bpInput.value.trim() === '') {
-            localStorage.removeItem('portfolio_buying_power');
-            localStorage.removeItem('portfolio_buying_power_user_set');
-            if (bpPreview) bpPreview.textContent = 'Reset to default';
-            saved = true;
-          }
+        // Save portfolio value override (empty string clears it)
+        if (pvVal !== '') {
+          localStorage.setItem('portfolio_value_override', pvVal);
+        } else {
+          localStorage.removeItem('portfolio_value_override');
         }
 
-        // Master Portfolio Value override verbatim
-        if (pvInput) {
-          const pvVal = pvInput.value.trim();
-          if (pvVal !== '') {
-            localStorage.setItem('portfolio_value_override', pvVal);
-            if (pvPreview) {
-              pvPreview.textContent = 'Override verbatim active: ' + pvVal;
-              pvPreview.classList.add('active');
-            }
-            saved = true;
-          } else {
-            localStorage.removeItem('portfolio_value_override');
-            if (pvPreview) pvPreview.textContent = 'Live calculation restored';
-            saved = true;
-          }
-        }
-
-        if (saved) {
-          const bpValStr = bpInput ? bpInput.value.trim() : '';
-          const pvOverVal = pvInput ? pvInput.value.trim() : '';
-
-          let startingCash = null;
-          if (bpValStr !== '') {
-            const bpVal = parseFloat(bpValStr);
-            let txs = [];
-            try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) {}
-            let cashTxs = [];
-            try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) {}
-            const netCash = calculateNetCash(txs, cashTxs);
-            startingCash = bpVal - netCash;
-            localStorage.setItem('portfolio_starting_cash', startingCash.toFixed(2));
-            localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
-            localStorage.setItem('portfolio_buying_power_user_set', 'true');
-          } else {
-            localStorage.removeItem('portfolio_starting_cash');
-            localStorage.removeItem('portfolio_buying_power');
-            localStorage.removeItem('portfolio_buying_power_user_set');
-          }
-
-          fetch('http://localhost:5001/api/overrides', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              buyingPowerOverride: bpValStr !== '' ? parseFloat(bpValStr) : null,
-              portfolioValueOverride: pvOverVal,
-              startingCash: startingCash
-            })
-          }).then(res => {
-            if (res.ok) {
-              showToast('✅ Portfolio overrides saved and synced with server! Refresh the tabs to see the updated values.');
-            } else {
-              showToast('✅ Portfolio overrides saved locally!');
-            }
-          }).catch(err => {
-            console.error('Failed to sync overrides:', err);
+        // Sync to server
+        fetch('http://localhost:5001/api/overrides', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            buyingPowerOverride: bpVal,
+            portfolioValueOverride: pvVal
+          })
+        })
+          .then(() => showToast('✅ Portfolio overrides saved!'))
+          .catch(err => {
+            console.error('Failed to sync overrides to server:', err);
             showToast('✅ Portfolio overrides saved locally!');
           });
 
-          recalculateBuyingPower();
-        } else {
-          showToast('⚠️ Please enter valid override values.', true);
-        }
+        // Update previews
+        if (bpPreview) bpPreview.textContent = 'Current Override: ' + fmt(bpVal);
+        if (pvPreview) pvPreview.textContent = pvVal !== '' ? 'Master Override verbatim active: ' + pvVal : 'Live calculation active';
+
+        recalculateBuyingPower();
       });
     });
   }
@@ -581,14 +556,14 @@ function initPortfolioOverrides() {
       showConfirmModal({
         icon: '💵',
         title: 'Deposit Funds',
-        message: 'Enter the amount you would like to deposit to your wallet:',
+        message: 'Enter the amount and reason for this deposit:',
         hasInput: true
-      }, (amount) => {
+      }, (amount, reason) => {
         if (isNaN(amount) || amount <= 0) {
           showToast('⚠️ Please enter a valid positive amount.', true);
           return;
         }
-        executeCashAdjustment('DEPOSIT', amount);
+        executeCashAdjustment('DEPOSIT', amount, reason || '');
       });
     });
   }
@@ -598,14 +573,14 @@ function initPortfolioOverrides() {
       showConfirmModal({
         icon: '💸',
         title: 'Withdraw Funds',
-        message: 'Enter the amount you would like to withdraw from your wallet:',
+        message: 'Enter the amount and reason for this withdrawal:',
         hasInput: true
-      }, (amount) => {
+      }, (amount, reason) => {
         if (isNaN(amount) || amount <= 0) {
           showToast('⚠️ Please enter a valid positive amount.', true);
           return;
         }
-        executeCashAdjustment('WITHDRAWAL', amount);
+        executeCashAdjustment('WITHDRAWAL', amount, reason || '');
       });
     });
   }
@@ -709,12 +684,15 @@ function showConfirmModal(options, onConfirm) {
   titleEl.textContent = options.title || 'Are you sure?';
   msgEl.textContent = options.message || 'Please confirm this action.';
 
+  const reasonEl = document.getElementById('confirmModalReason');
+
   if (options.hasInput) {
     if (inputContainer) inputContainer.style.display = 'block';
     if (inputEl) {
       inputEl.value = '';
       setTimeout(() => inputEl.focus(), 50);
     }
+    if (reasonEl) reasonEl.value = '';
   } else {
     if (inputContainer) inputContainer.style.display = 'none';
   }
@@ -733,8 +711,9 @@ function showConfirmModal(options, onConfirm) {
     if (options.hasInput && inputEl) {
       result = parseFloat(inputEl.value);
     }
+    const reason = (options.hasInput && reasonEl) ? reasonEl.value.trim() : '';
     cleanup();
-    onConfirm(result);
+    onConfirm(result, reason);
   }
 
   function handleCancel() {
@@ -775,14 +754,18 @@ async function pushCashTransactionToCloud(tx, name) {
         amount: Number(tx.price),
         date: tx.date.split('T')[0],
         time: tx.date.split('T')[1] || '12:00:00',
-        author: tx.author || 'Admin'
+        author: tx.author || 'Admin',
+        reason: tx.comment || tx.reason || ''
       })
     });
     if (!response.ok) throw new Error('Network response not ok');
     showToast("🟢 Cash Transaction Synced to Local Server!");
+    // Return the saved record from server so caller can update local cache
+    return await response.json().catch(() => null);
   } catch (err) {
     console.error('Local server cash post failed:', err);
     showToast("Transaction saved locally (Offline Mode)", true);
+    return null;
   }
 }
 
@@ -800,7 +783,7 @@ function saveCashLocally(tx) {
   localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
 }
 
-function executeCashAdjustment(actionType, amount) {
+async function executeCashAdjustment(actionType, amount, reason) {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -819,49 +802,58 @@ function executeCashAdjustment(actionType, amount) {
     shares: 0,
     price: amount,
     date: txDate,
-    comment: "",
+    comment: reason || "",
     stopLoss: 0,
     author: activeUser || 'Admin'
   };
 
-  // 1. Save locally in cash ledger
+  // 1. Save locally in cash ledger immediately
   saveCashLocally(tx);
 
-  // 2. Adjust local user override starting base if override is active
-  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
-  if (isUserSet) {
-    let startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
-    if (actionType === 'DEPOSIT') {
-      startingCash += amount;
-    } else {
-      startingCash -= amount;
-    }
-    localStorage.setItem('portfolio_starting_cash', startingCash.toFixed(2));
-    
-    // Sync new overrides to server
-    const currentBP = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
-    const adjustedBP = currentBP + (actionType === 'DEPOSIT' ? amount : -amount);
-    localStorage.setItem('portfolio_buying_power', adjustedBP.toFixed(2));
+  // 2. Always update buying power directly — deposits add, withdrawals subtract.
+  //    If no override is set, activate it now so user can see the running balance.
+  const currentBP = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+  const adjustedBP = Math.max(0, currentBP + (actionType === 'DEPOSIT' ? amount : -amount));
+  localStorage.setItem('portfolio_buying_power', adjustedBP.toFixed(2));
+  localStorage.setItem('portfolio_buying_power_user_set', 'true');
 
-    fetch('http://localhost:5001/api/overrides', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        buyingPowerOverride: adjustedBP,
-        portfolioValueOverride: localStorage.getItem('portfolio_value_override') || '',
-        startingCash: startingCash
-      })
-    }).catch(err => console.error('Failed to sync overrides:', err));
+  // Persist to server so portfolio tab loads the correct value on next visit
+  fetch('http://localhost:5001/api/overrides', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      buyingPowerOverride: adjustedBP,
+      portfolioValueOverride: localStorage.getItem('portfolio_value_override') || ''
+    })
+  }).catch(err => console.error('Failed to sync overrides:', err));
+
+  // 3. Update the override input preview on settings page
+  const bpInputEl = document.getElementById('buyingPowerInput');
+  const bpPreviewEl = document.getElementById('buyingPowerPreview');
+  if (bpInputEl) bpInputEl.value = adjustedBP.toFixed(2);
+  if (bpPreviewEl) {
+    const fmt = v => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
+    bpPreviewEl.textContent = 'Current Override: ' + fmt(adjustedBP);
   }
 
-  // 3. Recalculate dynamic buying power
-  recalculateBuyingPower();
-
-  // 4. Stream to cloud
+  // 4. Stream to cloud — AWAIT so the server has persisted the record (with reason)
+  //    before initTransactionHistory re-fetches the server list.
   const name = actionType === 'DEPOSIT' ? "Capital Bank Deposit" : "Capital Bank Withdrawal";
-  pushCashTransactionToCloud(tx, name);
+  const savedRecord = await pushCashTransactionToCloud(tx, name);
 
-  // 5. Re-render transaction history
+  // If the server returned the canonical record, sync it into local cash ledger
+  // so the reason field reflects exactly what the server stored.
+  if (savedRecord) {
+    let cashTxs = [];
+    try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) {}
+    // Replace the last entry (the one we just pushed) with the server-confirmed version
+    if (cashTxs.length > 0) {
+      cashTxs[cashTxs.length - 1] = savedRecord;
+      localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
+    }
+  }
+
+  // 5. Re-render transaction history — server now has the record saved
   initTransactionHistory();
 }
 
@@ -1115,39 +1107,30 @@ function calculateNetCash(txs, cashTxs) {
 }
 
 function recalculateBuyingPower() {
-  let txs = [];
-  try {
-    txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
-  } catch (e) {
-    txs = [];
-  }
-
-  let cashTxs = [];
-  try {
-    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
-  } catch (e) {
-    cashTxs = [];
-  }
-
-  const netCash = calculateNetCash(txs, cashTxs);
+  // ── Clean model ──────────────────────────────────────────────────────────
+  // When an override is set, portfolio_buying_power IS the canonical balance.
+  // Deposits/withdrawals have already adjusted it directly in executeCashAdjustment.
+  // When no override is set, fall back to pure netCash from all transactions.
   const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
 
   let buyingPower = 0;
   if (isUserSet) {
-    const startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
-    buyingPower = startingCash + netCash;
+    // Already maintained directly — just read it
+    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
   } else {
-    buyingPower = netCash;
+    // No override: derive from trade + cash ledger history
+    let txs = [];
+    try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) {}
+    let cashTxs = [];
+    try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) {}
+    buyingPower = Math.max(0, calculateNetCash(txs, cashTxs));
+    localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
   }
-
-  buyingPower = Math.max(0, buyingPower);
-
-  localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
 
   // Update inputs on Settings page if present
   const bpInput  = document.getElementById('buyingPowerInput');
   const bpPreview = document.getElementById('buyingPowerPreview');
-  if (bpInput && !isUserSet) bpInput.value = buyingPower.toFixed(2);
+  if (bpInput) bpInput.value = buyingPower.toFixed(2);
   if (bpPreview) {
     const fmt = v => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
     bpPreview.textContent = (isUserSet ? 'Current Override: ' : 'Current: ') + fmt(buyingPower);
@@ -1178,7 +1161,7 @@ async function initTransactionHistory() {
   if (cashTxs.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px 0;">
+        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px 0;">
           No cash transactions found.
         </td>
       </tr>
@@ -1190,6 +1173,7 @@ async function initTransactionHistory() {
     const action = String(tx.action || '').toUpperCase();
     const amount = parseFloat(tx.price) || 0;
     const author = tx.author || 'Admin';
+    const reason = (tx.comment && tx.comment.trim()) || (tx.reason && tx.reason.trim()) || (tx.note && tx.note.trim()) || '—';
     
     // Format date and time
     let formattedDate = '';
@@ -1217,6 +1201,7 @@ async function initTransactionHistory() {
         </td>
         <td class="history-date">${formattedDate}</td>
         <td class="history-amount ${amountClass}">${amountSign}$${amount.toFixed(2)}</td>
+        <td class="history-author" style="max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${reason}">${reason}</td>
         <td class="history-author">${author}</td>
       </tr>
     `;

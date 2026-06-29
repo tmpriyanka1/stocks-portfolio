@@ -199,10 +199,35 @@ document.addEventListener('DOMContentLoaded', () => {
     applyAccentColor(savedAccent);
   }
 
-  // Load tickers DB, then refresh and render
-  loadTickersDb().then(() => {
-    rebootDashboard();
-  });
+  // ── Load server-persisted overrides into localStorage FIRST ──────────────
+  // This fixes buying power showing $0.00 on reload: the server stores the
+  // canonical override values (startingCash, buyingPowerOverride) and we must
+  // hydrate localStorage before any calculation runs.
+  fetch('http://localhost:5001/api/overrides')
+    .then(r => r.ok ? r.json() : null)
+    .then(overrides => {
+      if (overrides) {
+        if (overrides.buyingPowerOverride !== null && overrides.buyingPowerOverride !== undefined && !isNaN(parseFloat(overrides.buyingPowerOverride))) {
+          localStorage.setItem('portfolio_buying_power_user_set', 'true');
+          localStorage.setItem('portfolio_buying_power', parseFloat(overrides.buyingPowerOverride).toFixed(2));
+        } else {
+          localStorage.removeItem('portfolio_buying_power_user_set');
+          localStorage.removeItem('portfolio_buying_power');
+        }
+        if (overrides.portfolioValueOverride && String(overrides.portfolioValueOverride).trim() !== '') {
+          localStorage.setItem('portfolio_value_override', String(overrides.portfolioValueOverride).trim());
+        } else {
+          localStorage.removeItem('portfolio_value_override');
+        }
+      }
+    })
+    .catch(() => {/* offline — use whatever is in localStorage */})
+    .finally(() => {
+      // Load tickers DB, then refresh and render
+      loadTickersDb().then(() => {
+        rebootDashboard();
+      });
+    });
 
   // Initialize comment popup modal
   initCommentModal();
@@ -337,16 +362,14 @@ async function pullCloudData() {
       });
 
       const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
-      let buyingPower = 0;
-      if (isUserSet) {
-        const startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
-        buyingPower = startingCash + dynamicCash;
-      } else {
-        buyingPower = dynamicCash;
+      // When an override is active, portfolio_buying_power is the canonical balance
+      // maintained by executeCashAdjustment and the server /api/overrides endpoint.
+      // DO NOT recalculate it here — that would overwrite the correct override value.
+      // Only derive buying power from dynamicCash when no override is set.
+      if (!isUserSet) {
+        const buyingPower = Math.max(0, dynamicCash);
+        localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
       }
-
-      buyingPower = Math.max(0, buyingPower);
-      localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
       // ─────────────────────────────────────────────────────────────────────
 
       // Re-render using the currently-active filter pill to preserve the user's view
@@ -734,53 +757,44 @@ function updateBalanceMetrics() {
   }
 
   // ── 4. NET PORTFOLIO VALUE = CASH (buying power) + OPEN POSITION EQUITY ──
-  let cashTxs = [];
-  try {
-    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
-  } catch (e) {
-    cashTxs = [];
-  }
-
-  let dynamicCash = 0;
-  cashTxs.forEach(tx => {
-    if (!tx) return;
-    const action = String(tx.action || '').toUpperCase();
-    const amount = parseFloat(tx.price) || 0;
-    if (action === 'DEPOSIT') {
-      dynamicCash += amount;
-    } else if (action === 'WITHDRAWAL') {
-      dynamicCash -= amount;
-    }
-  });
-
-  localTransactions.forEach(tx => {
-    if (!tx || !tx.ticker) return;
-    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
-    const action = String(tx.action || '').toUpperCase();
-    const sharesNum = parseFloat(tx.shares) || 0;
-    const priceNum = parseFloat(tx.price) || 0;
-    const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
-    const multiplier = isOpt ? 100 : 1;
-    const cost = sharesNum * priceNum * multiplier;
-
-    if (action === 'BUY') {
-      dynamicCash -= cost;
-    } else if (action === 'SELL') {
-      dynamicCash += cost;
-    }
-  });
-
+  // Clean model: if override is set, portfolio_buying_power is the canonical balance
+  // maintained directly by deposits/withdrawals and override saves.
+  // Only recalculate from ledger history when no override is active.
   const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
   let buyingPower = 0;
-  if (isUserSet) {
-    const startingCash = parseFloat(localStorage.getItem('portfolio_starting_cash') || '0');
-    buyingPower = startingCash + dynamicCash;
-  } else {
-    buyingPower = dynamicCash;
-  }
 
-  buyingPower = Math.max(0, buyingPower);
-  localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
+  if (isUserSet) {
+    // Override is active — use the stored value directly
+    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+  } else {
+    // No override: derive from cash ledger and trade costs
+    let cashTxs = [];
+    try {
+      cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+    } catch (e) { cashTxs = []; }
+
+    let dynamicCash = 0;
+    cashTxs.forEach(tx => {
+      if (!tx) return;
+      const action = String(tx.action || '').toUpperCase();
+      const amount = parseFloat(tx.price) || 0;
+      if (action === 'DEPOSIT') dynamicCash += amount;
+      else if (action === 'WITHDRAWAL') dynamicCash -= amount;
+    });
+    localTransactions.forEach(tx => {
+      if (!tx || !tx.ticker) return;
+      if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+      const action = String(tx.action || '').toUpperCase();
+      const sharesNum = parseFloat(tx.shares) || 0;
+      const priceNum = parseFloat(tx.price) || 0;
+      const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+      const cost = sharesNum * priceNum * (isOpt ? 100 : 1);
+      if (action === 'BUY') dynamicCash -= cost;
+      else if (action === 'SELL') dynamicCash += cost;
+    });
+    buyingPower = Math.max(0, dynamicCash);
+    localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
+  }
 
   // Calculate Unrealized P&L and Realized P&L (FIFO queue method)
   let unrealizedPL = 0;

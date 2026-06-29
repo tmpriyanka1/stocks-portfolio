@@ -1,6 +1,11 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "http://localhost:5001/api/trades"
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
 };
+
+const CLOULD_ENDPOINT = {
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
+};
+
 
 // Tracks the currently-active filter pill ('all', 'stocks', 'options')
 // so background cloud pulls and refresh always re-render the correct view
@@ -203,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // This fixes buying power showing $0.00 on reload: the server stores the
   // canonical override values (startingCash, buyingPowerOverride) and we must
   // hydrate localStorage before any calculation runs.
-  fetch('http://localhost:5001/api/overrides')
+  fetch(CLOULD_ENDPOINT.endpointUrl + "overrides")
     .then(r => r.ok ? r.json() : null)
     .then(overrides => {
       if (overrides) {
@@ -221,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     })
-    .catch(() => {/* offline — use whatever is in localStorage */})
+    .catch(() => {/* offline — use whatever is in localStorage */ })
     .finally(() => {
       // Load tickers DB, then refresh and render
       loadTickersDb().then(() => {
@@ -1862,7 +1867,7 @@ function initCommentModal() {
           text: commentText
         };
 
-        const response = await fetch('http://localhost:5001/api/notes', {
+        const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -1991,7 +1996,7 @@ function initQuickTradeModal() {
         // 1. POST to backend server (stored in trades.ndjson)
         // Field names must match server.js POST /api/trades handler:
         // expects: ticker, price, shares (or quantity), action, assetType, date, comment
-        const response = await fetch('http://localhost:5001/api/trades', {
+        const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'trades', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2128,7 +2133,7 @@ function initEditAssetModal() {
       submitBtn.textContent = 'Saving...';
 
       try {
-        const response = await fetch(`http://localhost:5001/api/trades/ticker/${encodeURIComponent(ticker)}`, {
+        const response = await fetch(CLOULD_ENDPOINT.endpointUrl + `trades/ticker/${encodeURIComponent(ticker)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2169,7 +2174,7 @@ async function deleteAsset(ticker) {
   }
 
   try {
-    const response = await fetch(`http://localhost:5001/api/trades/ticker/${encodeURIComponent(ticker)}`, {
+    const response = await fetch(CLOULD_ENDPOINT.endpointUrl + `trades/ticker/${encodeURIComponent(ticker)}`, {
       method: 'DELETE'
     });
 

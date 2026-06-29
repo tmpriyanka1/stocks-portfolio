@@ -1,9 +1,9 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "http://localhost:5001/api/trades"
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
 };
 
 const CLOUD_ENDPOINT = {
-  endpointUrl: "http://localhost:5001/api/"
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
 };
 
 

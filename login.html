@@ -5,7 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Vanai — Secure Login</title>
-  <meta name="description" content="Secure workspace access for Vanai Portfolio Manager. Enter your credentials to enter the dashboard.">
+  <meta name="description"
+    content="Secure workspace access for Vanai Portfolio Manager. Enter your credentials to enter the dashboard.">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,13 +30,27 @@
     .glow-orb {
       animation: orbDrift 12s ease-in-out infinite alternate;
     }
-    .orb-1 { animation-delay: 0s; }
-    .orb-2 { animation-delay: -4s; }
-    .orb-3 { animation-delay: -8s; }
+
+    .orb-1 {
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      animation-delay: -4s;
+    }
+
+    .orb-3 {
+      animation-delay: -8s;
+    }
 
     @keyframes orbDrift {
-      0%   { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(20px, -30px) scale(1.1); }
+      0% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      100% {
+        transform: translate(20px, -30px) scale(1.1);
+      }
     }
 
     /* Login card — centered glassmorphic panel */
@@ -44,19 +59,26 @@
       z-index: 10;
       width: 90%;
       max-width: 360px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 28px;
       padding: 36px 28px 28px 28px;
-      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       animation: cardFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     @keyframes cardFadeIn {
-      from { opacity: 0; transform: translateY(24px) scale(0.97); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     /* Logo + branding */
@@ -205,10 +227,23 @@
     }
 
     @keyframes shakeError {
-      0%, 100% { transform: translateX(0); }
-      15%       { transform: translateX(-6px); }
-      45%       { transform: translateX(6px); }
-      75%       { transform: translateX(-4px); }
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      15% {
+        transform: translateX(-6px);
+      }
+
+      45% {
+        transform: translateX(6px);
+      }
+
+      75% {
+        transform: translateX(-4px);
+      }
     }
 
     /* Submit button */
@@ -235,12 +270,14 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 50%);
       opacity: 0;
       transition: opacity 0.2s ease;
     }
 
-    .login-btn:hover::before { opacity: 1; }
+    .login-btn:hover::before {
+      opacity: 1;
+    }
 
     .login-btn:hover {
       transform: translateY(-2px);
@@ -260,18 +297,25 @@
       display: none;
       width: 16px;
       height: 16px;
-      border: 2.5px solid rgba(255,255,255,0.3);
+      border: 2.5px solid rgba(255, 255, 255, 0.3);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       margin: 0 auto;
     }
 
-    .login-btn.loading .btn-text { display: none; }
-    .login-btn.loading .btn-spinner { display: block; }
+    .login-btn.loading .btn-text {
+      display: none;
+    }
+
+    .login-btn.loading .btn-spinner {
+      display: block;
+    }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     /* Default credentials hint */
@@ -346,15 +390,8 @@
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </span>
-          <input
-            type="text"
-            id="loginUsername"
-            class="login-input"
-            placeholder="Enter username"
-            autocomplete="username"
-            required
-            aria-required="true"
-          >
+          <input type="text" id="loginUsername" class="login-input" placeholder="Enter username" autocomplete="username"
+            required aria-required="true">
         </div>
       </div>
 
@@ -362,7 +399,9 @@
       <div class="login-field">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <label class="login-label" for="loginPassword">Password</label>
-          <a href="#" id="forgotPasswordLink" style="font-size: 10px; font-weight: 600; color: var(--accent); text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-main);">Forgot Password?</a>
+          <a href="#" id="forgotPasswordLink"
+            style="font-size: 10px; font-weight: 600; color: var(--accent); text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-main);">Forgot
+            Password?</a>
         </div>
         <div class="login-input-wrapper">
           <span class="login-input-icon" aria-hidden="true">
@@ -372,18 +411,11 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
           </span>
-          <input
-            type="password"
-            id="loginPassword"
-            class="login-input"
-            placeholder="Enter password"
-            autocomplete="current-password"
-            required
-            aria-required="true"
-          >
+          <input type="password" id="loginPassword" class="login-input" placeholder="Enter password"
+            autocomplete="current-password" required aria-required="true">
           <button type="button" class="toggle-pw-btn" id="togglePwBtn" aria-label="Toggle password visibility">
-            <svg id="eyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
+            <svg id="eyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
               <circle cx="12" cy="12" r="3"></circle>
             </svg>
@@ -423,13 +455,8 @@
                 <polyline points="22,6 12,13 2,6"></polyline>
               </svg>
             </span>
-            <input
-              type="text"
-              id="forgotEmailOrPhone"
-              class="login-input"
-              placeholder="Enter email or phone..."
-              required
-            >
+            <input type="text" id="forgotEmailOrPhone" class="login-input" placeholder="Enter email or phone..."
+              required>
           </div>
         </div>
         <button type="button" class="login-btn" id="generateOtpBtn" style="margin-top: 14px;">
@@ -450,14 +477,8 @@
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
             </span>
-            <input
-              type="text"
-              id="forgotOtp"
-              class="login-input"
-              placeholder="Enter 6-digit OTP"
-              maxLength="6"
-              required
-            >
+            <input type="text" id="forgotOtp" class="login-input" placeholder="Enter 6-digit OTP" maxLength="6"
+              required>
           </div>
         </div>
         <button type="submit" class="login-btn" id="verifyOtpBtn" style="margin-top: 14px;">
@@ -468,7 +489,9 @@
 
       <!-- Back to Login option -->
       <div style="text-align: center; margin-top: 16px;">
-        <a href="#" id="backToLoginLink" style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-main);">Back to Login</a>
+        <a href="#" id="backToLoginLink"
+          style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-main);">Back
+          to Login</a>
       </div>
     </form>
 
@@ -482,7 +505,7 @@
   <script>
     (function () {
       var SESSION_KEY = 'portfolio_session';
-      var API_LOGIN_URL = 'http://localhost:5001/api/login';
+      var API_LOGIN_URL = 'https://vanai-portfolio-backend.onrender.com/api/login';
 
       // If already authenticated, go straight to the dashboard
       try {
@@ -564,7 +587,7 @@
           })
           .catch(function (err) {
             btn.classList.remove('loading');
-            showError('Cannot connect to the server. Make sure it is running on port 5001.');
+            showError('Cannot connect to the server. Make sure it is running on https://vanai-portfolio-backend.onrender.com.');
           });
       });
 
@@ -639,7 +662,7 @@
 
         generateOtpBtn.classList.add('loading');
 
-        fetch('http://localhost:5001/api/forgot-password/otp', {
+        fetch('https://vanai-portfolio-backend.onrender.com/api/forgot-password/otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ emailOrPhone: val })
@@ -682,7 +705,7 @@
             var queryVal = val.toLowerCase();
             var matched = localUsers.find(function (u) {
               return (u.email && u.email.trim().toLowerCase() === queryVal) ||
-                     (u.phoneNumber && u.phoneNumber.trim().toLowerCase() === queryVal);
+                (u.phoneNumber && u.phoneNumber.trim().toLowerCase() === queryVal);
             });
 
             generateOtpBtn.classList.remove('loading');
@@ -692,7 +715,7 @@
               mockUser = matched;
               // Write local OTP to console and show non-blocking toast overlay
               console.log('[Mock OTP Fallback] Generated OTP:', mockOtpVal, 'for user:', matched.username);
-              
+
               var toastEl = document.createElement('div');
               toastEl.style.position = 'fixed';
               toastEl.style.bottom = '20px';
@@ -707,7 +730,7 @@
               toastEl.style.fontSize = '12px';
               toastEl.textContent = 'Mock OTP: ' + mockOtpVal;
               document.body.appendChild(toastEl);
-              setTimeout(function() { toastEl.remove(); }, 6000);
+              setTimeout(function () { toastEl.remove(); }, 6000);
 
               forgotStep1.style.display = 'none';
               forgotStep2.style.display = 'block';
@@ -731,7 +754,7 @@
 
         verifyOtpBtn.classList.add('loading');
 
-        fetch('http://localhost:5001/api/forgot-password/login', {
+        fetch('https://vanai-portfolio-backend.onrender.com/api/forgot-password/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ emailOrPhone: val, otp: otpVal })

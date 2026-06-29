@@ -1,5 +1,9 @@
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "http://localhost:5001/api/trades"
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
+};
+
+const CLOULD_ENDPOINT = {
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
 };
 
 const defaultAssetData = {
@@ -55,7 +59,7 @@ function resolveAssetName(ticker) {
   let marketPrices = {};
   try {
     marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-  } catch (e) {}
+  } catch (e) { }
 
   if (marketPrices[capitalized] && marketPrices[capitalized].name && marketPrices[capitalized].name !== capitalized) {
     return marketPrices[capitalized].name;
@@ -448,7 +452,7 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
 
       if (isBeforeOrOnEnd) {
         netSharesAsOfEndDate = runningShares;
-        
+
         // Compute average cost of remaining layers in buyQueue
         let totalRemainingCost = 0;
         let totalRemainingShares = 0;
@@ -592,7 +596,7 @@ function formatDateTime(d) {
   const day = d.getDate();
   const year = d.getFullYear();
   const datePart = `${monthName} ${day},${year}`;
-  
+
   let hours = d.getHours();
   const minutes = String(d.getMinutes()).padStart(2, '0');
   const seconds = String(d.getSeconds()).padStart(2, '0');
@@ -711,28 +715,28 @@ function createMasterCardHTML(cardData, listType) {
   const timelineHTML = cardData.transactions.length === 0
     ? `<div style="padding: 10px 0; font-size: 11px; color: var(--text-muted); text-align: center; font-style: italic;">No transactions in this period.</div>`
     : cardData.transactions.slice()
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .map(tx => {
-          if (!tx) return '';
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .map(tx => {
+        if (!tx) return '';
 
-          const txDate = tx.date ? new Date(tx.date) : new Date();
-          const action = tx.action || 'BUY';
-          const actionClass = action.toLowerCase();
-          const actionLabel = action === 'SELL' ? 'Sold' : 'Bought';
+        const txDate = tx.date ? new Date(tx.date) : new Date();
+        const action = tx.action || 'BUY';
+        const actionClass = action.toLowerCase();
+        const actionLabel = action === 'SELL' ? 'Sold' : 'Bought';
 
-          const sharesVal = parseFloat(tx.shares) || 0;
-          const priceVal = parseFloat(tx.price) || 0;
-          const comment = tx.comment || '';
-          
-          const dateTimeStr = formatDateTime(txDate);
-          
-          // Filter out quick buy/sell drawer comments
-          let displayComment = comment;
-          if (isQuickDrawerComment(displayComment)) {
-            displayComment = '';
-          }
+        const sharesVal = parseFloat(tx.shares) || 0;
+        const priceVal = parseFloat(tx.price) || 0;
+        const comment = tx.comment || '';
 
-          return `
+        const dateTimeStr = formatDateTime(txDate);
+
+        // Filter out quick buy/sell drawer comments
+        let displayComment = comment;
+        if (isQuickDrawerComment(displayComment)) {
+          displayComment = '';
+        }
+
+        return `
               <div class="timeline-item ${actionClass}">
                 <div class="timeline-dot"></div>
                 <div class="timeline-header">
@@ -741,14 +745,14 @@ function createMasterCardHTML(cardData, listType) {
                 ${displayComment ? `<div class="timeline-comment">${displayComment}</div>` : ''}
               </div>
             `;
-        }).join('');
+      }).join('');
 
   // Retrieve local notes database to build notes history timeline
   let tickerTimelineHTML = '';
   try {
     const allNotes = JSON.parse(localStorage.getItem('portfolio_notes') || '[]');
     const combinedNotes = [];
-    
+
     // 1. Collect notes from portfolio_notes for this ticker
     allNotes.forEach(n => {
       if (n.ticker && n.ticker.trim().toUpperCase() === cardData.ticker.trim().toUpperCase()) {
@@ -975,7 +979,7 @@ function renderLedger(rangeType, startDate, endDate) {
   calculateSection1Metrics(rangeType, startDate, endDate);
 
   // Sync timeframe data packets from the backend skeleton route
-  fetch(`http://localhost:5001/api/reports?filter=${rangeType}`)
+  fetch(CLOULD_ENDPOINT.endpointUrl + `reports?filter=${rangeType}`)
     .then(res => {
       if (res.ok) return res.json();
       throw new Error(`Server returned status ${res.status}`);
@@ -986,7 +990,7 @@ function renderLedger(rangeType, startDate, endDate) {
       cards.forEach(card => card.classList.remove('loading'));
 
       console.log(`[Reports Endpoint Sync] Successfully loaded timeframe packet for filter="${rangeType}":`, data);
-      
+
       const containerEl = document.getElementById('ledger-scroll-container');
       const tableSection = document.querySelector('.table-section');
       let existingPlaceholder = document.getElementById('reports-empty-state-placeholder');
@@ -996,7 +1000,7 @@ function renderLedger(rangeType, startDate, endDate) {
         if (containerEl) {
           containerEl.style.display = 'none';
         }
-        
+
         // Inject a beautifully styled placeholder message
         if (!existingPlaceholder) {
           existingPlaceholder = document.createElement('div');
@@ -1378,7 +1382,7 @@ async function pullCloudData() {
 
   try {
     await loadTickersDb();
-    
+
     // Fetch trades
     const response = await fetch(url, { method: 'GET' });
     if (!response.ok) throw new Error('Network response error.');
@@ -1813,7 +1817,7 @@ async function fetchAIJournalSummary(transactions, currentRange) {
 
   // 2. Filter comments that match the current date range
   const matchedNotes = [];
-  
+
   allNotes.forEach(n => {
     if (!n.date) return;
     const timeStr = n.time || '00:00:00';
@@ -1909,7 +1913,7 @@ async function fetchAIJournalSummary(transactions, currentRange) {
 function getAssetStateBadge(cardData, startDate, endDate) {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   let runningShares = 0;
   let liquidationDate = null;
 
@@ -1917,7 +1921,7 @@ function getAssetStateBadge(cardData, startDate, endDate) {
   cardData.transactions.forEach(tx => {
     const sharesNum = parseFloat(tx.shares) || 0;
     const action = tx.action || 'BUY';
-    
+
     if (action === 'BUY') {
       runningShares += sharesNum;
     } else if (action === 'SELL') {
@@ -2067,7 +2071,7 @@ function initAINotesCollapsible() {
     if (e.target.closest('#dismiss-ai-digest-btn')) {
       return; // Handled by dismiss button listener
     }
-    
+
     const isCollapsed = body.style.display === 'none';
     if (isCollapsed) {
       body.style.display = 'block';
@@ -2094,7 +2098,7 @@ function initAINotesCollapsible() {
       body.style.display = 'block';
       toggleIcon.textContent = '▼';
       container.classList.remove('collapsed');
-      
+
       // Auto-scroll to show the container
       container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });

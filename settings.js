@@ -102,7 +102,7 @@ function initProfileForm() {
   if (phoneInput) phoneInput.value = initialPhone;
 
   // Retrieve updated details from backend
-  fetch(`http://localhost:5001/api/profile?username=${encodeURIComponent(activeUser)}`)
+  fetch(CLOULD_ENDPOINT.endpointUrl + `profile?username=${encodeURIComponent(activeUser)}`)
     .then(res => {
       if (res.ok) return res.json();
       throw new Error('Failed to fetch profile details');
@@ -183,7 +183,7 @@ function initProfileForm() {
         message: 'Are you sure you want to update your profile details?'
       }, async () => {
         try {
-          const response = await fetch('http://localhost:5001/api/profile/update', {
+          const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -206,7 +206,7 @@ function initProfileForm() {
 
             // Sync to localUsers list
             let localUsers = [];
-            try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch(e){}
+            try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch (e) { }
             let found = false;
             localUsers = localUsers.map(u => {
               if (u.username.toLowerCase() === activeUser.toLowerCase()) {
@@ -252,7 +252,7 @@ function initProfileForm() {
           }
 
           let localUsers = [];
-          try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch(e){}
+          try { localUsers = JSON.parse(localStorage.getItem('portfolio_users') || '[]'); } catch (e) { }
           let found = false;
           localUsers = localUsers.map(u => {
             if (u.username.toLowerCase() === activeUser.toLowerCase()) {
@@ -442,11 +442,11 @@ function initPreferences() {
  * and a Total Portfolio Value override from the Settings screen.
  */
 function initPortfolioOverrides() {
-  const bpInput  = document.getElementById('buyingPowerInput');
-  const pvInput  = document.getElementById('portfolioValueInput');
+  const bpInput = document.getElementById('buyingPowerInput');
+  const pvInput = document.getElementById('portfolioValueInput');
   const bpPreview = document.getElementById('buyingPowerPreview');
   const pvPreview = document.getElementById('portfolioValuePreview');
-  const saveBtn  = document.getElementById('saveOverridesBtn');
+  const saveBtn = document.getElementById('saveOverridesBtn');
 
   const fmt = v => new Intl.NumberFormat('en-US', {
     style: 'currency', currency: 'USD'
@@ -524,7 +524,7 @@ function initPortfolioOverrides() {
         }
 
         // Sync to server
-        fetch('http://localhost:5001/api/overrides', {
+        fetch(CLOUDD_ENDPOINT.endpointUrl + 'overrides', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -620,7 +620,7 @@ function showToast(message, isError) {
   const toast = document.createElement('div');
   toast.className = 'app-toast';
   toast.innerText = message;
-  
+
   if (isError) {
     toast.style.borderColor = 'rgba(239, 68, 68, 0.4)';
   }
@@ -725,7 +725,11 @@ function showConfirmModal(options, onConfirm) {
 }
 
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "http://localhost:5001/api/trades"
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
+};
+
+const CLOULD_ENDPOINT = {
+  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
 };
 
 function saveTransactionLocally(tx) {
@@ -744,7 +748,7 @@ function saveTransactionLocally(tx) {
 
 async function pushCashTransactionToCloud(tx, name) {
   try {
-    const response = await fetch('http://localhost:5001/api/cash', {
+    const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'cash', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -818,7 +822,7 @@ async function executeCashAdjustment(actionType, amount, reason) {
   localStorage.setItem('portfolio_buying_power_user_set', 'true');
 
   // Persist to server so portfolio tab loads the correct value on next visit
-  fetch('http://localhost:5001/api/overrides', {
+  fetch(CLOULD_ENDPOINT.endpointUrl + 'overrides', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -845,7 +849,7 @@ async function executeCashAdjustment(actionType, amount, reason) {
   // so the reason field reflects exactly what the server stored.
   if (savedRecord) {
     let cashTxs = [];
-    try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) {}
+    try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) { }
     // Replace the last entry (the one we just pushed) with the server-confirmed version
     if (cashTxs.length > 0) {
       cashTxs[cashTxs.length - 1] = savedRecord;
@@ -886,7 +890,7 @@ function initUserManagement() {
     const addUserPhoneEl = document.getElementById('addUserPhone');
     const addUserPasswordEl = document.getElementById('addUserPassword');
     const addUserConfirmPasswordEl = document.getElementById('addUserConfirmPassword');
-    
+
     if (!addUsernameEl || !addRoleEl || !addUserEmailEl || !addUserPhoneEl || !addUserPasswordEl || !addUserConfirmPasswordEl) return;
 
     const username = addUsernameEl.value.trim();
@@ -925,7 +929,7 @@ function initUserManagement() {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/users', {
+      const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -946,7 +950,7 @@ function initUserManagement() {
       }
     } catch (err) {
       console.error('Failed to register user:', err);
-      
+
       // Fallback: save to localStorage (Offline Mode)
       localUsers = localUsers.filter(u => u.username.toLowerCase() !== username.toLowerCase());
       localUsers.push({ username, role, email, phoneNumber, password });
@@ -993,7 +997,7 @@ function initSecuritySettings() {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/password', {
+      const response = await fetch(CLOULD_ENDPOINT.endpointUrl + 'password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1032,7 +1036,7 @@ function initSecuritySettings() {
       }
     } catch (err) {
       console.error('Failed to update password:', err);
-      
+
       // Fallback: update password locally (Offline Mode)
       const activeUser = localStorage.getItem('portfolio_username') || 'Vanai';
       let localUsers = [];
@@ -1063,7 +1067,7 @@ function initSecuritySettings() {
 
 function calculateNetCash(txs, cashTxs) {
   let cash = 0;
-  
+
   // 1. Process cash ledger
   cashTxs.forEach(t => {
     if (!t) return;
@@ -1120,15 +1124,15 @@ function recalculateBuyingPower() {
   } else {
     // No override: derive from trade + cash ledger history
     let txs = [];
-    try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) {}
+    try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) { }
     let cashTxs = [];
-    try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) {}
+    try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) { }
     buyingPower = Math.max(0, calculateNetCash(txs, cashTxs));
     localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
   }
 
   // Update inputs on Settings page if present
-  const bpInput  = document.getElementById('buyingPowerInput');
+  const bpInput = document.getElementById('buyingPowerInput');
   const bpPreview = document.getElementById('buyingPowerPreview');
   if (bpInput) bpInput.value = buyingPower.toFixed(2);
   if (bpPreview) {
@@ -1143,7 +1147,7 @@ async function initTransactionHistory() {
 
   let cashTxs = [];
   try {
-    const res = await fetch('http://localhost:5001/api/cash');
+    const res = await fetch(CLOULD_ENDPOINT.endpointUrl + 'cash');
     if (res.ok) {
       cashTxs = await res.json();
       localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
@@ -1174,7 +1178,7 @@ async function initTransactionHistory() {
     const amount = parseFloat(tx.price) || 0;
     const author = tx.author || 'Admin';
     const reason = (tx.comment && tx.comment.trim()) || (tx.reason && tx.reason.trim()) || (tx.note && tx.note.trim()) || '—';
-    
+
     // Format date and time
     let formattedDate = '';
     if (tx.date) {
@@ -1193,7 +1197,7 @@ async function initTransactionHistory() {
     const badgeClass = action === 'DEPOSIT' ? 'deposit' : 'withdrawal';
     const amountClass = action === 'DEPOSIT' ? 'deposit' : 'withdrawal';
     const amountSign = action === 'DEPOSIT' ? '+' : '-';
-    
+
     return `
       <tr>
         <td>
@@ -1214,9 +1218,9 @@ function initPasswordToggles() {
     const input = container.querySelector('input');
     const toggleBtn = container.querySelector('.password-toggle-btn');
     if (!input || !toggleBtn) return;
-    
+
     toggleBtn.textContent = input.type === 'password' ? 'Show' : 'Hide';
-    
+
     toggleBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1244,7 +1248,7 @@ async function initPnLGraph() {
   // Load all transactions
   let allTxs = [];
   try {
-    const res = await fetch('http://localhost:5001/api/trades');
+    const res = await fetch(CLOULD_ENDPOINT.endpointUrl + 'trades');
     if (res.ok) {
       allTxs = await res.json();
     } else {

@@ -12,12 +12,20 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-const DB_PATH = path.join(__dirname, 'data', 'trades.ndjson');
-const NOTES_DB_PATH = path.join(__dirname, 'data', 'journal_notes.ndjson');
-const PRICES_PATH = path.join(__dirname, 'data', 'prices.json');
-const CASH_LEDGER_PATH = path.join(__dirname, 'data', 'cash_ledger.ndjson');
 const USERS_DB_PATH = path.join(__dirname, 'data', 'users.ndjson');
-const OVERRIDES_PATH = path.join(__dirname, 'data', 'overrides.json');
+
+function getDatabasePath(req, fileName) {
+    const userRole = req && req.headers['x-user-role'] || 'production';
+    const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
+    
+    // Auto-create folder if missing so the user doesn't have to do it manually
+    const folderPath = path.join(__dirname, targetFolder);
+    if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+    }
+    
+    return path.join(folderPath, fileName);
+}
 
 const DEFAULT_PRICES = {
   'NVDA': 485.00,
@@ -42,6 +50,12 @@ const DEFAULT_PRICES = {
  * Reports [CREATED] for newly scaffolded assets and [OK] for pre-existing ones.
  */
 function bootstrapDataLayer() {
+  const DB_PATH = path.join(__dirname, 'data', 'trades.ndjson');
+  const NOTES_DB_PATH = path.join(__dirname, 'data', 'journal_notes.ndjson');
+  const PRICES_PATH = path.join(__dirname, 'data', 'prices.json');
+  const CASH_LEDGER_PATH = path.join(__dirname, 'data', 'cash_ledger.ndjson');
+  const OVERRIDES_PATH = path.join(__dirname, 'data', 'overrides.json');
+
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
   console.log('║       DATA LAYER BOOTSTRAP — Initializing...         ║');
@@ -122,17 +136,25 @@ function bootstrapDataLayer() {
   console.log('');
 }
 
-// ── Legacy alias kept for all downstream route handlers that call ensureDbExists() ──
-function ensureDbExists() {
-  // Lightweight repeat-safe guard: verifies files exist at request time without
-  // re-running the full bootstrap or emitting diagnostic logs again.
-  if (!fs.existsSync(path.join(__dirname, 'data'))) {
-    fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+// ── Dynamic version of ensureDbExists ──
+function ensureDbExists(req) {
+  const userRole = req && req.headers['x-user-role'] || 'production';
+  const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
+  const folderPath = path.join(__dirname, targetFolder);
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true });
   }
-  const guards = [DB_PATH, NOTES_DB_PATH, CASH_LEDGER_PATH, USERS_DB_PATH];
+  const dbPath = path.join(folderPath, 'trades.ndjson');
+  const notesPath = path.join(folderPath, 'journal_notes.ndjson');
+  const cashLedgerPath = path.join(folderPath, 'cash_ledger.ndjson');
+  const overridesPath = path.join(folderPath, 'overrides.json');
+  const pricesPath = path.join(folderPath, 'prices.json');
+
+  const guards = [dbPath, notesPath, cashLedgerPath];
   guards.forEach(p => { if (!fs.existsSync(p)) fs.writeFileSync(p, '', 'utf8'); });
-  if (!fs.existsSync(PRICES_PATH)) fs.writeFileSync(PRICES_PATH, '{}', 'utf8');
-  if (!fs.existsSync(OVERRIDES_PATH)) fs.writeFileSync(OVERRIDES_PATH, '{}', 'utf8');
+  if (!fs.existsSync(pricesPath)) fs.writeFileSync(pricesPath, '{}', 'utf8');
+  if (!fs.existsSync(overridesPath)) fs.writeFileSync(overridesPath, '{}', 'utf8');
+  if (!fs.existsSync(USERS_DB_PATH)) fs.writeFileSync(USERS_DB_PATH, '', 'utf8');
 }
 
 // Run the full bootstrap synchronously before any routes are registered
@@ -141,6 +163,10 @@ bootstrapDataLayer();
 // Execute lightweight backup logic on startup
 function executeStartupBackups() {
   try {
+    const DB_PATH = path.join(__dirname, 'data', 'trades.ndjson');
+    const CASH_LEDGER_PATH = path.join(__dirname, 'data', 'cash_ledger.ndjson');
+    const NOTES_DB_PATH = path.join(__dirname, 'data', 'journal_notes.ndjson');
+
     const backupDir = path.join(__dirname, 'backups');
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
@@ -183,10 +209,11 @@ executeStartupBackups();
 
 
 
-function loadPrices() {
-  ensureDbExists();
+function loadPrices(req) {
+  ensureDbExists(req);
   try {
-    const data = fs.readFileSync(PRICES_PATH, 'utf8');
+    const pricesPath = getDatabasePath(req, 'prices.json');
+    const data = fs.readFileSync(pricesPath, 'utf8');
     return JSON.parse(data || '{}');
   } catch (err) {
     console.error('Failed to read or parse prices.json:', err);
@@ -194,24 +221,22 @@ function loadPrices() {
   }
 }
 
-function savePrices(prices) {
-  ensureDbExists();
+function savePrices(req, prices) {
+  ensureDbExists(req);
   try {
-    fs.writeFileSync(PRICES_PATH, JSON.stringify(prices, null, 2), 'utf8');
+    const pricesPath = getDatabasePath(req, 'prices.json');
+    fs.writeFileSync(pricesPath, JSON.stringify(prices, null, 2), 'utf8');
   } catch (err) {
     console.error('Failed to write prices.json:', err);
   }
 }
 
 /**
- * Fetches a live price from Yahoo Finance using a curl subprocess.
- * This avoids Node fetch() TLS fingerprinting issues that cause 429s.
- * Returns { price, change24h, name } or null on failure.
+ * General helper to fetch and parse JSON from a Yahoo Finance API URL using allorigins proxy.
  */
-function fetchYahooPrice(ticker) {
+function fetchYahooUrl(targetUrl) {
   return new Promise((resolve) => {
-    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
-    const url = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+    const url = `http://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
     const args = [
       '-s', '-L', '--max-time', '12',
       '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -219,33 +244,93 @@ function fetchYahooPrice(ticker) {
     ];
     execFile('curl', args, { timeout: 15000 }, (err, stdout, stderr) => {
       if (err) {
-        console.warn(`[fetchYahooPrice] curl error for ${ticker}:`, err.message);
+        console.warn(`[fetchYahooUrl] curl error for ${targetUrl}:`, err.message, "Stderr:", stderr);
         return resolve(null);
       }
       try {
         const wrapper = JSON.parse(stdout);
         if (!wrapper || !wrapper.contents) {
-          console.warn(`[fetchYahooPrice] No contents in proxy wrapper for ${ticker}`);
+          console.warn(`[fetchYahooUrl] No contents in proxy wrapper for ${targetUrl}`);
           return resolve(null);
         }
-        const json = JSON.parse(wrapper.contents);
-        const result = json && json.chart && json.chart.result && json.chart.result[0];
-        if (result && result.meta && result.meta.regularMarketPrice !== undefined) {
-          const price = result.meta.regularMarketPrice;
-          const prevClose = result.meta.chartPreviousClose || result.meta.previousClose || price;
-          const change24h = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
-          const name = result.meta.longName || result.meta.shortName || ticker;
-          resolve({ price, change24h: parseFloat(change24h.toFixed(4)), name });
-        } else {
-          console.warn(`[fetchYahooPrice] No price data in proxy response contents for ${ticker}`);
-          resolve(null);
-        }
+        resolve(JSON.parse(wrapper.contents));
       } catch (parseErr) {
-        console.warn(`[fetchYahooPrice] JSON parse/proxy wrapper error for ${ticker}:`, parseErr.message);
+        console.warn(`[fetchYahooUrl] JSON parse/proxy wrapper error for ${targetUrl}:`, parseErr.message);
         resolve(null);
       }
     });
   });
+}
+
+/**
+ * Fetches a live price from Yahoo Finance for a stock/underlying index.
+ * Returns { price, change24h, name } or null on failure.
+ */
+function fetchYahooPrice(ticker) {
+  return new Promise(async (resolve) => {
+    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
+    const json = await fetchYahooUrl(targetUrl);
+    if (!json) return resolve(null);
+    try {
+      const result = json.chart && json.chart.result && json.chart.result[0];
+      if (result && result.meta && result.meta.regularMarketPrice !== undefined) {
+        const price = result.meta.regularMarketPrice;
+        const prevClose = result.meta.chartPreviousClose || result.meta.previousClose || price;
+        const change24h = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+        const name = result.meta.longName || result.meta.shortName || ticker;
+        resolve({ price, change24h: parseFloat(change24h.toFixed(4)), name });
+      } else {
+        console.warn(`[fetchYahooPrice] No price data in response for ${ticker}`);
+        resolve(null);
+      }
+    } catch (err) {
+      console.warn(`[fetchYahooPrice] Error parsing response for ${ticker}:`, err.message);
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Helper to construct a standard OCC option symbol.
+ * Returns the symbol string (e.g. "SPY260731P00734000") or null.
+ */
+function getYahooOptionSymbol(ticker, expiryDate) {
+  if (!expiryDate) return null;
+  const baseMatch = ticker.match(/^([A-Z]+)/i);
+  if (!baseMatch) return null;
+  const underlying = baseMatch[1].toUpperCase();
+  const strikeMatch = ticker.match(/(?:@|\$|\s)(\d+(?:\.\d+)?)/);
+  if (!strikeMatch) return null;
+  const strikeNum = parseFloat(strikeMatch[1]);
+  const dateObj = new Date(expiryDate);
+  if (isNaN(dateObj.getTime())) return null;
+  const yy = String(dateObj.getUTCFullYear()).slice(-2);
+  const mm = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(dateObj.getUTCDate()).padStart(2, '0');
+  const expiryStr = `${yy}${mm}${dd}`;
+  const isPut = /\b(put|p)\b/i.test(ticker);
+  const type = isPut ? 'P' : 'C';
+  const strikeCents = Math.round(strikeNum * 1000);
+  const strikeStr = String(strikeCents).padStart(8, '0');
+  return `${underlying}${expiryStr}${type}${strikeStr}`;
+}
+
+/**
+ * Fetches a live price from Yahoo Finance for a specific option contract.
+ * Returns { price, change24h, name } or null on failure.
+ */
+async function fetchYahooOptionPrice(ticker, expiryDate) {
+  const occSymbol = getYahooOptionSymbol(ticker, expiryDate);
+  if (!occSymbol) {
+    console.warn(`[fetchYahooOptionPrice] Could not parse OCC symbol for ticker=${ticker}, expiryDate=${expiryDate}`);
+    return null;
+  }
+  const data = await fetchYahooPrice(occSymbol);
+  if (data) {
+    // Retain OCC symbol as name for tracking
+    data.name = occSymbol;
+  }
+  return data;
 }
 
 // Server-side cache for fetched prices to prevent rate limiting (5 min TTL)
@@ -255,7 +340,7 @@ const CACHE_TTL_MS = 300000; // 5 minutes
 // GET /api/prices - Return the cached prices.json
 app.get('/api/prices', (req, res) => {
   try {
-    const prices = loadPrices();
+    const prices = loadPrices(req);
     res.status(200).json(prices);
   } catch (err) {
     res.status(500).json({ error: 'Failed to read prices.' });
@@ -272,33 +357,63 @@ app.get('/api/prices/fetch', async (req, res) => {
   }
 
   const tickers = tickerParam.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
-  const prices = loadPrices();
+  const prices = loadPrices(req);
   const results = {};
   const errors = {};
 
-  // Track which base tickers have already been fetched to avoid duplicate requests
-  const fetchedBase = {};
+  // Build expiry Map from trades database to match option expiries
+  const trades = loadTrades(req);
+  const expiryMap = {};
+  trades.forEach(t => {
+    if (t && t.ticker && (t['Expiry Date'] || t.expiryDate || t.expiry)) {
+      expiryMap[t.ticker.toUpperCase().trim()] = t['Expiry Date'] || t.expiryDate || t.expiry;
+    }
+  });
+
+  // Track which tickers have already been fetched in current request batch to avoid duplicates
+  const fetchedTickers = {};
 
   // Process sequentially with a short delay to avoid Yahoo Finance rate limiting
   for (const ticker of tickers) {
     const isOption = /[@$]|\b(call|put)\b/i.test(ticker);
-    const baseTicker = isOption ? ticker.split(/[\s$@]/)[0].toUpperCase() : ticker;
+    const baseMatch = ticker.split(/[\s$@]/)[0].toUpperCase();
 
     let data = null;
     const now = Date.now();
-    const cachedEntry = priceCache[baseTicker];
+    const cachedEntry = priceCache[ticker];
 
     if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL_MS)) {
       // Use server-side cache
       data = cachedEntry.data;
-    } else if (fetchedBase[baseTicker]) {
-      // Reuse already-fetched data for this underlying in current request batch
-      data = fetchedBase[baseTicker];
+    } else if (fetchedTickers[ticker]) {
+      // Reuse already-fetched data in current request batch
+      data = fetchedTickers[ticker];
     } else {
-      data = await fetchYahooPrice(baseTicker);
-      fetchedBase[baseTicker] = data; // cache for current request batch (null means failed)
+      if (isOption) {
+        const expiryDate = expiryMap[ticker];
+
+        data = await fetchYahooOptionPrice(ticker, expiryDate);
+
+        // If option fetching failed, fallback to underlying price
+        if (!data) {
+          console.warn(`[prices/fetch] Option fetch failed for ${ticker}. Falling back to underlying price for ${baseMatch}.`);
+          const underlyingCached = priceCache[baseMatch];
+          if (underlyingCached && (now - underlyingCached.timestamp < CACHE_TTL_MS)) {
+            data = underlyingCached.data;
+          } else {
+            data = await fetchYahooPrice(baseMatch);
+            if (data) {
+              priceCache[baseMatch] = { data, timestamp: now };
+            }
+          }
+        }
+      } else {
+        data = await fetchYahooPrice(ticker);
+      }
+
+      fetchedTickers[ticker] = data; // cache for current request batch (null means failed)
       if (data) {
-        priceCache[baseTicker] = {
+        priceCache[ticker] = {
           data: data,
           timestamp: now
         };
@@ -308,10 +423,10 @@ app.get('/api/prices/fetch', async (req, res) => {
     }
 
     if (data) {
-      prices[baseTicker] = data.price;
+      prices[ticker] = data.price;
       results[ticker] = {
         ticker,
-        baseTicker,
+        baseTicker: baseMatch,
         price: data.price,
         change24h: data.change24h,
         name: data.name,
@@ -319,14 +434,14 @@ app.get('/api/prices/fetch', async (req, res) => {
       };
     } else {
       // Fallback to cached price in prices.json
-      const cached = prices[baseTicker] !== undefined ? prices[baseTicker] : prices[ticker];
+      const cached = prices[ticker] !== undefined ? prices[ticker] : prices[baseMatch];
       if (cached !== undefined) {
         results[ticker] = {
           ticker,
-          baseTicker,
+          baseTicker: baseMatch,
           price: cached,
           change24h: 0,
-          name: baseTicker,
+          name: ticker,
           isOption,
           fromCache: true
         };
@@ -337,7 +452,7 @@ app.get('/api/prices/fetch', async (req, res) => {
   }
 
   // Persist updated prices
-  savePrices(prices);
+  savePrices(req, prices);
 
   res.status(200).json({ results, errors, updatedAt: new Date().toISOString() });
 });
@@ -346,8 +461,9 @@ app.get('/api/prices/fetch', async (req, res) => {
 // GET /api/trades - Read and parse all trades
 app.get('/api/trades', (req, res) => {
   try {
-    ensureDbExists();
-    const fileContent = fs.readFileSync(DB_PATH, 'utf8');
+    ensureDbExists(req);
+    const tradesPath = getDatabasePath(req, 'trades.ndjson');
+    const fileContent = fs.readFileSync(tradesPath, 'utf8');
 
     // Process line-by-line, filtering out empty lines
     const trades = fileContent
@@ -382,7 +498,7 @@ function isNumeric(val) {
 // POST /api/trades - Add a new trade with validation
 app.post('/api/trades', (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
 
     // Check if this is a price sync request
     if (req.body.action && req.body.action.trim().toUpperCase() === 'UPDATEPRICE') {
@@ -391,9 +507,9 @@ app.post('/api/trades', (req, res) => {
       if (!symbol || isNaN(currentPrice)) {
         return res.status(400).json({ error: "Invalid parameters for updatePrice action" });
       }
-      const prices = loadPrices();
+      const prices = loadPrices(req);
       prices[symbol] = currentPrice;
-      savePrices(prices);
+      savePrices(req, prices);
       return res.status(200).json({ success: true, ticker: symbol, price: currentPrice });
     }
 
@@ -454,7 +570,8 @@ app.post('/api/trades', (req, res) => {
     }
 
     // Append to file in NDJSON format
-    fs.appendFileSync(DB_PATH, JSON.stringify(tradeRecord) + '\n', 'utf8');
+    const tradesPath = getDatabasePath(req, 'trades.ndjson');
+    fs.appendFileSync(tradesPath, JSON.stringify(tradeRecord) + '\n', 'utf8');
 
     // Server Logs
     console.log(`Successfully saved sanitized trade record: Ticker=${tradeRecord.ticker}, Action=${tradeRecord.action}, Shares=${tradeRecord.shares}, Price=$${tradeRecord.price.toFixed(2)}, Date=${tradeRecord.date}`);
@@ -469,12 +586,13 @@ app.post('/api/trades', (req, res) => {
 // DELETE /api/trades/ticker/:ticker - Remove all trade records for a given ticker
 app.delete('/api/trades/ticker/:ticker', (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
     const tickerToDelete = req.params.ticker.trim().toUpperCase();
     if (!tickerToDelete) {
       return res.status(400).json({ error: "Ticker is required" });
     }
-    const fileContent = fs.readFileSync(DB_PATH, 'utf8');
+    const tradesPath = getDatabasePath(req, 'trades.ndjson');
+    const fileContent = fs.readFileSync(tradesPath, 'utf8');
     const lines = fileContent.split('\n');
     const remainingLines = [];
     let deletedCount = 0;
@@ -493,7 +611,7 @@ app.delete('/api/trades/ticker/:ticker', (req, res) => {
       }
     }
 
-    fs.writeFileSync(DB_PATH, remainingLines.join('\n') + (remainingLines.length ? '\n' : ''), 'utf8');
+    fs.writeFileSync(tradesPath, remainingLines.join('\n') + (remainingLines.length ? '\n' : ''), 'utf8');
     console.log(`Deleted ${deletedCount} trades for ticker ${tickerToDelete}`);
     res.status(200).json({ success: true, deletedCount });
   } catch (error) {
@@ -505,7 +623,7 @@ app.delete('/api/trades/ticker/:ticker', (req, res) => {
 // PUT /api/trades/ticker/:ticker - Overwrite trade records for a given ticker
 app.put('/api/trades/ticker/:ticker', (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
     const targetTicker = req.params.ticker.trim().toUpperCase();
     if (!targetTicker) {
       return res.status(400).json({ error: "Ticker is required" });
@@ -526,7 +644,8 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
     const finalAssetType = assetType ? assetType.trim().toLowerCase() : 'stocks';
 
     // 1. Read existing file and filter out trades for this ticker
-    const fileContent = fs.readFileSync(DB_PATH, 'utf8');
+    const tradesPath = getDatabasePath(req, 'trades.ndjson');
+    const fileContent = fs.readFileSync(tradesPath, 'utf8');
     const lines = fileContent.split('\n');
     const remainingLines = [];
 
@@ -542,7 +661,7 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
       }
     }
 
-    // 2. Construct the single new BUY trade record representing the updated holdings
+    // 2. Construct the new BUY trade record representing the updated holdings
     const newTradeRecord = {
       ticker: targetTicker,
       shares: parsedShares,
@@ -560,7 +679,7 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
 
     // 3. Append the new record to the filtered lines and write back
     remainingLines.push(JSON.stringify(newTradeRecord));
-    fs.writeFileSync(DB_PATH, remainingLines.join('\n') + '\n', 'utf8');
+    fs.writeFileSync(tradesPath, remainingLines.join('\n') + '\n', 'utf8');
 
     console.log(`Successfully updated trade record for ${targetTicker} via PUT`);
     res.status(200).json({ success: true, trade: newTradeRecord });
@@ -574,8 +693,9 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
 // GET /api/notes - Read and parse all journal notes
 app.get('/api/notes', (req, res) => {
   try {
-    ensureDbExists();
-    const fileContent = fs.readFileSync(NOTES_DB_PATH, 'utf8');
+    ensureDbExists(req);
+    const notesPath = getDatabasePath(req, 'journal_notes.ndjson');
+    const fileContent = fs.readFileSync(notesPath, 'utf8');
 
     const notes = fileContent
       .split('\n')
@@ -601,7 +721,7 @@ app.get('/api/notes', (req, res) => {
 // POST /api/notes - Add a new journal note with validation
 app.post('/api/notes', (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
 
     const { ticker, author, date, time, text } = req.body;
 
@@ -631,7 +751,8 @@ app.post('/api/notes', (req, res) => {
     };
 
     // Append to file in NDJSON format
-    fs.appendFileSync(NOTES_DB_PATH, JSON.stringify(noteRecord) + '\n', 'utf8');
+    const notesPath = getDatabasePath(req, 'journal_notes.ndjson');
+    fs.appendFileSync(notesPath, JSON.stringify(noteRecord) + '\n', 'utf8');
 
     res.status(201).json(noteRecord);
   } catch (error) {
@@ -643,7 +764,7 @@ app.post('/api/notes', (req, res) => {
 // POST /api/cash - Add a cash transaction to the cash ledger
 app.post('/api/cash', (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
 
     const { action, amount, date, time, author, reason } = req.body;
 
@@ -690,7 +811,8 @@ app.post('/api/cash', (req, res) => {
     };
 
     // Append to file in NDJSON format
-    fs.appendFileSync(CASH_LEDGER_PATH, JSON.stringify(cashRecord) + '\n', 'utf8');
+    const cashLedgerPath = getDatabasePath(req, 'cash_ledger.ndjson');
+    fs.appendFileSync(cashLedgerPath, JSON.stringify(cashRecord) + '\n', 'utf8');
 
     // Server Logs
     console.log(`Successfully saved sanitized cash record: Action=${cashRecord.action}, Amount=$${cashRecord.price.toFixed(2)}, Date=${cashRecord.date}, Author=${cashRecord.author}`);
@@ -705,10 +827,11 @@ app.post('/api/cash', (req, res) => {
 // GET /api/cash - Read all cash transactions
 app.get('/api/cash', (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
     const cash = [];
-    if (fs.existsSync(CASH_LEDGER_PATH)) {
-      const content = fs.readFileSync(CASH_LEDGER_PATH, 'utf8');
+    const cashLedgerPath = getDatabasePath(req, 'cash_ledger.ndjson');
+    if (fs.existsSync(cashLedgerPath)) {
+      const content = fs.readFileSync(cashLedgerPath, 'utf8');
       content.split('\n').forEach(line => {
         const trimmed = line.trim();
         if (!trimmed) return;
@@ -725,12 +848,13 @@ app.get('/api/cash', (req, res) => {
 });
 
 // Helper to read all trades
-function loadTrades() {
-  ensureDbExists();
+function loadTrades(req) {
+  ensureDbExists(req);
   const trades = [];
   try {
-    if (fs.existsSync(DB_PATH)) {
-      const content = fs.readFileSync(DB_PATH, 'utf8');
+    const tradesPath = getDatabasePath(req, 'trades.ndjson');
+    if (fs.existsSync(tradesPath)) {
+      const content = fs.readFileSync(tradesPath, 'utf8');
       content.split('\n').forEach(line => {
         const trimmed = line.trim();
         if (!trimmed) return;
@@ -746,12 +870,13 @@ function loadTrades() {
 }
 
 // Helper to read all cash ledger entries
-function loadCashLedger() {
-  ensureDbExists();
+function loadCashLedger(req) {
+  ensureDbExists(req);
   const cash = [];
   try {
-    if (fs.existsSync(CASH_LEDGER_PATH)) {
-      const content = fs.readFileSync(CASH_LEDGER_PATH, 'utf8');
+    const cashLedgerPath = getDatabasePath(req, 'cash_ledger.ndjson');
+    if (fs.existsSync(cashLedgerPath)) {
+      const content = fs.readFileSync(cashLedgerPath, 'utf8');
       content.split('\n').forEach(line => {
         const trimmed = line.trim();
         if (!trimmed) return;
@@ -769,9 +894,9 @@ function loadCashLedger() {
 // GET /api/portfolio-summary - Calculate account values
 app.get('/api/portfolio-summary', (req, res) => {
   try {
-    const trades = loadTrades();
-    const cashLedger = loadCashLedger();
-    const prices = loadPrices();
+    const trades = loadTrades(req);
+    const cashLedger = loadCashLedger(req);
+    const prices = loadPrices(req);
 
     // 1. Calculate Running Cash (Buying Power)
     // Starting at $0, adding deposits, subtracting withdrawals, subtracting buy cost, adding sell proceeds.
@@ -857,8 +982,9 @@ app.get('/api/portfolio-summary', (req, res) => {
     let startingCashVal = null;
     let valOverride = null;
     try {
-      if (fs.existsSync(OVERRIDES_PATH)) {
-        const overridesContent = fs.readFileSync(OVERRIDES_PATH, 'utf8');
+      const overridesPath = getDatabasePath(req, 'overrides.json');
+      if (fs.existsSync(overridesPath)) {
+        const overridesContent = fs.readFileSync(overridesPath, 'utf8');
         const overrides = JSON.parse(overridesContent || '{}');
         if (overrides.buyingPowerOverride !== undefined && overrides.buyingPowerOverride !== null) {
           buyingPowerOverrideVal = parseFloat(overrides.buyingPowerOverride);
@@ -946,8 +1072,9 @@ app.get('/api/portfolio-summary', (req, res) => {
 // GET /api/overrides - Read portfolio overrides config
 app.get('/api/overrides', (req, res) => {
   try {
-    ensureDbExists();
-    const data = fs.readFileSync(OVERRIDES_PATH, 'utf8');
+    ensureDbExists(req);
+    const overridesPath = getDatabasePath(req, 'overrides.json');
+    const data = fs.readFileSync(overridesPath, 'utf8');
     res.status(200).json(JSON.parse(data || '{}'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to read overrides.' });
@@ -957,7 +1084,7 @@ app.get('/api/overrides', (req, res) => {
 // POST /api/overrides - Save portfolio overrides config
 app.post('/api/overrides', (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
     const { buyingPowerOverride, buyingPowerAdjust, portfolioValueOverride } = req.body;
 
     let bpVal = null;
@@ -974,7 +1101,8 @@ app.post('/api/overrides', (req, res) => {
       buyingPowerOverride: finalBuyingPowerOverride,
       portfolioValueOverride: finalPortfolioValueOverride
     };
-    fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(overrides, null, 2), 'utf8');
+    const overridesPath = getDatabasePath(req, 'overrides.json');
+    fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2), 'utf8');
     console.log(`[Overrides] Saved overrides: buyingPowerOverride=${overrides.buyingPowerOverride}, portfolioValueOverride=${overrides.portfolioValueOverride}`);
     res.status(200).json(overrides);
   } catch (error) {
@@ -1506,10 +1634,10 @@ function getActivePositions(trades) {
 // GET /api/ai-prompt-builder - Specialized context aggregation
 app.get('/api/ai-prompt-builder', async (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
 
-    const trades = await readNdjsonStream(DB_PATH);
-    const notes = await readNdjsonStream(NOTES_DB_PATH);
+    const trades = await readNdjsonStream(getDatabasePath(req, 'trades.ndjson'));
+    const notes = await readNdjsonStream(getDatabasePath(req, 'journal_notes.ndjson'));
 
     const activePositions = getActivePositions(trades);
     const totalRealizedPnL = calculateTotalRealizedPnL(trades);

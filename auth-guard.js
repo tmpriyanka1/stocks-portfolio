@@ -60,4 +60,51 @@
       document.body.classList.add('disable-glass-blur');
     }
   });
+
+  // Override global fetch to support sandbox routing and header injection
+  var originalFetch = window.fetch;
+  window.fetch = function (input, init) {
+    var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+    
+    // Check if the URL is hitting the backend
+    var isBackend = url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0 ||
+                    url.indexOf('/api/') === 0 ||
+                    url.indexOf('http://localhost:5001/api/') === 0;
+                    
+    if (isBackend) {
+      // 1. Dynamic Routing: Rewrite to local server if running locally
+      var isLocal = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' || 
+                    !window.location.hostname;
+      if (isLocal) {
+        if (url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0) {
+          url = url.replace('https://vanai-portfolio-backend.onrender.com/api/', 'http://localhost:5001/api/');
+        }
+      }
+      
+      // 2. Inject x-user-role header
+      init = init || {};
+      init.headers = init.headers || {};
+      
+      // Get the role from the guard session helper
+      var currentRole = window.getSessionRole ? window.getSessionRole() : 'production';
+      
+      // Convert headers if it's a Headers object
+      if (typeof init.headers.set === 'function') {
+        init.headers.set('x-user-role', currentRole);
+      } else if (Array.isArray(init.headers)) {
+        init.headers.push(['x-user-role', currentRole]);
+      } else {
+        init.headers['x-user-role'] = currentRole;
+      }
+      
+      if (typeof input === 'string') {
+        input = url;
+      } else if (input && input.url) {
+        input = new Request(url, input);
+      }
+    }
+    
+    return originalFetch(input, init);
+  };
 })();

@@ -724,12 +724,15 @@ function showConfirmModal(options, onConfirm) {
   cancelBtn.addEventListener('click', handleCancel);
 }
 
+const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || !window.location.hostname;
+const BASE_BACKEND_URL = isLocalHost ? 'http://localhost:5001/api/' : 'https://vanai-portfolio-backend.onrender.com/api/';
+
 const CLOUD_SPREADSHEET_CONFIG = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/trades"
+  endpointUrl: BASE_BACKEND_URL + "trades"
 };
 
 const CLOUD_ENDPOINT = {
-  endpointUrl: "https://vanai-portfolio-backend.onrender.com/api/"
+  endpointUrl: BASE_BACKEND_URL
 };
 
 function saveTransactionLocally(tx) {

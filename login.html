@@ -505,7 +505,10 @@
   <script>
     (function () {
       var SESSION_KEY = 'portfolio_session';
-      var API_LOGIN_URL = 'https://vanai-portfolio-backend.onrender.com/api/login';
+      var BASE_API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || !window.location.hostname)
+        ? 'http://localhost:5001/api/'
+        : 'https://vanai-portfolio-backend.onrender.com/api/';
+      var API_LOGIN_URL = BASE_API_URL + 'login';
 
       // If already authenticated, go straight to the dashboard
       try {
@@ -587,7 +590,7 @@
           })
           .catch(function (err) {
             btn.classList.remove('loading');
-            showError('Cannot connect to the server. Make sure it is running on https://vanai-portfolio-backend.onrender.com.');
+            showError('Cannot connect to the server. Make sure it is running on ' + BASE_API_URL.replace('/api/', '') + '.');
           });
       });
 
@@ -662,7 +665,7 @@
 
         generateOtpBtn.classList.add('loading');
 
-        fetch('https://vanai-portfolio-backend.onrender.com/api/forgot-password/otp', {
+        fetch(BASE_API_URL + 'forgot-password/otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ emailOrPhone: val })
@@ -754,7 +757,7 @@
 
         verifyOtpBtn.classList.add('loading');
 
-        fetch('https://vanai-portfolio-backend.onrender.com/api/forgot-password/login', {
+        fetch(BASE_API_URL + 'forgot-password/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ emailOrPhone: val, otp: otpVal })

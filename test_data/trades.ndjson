@@ -1,0 +1,2 @@
+{"ticker":"SPY@735","shares":3,"price":17.95,"action":"BUY","assetType":"options","date":"2026-06-25T09:30:28","comment":"Expected spy will drop below 735","stopLoss":0,"Expiry Date":"2026-08-31"}
+{"ticker":"SPY @734 PUT","shares":10,"price":14.1,"action":"BUY","assetType":"options","date":"2026-06-26T12:03:38","comment":"","stopLoss":0,"Expiry Date":"2026-07-31"}

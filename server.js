@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
+
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -200,6 +202,146 @@ function savePrices(prices) {
     console.error('Failed to write prices.json:', err);
   }
 }
+
+/**
+ * Fetches a live price from Yahoo Finance using a curl subprocess.
+ * This avoids Node fetch() TLS fingerprinting issues that cause 429s.
+ * Returns { price, change24h, name } or null on failure.
+ */
+function fetchYahooPrice(ticker) {
+  return new Promise((resolve) => {
+    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
+    const url = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+    const args = [
+      '-s', '-L', '--max-time', '12',
+      '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      url
+    ];
+    execFile('curl', args, { timeout: 15000 }, (err, stdout, stderr) => {
+      if (err) {
+        console.warn(`[fetchYahooPrice] curl error for ${ticker}:`, err.message);
+        return resolve(null);
+      }
+      try {
+        const wrapper = JSON.parse(stdout);
+        if (!wrapper || !wrapper.contents) {
+          console.warn(`[fetchYahooPrice] No contents in proxy wrapper for ${ticker}`);
+          return resolve(null);
+        }
+        const json = JSON.parse(wrapper.contents);
+        const result = json && json.chart && json.chart.result && json.chart.result[0];
+        if (result && result.meta && result.meta.regularMarketPrice !== undefined) {
+          const price = result.meta.regularMarketPrice;
+          const prevClose = result.meta.chartPreviousClose || result.meta.previousClose || price;
+          const change24h = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+          const name = result.meta.longName || result.meta.shortName || ticker;
+          resolve({ price, change24h: parseFloat(change24h.toFixed(4)), name });
+        } else {
+          console.warn(`[fetchYahooPrice] No price data in proxy response contents for ${ticker}`);
+          resolve(null);
+        }
+      } catch (parseErr) {
+        console.warn(`[fetchYahooPrice] JSON parse/proxy wrapper error for ${ticker}:`, parseErr.message);
+        resolve(null);
+      }
+    });
+  });
+}
+
+// Server-side cache for fetched prices to prevent rate limiting (5 min TTL)
+const priceCache = {};
+const CACHE_TTL_MS = 300000; // 5 minutes
+
+// GET /api/prices - Return the cached prices.json
+app.get('/api/prices', (req, res) => {
+  try {
+    const prices = loadPrices();
+    res.status(200).json(prices);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read prices.' });
+  }
+});
+
+// GET /api/prices/fetch?tickers=AAPL,TSLA,SPY
+// Fetches live prices from Yahoo Finance server-side (no CORS proxy needed),
+// persists to prices.json, and returns the result.
+app.get('/api/prices/fetch', async (req, res) => {
+  const tickerParam = (req.query.tickers || '').trim();
+  if (!tickerParam) {
+    return res.status(400).json({ error: 'Query param "tickers" is required (comma-separated).' });
+  }
+
+  const tickers = tickerParam.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
+  const prices = loadPrices();
+  const results = {};
+  const errors = {};
+
+  // Track which base tickers have already been fetched to avoid duplicate requests
+  const fetchedBase = {};
+
+  // Process sequentially with a short delay to avoid Yahoo Finance rate limiting
+  for (const ticker of tickers) {
+    const isOption = /[@$]|\b(call|put)\b/i.test(ticker);
+    const baseTicker = isOption ? ticker.split(/[\s$@]/)[0].toUpperCase() : ticker;
+
+    let data = null;
+    const now = Date.now();
+    const cachedEntry = priceCache[baseTicker];
+
+    if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL_MS)) {
+      // Use server-side cache
+      data = cachedEntry.data;
+    } else if (fetchedBase[baseTicker]) {
+      // Reuse already-fetched data for this underlying in current request batch
+      data = fetchedBase[baseTicker];
+    } else {
+      data = await fetchYahooPrice(baseTicker);
+      fetchedBase[baseTicker] = data; // cache for current request batch (null means failed)
+      if (data) {
+        priceCache[baseTicker] = {
+          data: data,
+          timestamp: now
+        };
+      }
+      // Small delay between requests to respect rate limits
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    if (data) {
+      prices[baseTicker] = data.price;
+      results[ticker] = {
+        ticker,
+        baseTicker,
+        price: data.price,
+        change24h: data.change24h,
+        name: data.name,
+        isOption
+      };
+    } else {
+      // Fallback to cached price in prices.json
+      const cached = prices[baseTicker] !== undefined ? prices[baseTicker] : prices[ticker];
+      if (cached !== undefined) {
+        results[ticker] = {
+          ticker,
+          baseTicker,
+          price: cached,
+          change24h: 0,
+          name: baseTicker,
+          isOption,
+          fromCache: true
+        };
+      } else {
+        errors[ticker] = 'Fetch failed and no cached price available';
+      }
+    }
+  }
+
+  // Persist updated prices
+  savePrices(prices);
+
+  res.status(200).json({ results, errors, updatedAt: new Date().toISOString() });
+});
+
 
 // GET /api/trades - Read and parse all trades
 app.get('/api/trades', (req, res) => {

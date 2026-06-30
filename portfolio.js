@@ -1618,142 +1618,89 @@ async function updateLivePrices() {
     marketPrices = {};
   }
 
-  let updatedAny = false;
   const now = Date.now();
   const shouldSyncCloud = (now - lastCloudSyncTime) >= CLOUD_SYNC_INTERVAL || lastCloudSyncTime === 0;
+
+  // Build a deduplicated list of tickers to fetch
+  const tickerSet = new Set();
+  for (const asset of portfolioAssets) {
+    if (asset.ticker) tickerSet.add(asset.ticker.toUpperCase());
+  }
+  const tickersToFetch = [...tickerSet];
+  if (tickersToFetch.length === 0) return;
+
+  // ── Fetch all prices in one server call (Yahoo Finance, server-side, no CORS) ──
+  let fetchedResults = {};
+  try {
+    const res = await fetch(
+      `http://localhost:5001/api/prices/fetch?tickers=${encodeURIComponent(tickersToFetch.join(','))}`,
+      { signal: AbortSignal.timeout(12000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      fetchedResults = data.results || {};
+      if (Object.keys(data.errors || {}).length > 0) {
+        console.warn('[updateLivePrices] Some tickers failed:', data.errors);
+      }
+    } else {
+      console.warn('[updateLivePrices] Server price fetch returned', res.status);
+    }
+  } catch (err) {
+    console.warn('[updateLivePrices] Server unreachable, using cached prices:', err.message);
+  }
+
+  let updatedAny = false;
 
   for (const asset of portfolioAssets) {
     const ticker = asset.ticker;
     if (!ticker) continue;
 
-    const isOption = asset.type === 'options' || ticker.includes('@') || ticker.includes('$') || ticker.includes('Call') || ticker.includes('Put');
+    const upperTicker = ticker.toUpperCase();
+    const fetchEntry = fetchedResults[upperTicker];
 
-    // For options, strip to base symbol (e.g. "NVDA $490 Call" or "SPY@735" → "NVDA" / "SPY")
-    // so we can fetch the real live underlying price from Yahoo Finance.
-    const queryTicker = isOption ? ticker.split(/[\s$@]/)[0].toUpperCase() : ticker.toUpperCase();
+    let price = asset.currentPrice || 0;
+    let change24h = asset.change24h || 0;
+    let name = asset.name || ticker;
 
-    // Fetch name from internet if not cached
-    if (!marketPrices[queryTicker] || !marketPrices[queryTicker].name || marketPrices[queryTicker].name === queryTicker) {
-      const fetchedName = await fetchTickerNameFromInternet(queryTicker);
-      if (fetchedName) {
-        if (!marketPrices[queryTicker]) marketPrices[queryTicker] = {};
-        marketPrices[queryTicker].name = fetchedName;
-        updatedAny = true;
+    if (fetchEntry) {
+      price = fetchEntry.price;
+      change24h = fetchEntry.change24h;
+      if (fetchEntry.name && fetchEntry.name !== fetchEntry.baseTicker) {
+        name = fetchEntry.name;
+      }
+    } else {
+      // Fallback: use what's already cached in marketPrices
+      const cached = marketPrices[upperTicker] || marketPrices[asset.ticker];
+      if (cached && cached.currentPrice) {
+        price = cached.currentPrice;
+        change24h = cached.change24h || 0;
       }
     }
 
-    let price = asset.currentPrice;
-    let change24h = asset.change24h;
-    let success = false;
-
-    // Try fetching option premium if option Yahoo symbol is resolved
-    let optionYahooSymbol = null;
-    if (isOption) {
-      optionYahooSymbol = getYahooOptionSymbol(ticker, asset.expiryDate, asset.comment, asset.type);
-      if (optionYahooSymbol) {
-        try {
-          const optionTargetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${optionYahooSymbol}`;
-          const optionProxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(optionTargetUrl)}`;
-          const optionRes = await fetch(optionProxyUrl);
-          if (optionRes.ok) {
-            const wrapper = await optionRes.json();
-            if (wrapper && wrapper.contents) {
-              const json = JSON.parse(wrapper.contents);
-              if (json && json.chart && json.chart.result && json.chart.result[0]) {
-                const meta = json.chart.result[0].meta;
-                if (meta && meta.regularMarketPrice !== undefined) {
-                  price = meta.regularMarketPrice;
-                  const prevClose = meta.chartPreviousClose || meta.previousClose || price;
-                  change24h = ((price - prevClose) / prevClose) * 100;
-                  success = true;
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.warn(`Failed to fetch live premium for ${optionYahooSymbol}:`, e);
-        }
-      }
-    }
-
-    try {
-      // Fetch real market quote for both stocks AND options (using underlying for options)
-      const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${queryTicker}`;
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-      const res = await fetch(proxyUrl);
-      if (res.ok) {
-        const wrapper = await res.json();
-        if (wrapper && wrapper.contents) {
-          const json = JSON.parse(wrapper.contents);
-          if (json && json.chart && json.chart.result && json.chart.result[0]) {
-            const meta = json.chart.result[0].meta;
-            if (meta && meta.regularMarketPrice !== undefined) {
-              const fetchedPrice = meta.regularMarketPrice;
-              const prevClose = meta.chartPreviousClose || meta.previousClose || fetchedPrice;
-              const fetchedChange = ((fetchedPrice - prevClose) / prevClose) * 100;
-
-              if (isOption) {
-                // Save underlying stock price separately so underlying price pills are accurate
-                if (!marketPrices[queryTicker]) {
-                  marketPrices[queryTicker] = {
-                    name: (getDefaultAsset(queryTicker) ? getDefaultAsset(queryTicker).name : queryTicker),
-                    icon: queryTicker.slice(0, 2).toUpperCase()
-                  };
-                }
-                marketPrices[queryTicker].currentPrice = fetchedPrice;
-                marketPrices[queryTicker].change24h = fetchedChange;
-
-                // Only if option premium fetch did NOT succeed do we leave the premium as-is.
-                if (!success) {
-                  success = true;
-                }
-              } else {
-                price = fetchedPrice;
-                change24h = fetchedChange;
-                success = true;
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn(`Yahoo Finance API fetch failed for ${queryTicker} (${ticker}), using local fallback.`, e);
-    }
-
-    // Fallback: keep last known price (no random drift)
-    if (!success) {
-      success = true;
-    }
-
-    // Save back to marketPrices cache
+    // Update marketPrices cache entry
     if (marketPrices[ticker]) {
       marketPrices[ticker].currentPrice = price;
       marketPrices[ticker].change24h = change24h;
+      if (name && name !== ticker) marketPrices[ticker].name = name;
     } else {
       marketPrices[ticker] = {
-        name: asset.name,
+        name,
         currentPrice: price,
-        change24h: change24h,
+        change24h,
         icon: asset.icon || ticker.slice(0, 2).toUpperCase(),
         stopLoss: asset.stopLoss
       };
     }
 
-    // Stop Loss Alert Notification Evaluation
-    if (asset.stopLoss && asset.stopLoss > 0 && price <= asset.stopLoss) {
+    // Stop Loss Alert
+    if (asset.stopLoss && asset.stopLoss > 0 && price > 0 && price <= asset.stopLoss) {
       const alertKey = `portfolio_sl_alert_fired_${ticker}_${asset.stopLoss}`;
       if (!sessionStorage.getItem(alertKey)) {
         sessionStorage.setItem(alertKey, 'true');
-
         const title = `⚠️ Stop Limit Hit for ${ticker}!`;
-        const body = `${asset.name || ticker} live price is $${price.toFixed(2)}, which has met your Stop Limit of $${asset.stopLoss.toFixed(2)}.`;
-
+        const body = `${name || ticker} live price is $${price.toFixed(2)}, which has met your Stop Limit of $${asset.stopLoss.toFixed(2)}.`;
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          try {
-            new Notification(title, { body });
-          } catch (e) {
-            console.warn('Failed to fire browser Notification:', e);
-          }
+          try { new Notification(title, { body }); } catch (e) { console.warn('Notification failed:', e); }
         }
         showToast(`🚨 ${title} ${body}`, true);
       }
@@ -1761,16 +1708,14 @@ async function updateLivePrices() {
 
     updatedAny = true;
 
-    // Sync the updated live price back to the Google Sheet (throttled)
-    if (shouldSyncCloud) {
+    // Sync to cloud (throttled)
+    if (shouldSyncCloud && price > 0) {
       syncPriceToCloud(ticker, price);
     }
   }
 
   if (updatedAny) {
     localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
-
-    // Refresh the local assets array and re-render dashboard components
     refreshPortfolioAssets();
     updateBalanceMetrics();
     renderAssetsTable(activeFilterMode);

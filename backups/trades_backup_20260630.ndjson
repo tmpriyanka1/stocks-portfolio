@@ -1,0 +1,11 @@
+{"ticker":"ORCL","shares":49,"price":178.78,"action":"BUY","assetType":"stocks","date":"2026-06-11T11:00:58","comment":"customers buy volume percent increased by 7%","stopLoss":0}
+{"ticker":"INTL","shares":105,"price":117.96,"action":"BUY","assetType":"stocks","date":"2026-06-11T14:00:15","comment":"Intel secured an AI chip contract with apple. Most chip buyers in the world trust intel upcoming technical roadmap.","stopLoss":0}
+{"ticker":"SPY@735","shares":3,"price":17.95,"action":"BUY","assetType":"options","date":"2026-06-25T09:30:28","comment":"Expected spy will drop below 735","stopLoss":0,"Expiry Date":"2026-08-31"}
+{"ticker":"ORCL","shares":1,"price":152.46,"action":"BUY","assetType":"stocks","date":"2026-06-25T21:08:52.721Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
+{"ticker":"ORCL","shares":11,"price":150,"action":"SELL","assetType":"stocks","date":"2026-06-25T21:11:36.688Z","comment":"Ofollowing a recent post earning sell off due to heavy capital expenditure projections","stopLoss":0}
+{"ticker":"INTL","shares":105,"price":30.37,"action":"SELL","assetType":"stocks","date":"2026-06-25T21:22:21.913Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"CASH","shares":1,"price":3000,"action":"DEPOSIT","assetType":"cash","date":"2026-06-25T14:32:23","comment":"","stopLoss":0}
+{"ticker":"SPY @734 PUT","shares":10,"price":14.1,"action":"BUY","assetType":"options","date":"2026-06-26T12:03:38","comment":"","stopLoss":0,"Expiry Date":"2026-07-31"}
+{"ticker":"ORCL","shares":1,"price":147.76,"action":"BUY","assetType":"stocks","date":"2026-06-29T21:08:22.407Z","comment":"Testing","stopLoss":0}
+{"ticker":"NBIS","shares":35,"price":229.41,"action":"BUY","assetType":"stocks","date":"2026-06-29T21:17:21.990Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
+{"ticker":"NBIS","shares":35,"price":251.86,"action":"BUY","assetType":"stocks","date":"2026-06-29T21:20:05.893Z","comment":"These contracts provide immense long term revenue visibility .","stopLoss":0}

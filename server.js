@@ -31,7 +31,7 @@ app.use((req, res, next) => {
         const remote = process.env.GIT_TOKEN 
           ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git` 
           : 'origin';
-        exec(`git add data/ && git commit -m "${message}" && git push ${remote} main`, { cwd: __dirname }, (err, stdout, stderr) => {
+        exec(`git config user.name "Portfolio Bot" && git config user.email "bot@portfolio.com" && git add data/ && git commit -m "${message}" && git push ${remote} main`, { cwd: __dirname }, (err, stdout, stderr) => {
           if (err) {
             console.error("[Auto-Commit] Failed:", err.message);
           } else {

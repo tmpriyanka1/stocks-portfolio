@@ -1,5 +1,4 @@
-const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || !window.location.hostname;
-const BASE_BACKEND_URL = isLocalHost ? 'http://localhost:5001/api/' : 'https://vanai-portfolio-backend.onrender.com/api/';
+const BASE_BACKEND_URL = '/api/';
 
 const CLOUD_SPREADSHEET_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"

@@ -72,13 +72,25 @@
                     url.indexOf('http://localhost:5001/api/') === 0;
                     
     if (isBackend) {
-      // 1. Dynamic Routing: Rewrite to local server if running locally
-      var isLocal = window.location.hostname === 'localhost' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    !window.location.hostname;
-      if (isLocal) {
-        if (url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0) {
-          url = url.replace('https://vanai-portfolio-backend.onrender.com/api/', 'http://localhost:5001/api/');
+      var currentRole = window.getSessionRole ? window.getSessionRole() : 'production';
+      
+      // 1. Dynamic Routing
+      if (currentRole.toLowerCase() !== 'tester') {
+        if (url.indexOf('http://localhost:5001/api/') === 0) {
+          url = url.replace('http://localhost:5001/api/', 'https://vanai-portfolio-backend.onrender.com/api/');
+        } else if (url.indexOf('/api/') === 0) {
+          url = 'https://vanai-portfolio-backend.onrender.com' + url;
+        }
+      } else {
+        var isLocal = window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1' || 
+                      !window.location.hostname;
+        if (isLocal) {
+          if (url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0) {
+            url = url.replace('https://vanai-portfolio-backend.onrender.com/api/', 'http://localhost:5001/api/');
+          } else if (url.indexOf('/api/') === 0) {
+            url = 'http://localhost:5001' + url;
+          }
         }
       }
       

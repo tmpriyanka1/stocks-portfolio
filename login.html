@@ -563,8 +563,13 @@
 
         var btn = document.getElementById('loginBtn');
         btn.classList.add('loading');
+        
+        var targetLoginUrl = API_LOGIN_URL;
+        if (username.toLowerCase() !== 'tester') {
+          targetLoginUrl = 'https://vanai-portfolio-backend.onrender.com/api/login';
+        }
 
-        fetch(API_LOGIN_URL, {
+        fetch(targetLoginUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: username, password: password })

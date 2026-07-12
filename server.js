@@ -210,6 +210,11 @@ function loadPrices(req) {
 }
 
 function savePrices(req, prices) {
+  // Only save prices if running on Render to avoid local git diff noise
+  if (!process.env.GIT_TOKEN && !process.env.RENDER) {
+    return;
+  }
+  
   ensureDbExists(req);
   try {
     const pricesPath = getDatabasePath(req, 'prices.json');

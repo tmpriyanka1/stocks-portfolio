@@ -12,6 +12,38 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
+
+
+// Auto-commit middleware
+const { exec } = require('child_process');
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (['POST', 'PUT', 'DELETE'].includes(req.method) && res.statusCode >= 200 && res.statusCode < 300) {
+      // Do not auto-commit if a tester is modifying test data
+      if (req.headers['x-user-role'] === 'tester') {
+        return;
+      }
+      
+      const excludePaths = ['/api/login', '/api/forgot-password/otp', '/api/forgot-password/login'];
+      if (!excludePaths.includes(req.path) && req.path.startsWith('/api/')) {
+        const timestamp = new Date().toISOString();
+        const message = `Data modification ${timestamp}`;
+        const remote = process.env.GIT_TOKEN 
+          ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git` 
+          : 'origin';
+        exec(`git add data/ && git commit -m "${message}" && git push ${remote} main`, { cwd: __dirname }, (err, stdout, stderr) => {
+          if (err) {
+            console.error("[Auto-Commit] Failed:", err.message);
+          } else {
+            console.log("[Auto-Commit] Success:", stdout.trim());
+          }
+        });
+      }
+    }
+  });
+  next();
+});
+
 const USERS_DB_PATH = path.join(__dirname, 'data', 'users.ndjson');
 
 function getDatabasePath(req, fileName) {
@@ -160,52 +192,6 @@ function ensureDbExists(req) {
 // Run the full bootstrap synchronously before any routes are registered
 bootstrapDataLayer();
 
-// Execute lightweight backup logic on startup
-function executeStartupBackups() {
-  try {
-    const DB_PATH = path.join(__dirname, 'data', 'trades.ndjson');
-    const CASH_LEDGER_PATH = path.join(__dirname, 'data', 'cash_ledger.ndjson');
-    const NOTES_DB_PATH = path.join(__dirname, 'data', 'journal_notes.ndjson');
-
-    const backupDir = path.join(__dirname, 'backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const dateStr = `${yyyy}${mm}${dd}`;
-
-    const filesToBackup = [
-      { name: 'trades', path: DB_PATH },
-      { name: 'cash_ledger', path: CASH_LEDGER_PATH },
-      { name: 'journal_notes', path: NOTES_DB_PATH }
-    ];
-
-    filesToBackup.forEach(file => {
-      try {
-        if (fs.existsSync(file.path)) {
-          const stats = fs.statSync(file.path);
-          if (stats.size > 0) {
-            const ext = path.extname(file.path);
-            const backupFileName = `${file.name}_backup_${dateStr}${ext}`;
-            const backupFilePath = path.join(backupDir, backupFileName);
-            fs.copyFileSync(file.path, backupFilePath);
-            console.log(`[Backup] Successfully backed up ${file.name} to ${backupFilePath}`);
-          }
-        }
-      } catch (err) {
-        console.warn(`[Backup Warning] Non-blocking: Failed to back up ${file.name}:`, err.message);
-      }
-    });
-  } catch (err) {
-    console.warn(`[Backup Warning] Non-blocking: Failed to execute backup process:`, err.message);
-  }
-}
-
-executeStartupBackups();
 
 
 

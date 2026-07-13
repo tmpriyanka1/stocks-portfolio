@@ -1773,36 +1773,93 @@ async function updateLivePrices() {
 
   // Build a deduplicated list of tickers to fetch
   const tickerSet = new Set();
+  const osiToOriginalMap = {};
   for (const asset of portfolioAssets) {
     if (asset.ticker) {
-      tickerSet.add(asset.ticker.toUpperCase());
       const isOption = asset.type === 'options' || (/\$\d/.test(asset.ticker) && /\b(call|put)\b/i.test(asset.ticker)) || asset.ticker.includes('@');
+      
       if (isOption) {
-        const baseMatch = asset.ticker.match(/^([A-Za-z]+)/);
-        if (baseMatch) {
-          tickerSet.add(baseMatch[1].toUpperCase());
+        let expiry = asset.expiryDate;
+        if (!expiry) {
+          expiry = getOptionExpiry(asset.ticker, asset.name);
         }
+        const osi = getYahooOptionSymbol(asset.ticker, expiry, asset.comment, asset.type);
+        if (osi && osi.length === 21) {
+          tickerSet.add(osi);
+          osiToOriginalMap[osi] = asset.ticker.toUpperCase();
+        } else {
+          const baseMatch = asset.ticker.match(/^([A-Za-z]+)/);
+          if (baseMatch) {
+            const base = baseMatch[1].toUpperCase();
+            tickerSet.add(base);
+            osiToOriginalMap[base] = asset.ticker.toUpperCase();
+          }
+        }
+      } else {
+        const t = asset.ticker.toUpperCase();
+        tickerSet.add(t);
+        osiToOriginalMap[t] = t;
       }
     }
   }
   const tickersToFetch = [...tickerSet];
   if (tickersToFetch.length === 0) return;
 
-  // ── Fetch all prices in one server call (Yahoo Finance, server-side, no CORS) ──
+  // ── Fetch all prices in one server call (Secure Proxy to Unusual Whales) ──
   let fetchedResults = {};
   try {
     const res = await fetch(
-      `http://localhost:5001/api/prices/fetch?tickers=${encodeURIComponent(tickersToFetch.join(','))}`,
+      `/api/market-prices?tickers=${encodeURIComponent(tickersToFetch.join(','))}`,
       { signal: AbortSignal.timeout(12000) }
     );
     if (res.ok) {
-      const data = await res.json();
-      fetchedResults = data.results || {};
-      if (Object.keys(data.errors || {}).length > 0) {
-        console.warn('[updateLivePrices] Some tickers failed:', data.errors);
+      const uwPayload = await res.json();
+      
+      // Flexibly parse the JSON payload from Unusual Whales (array, {data:[]}, or ticker map)
+      let items = [];
+      if (Array.isArray(uwPayload)) {
+        items = uwPayload;
+      } else if (uwPayload.data && Array.isArray(uwPayload.data)) {
+        items = uwPayload.data;
+      } else if (uwPayload.results && Array.isArray(uwPayload.results)) {
+        items = uwPayload.results;
+      } else if (typeof uwPayload === 'object') {
+        // Fallback for ticker-mapped objects { "AAPL": { price: 150 } }
+        items = Object.keys(uwPayload).map(k => ({ symbol: k, ...uwPayload[k] }));
+      }
+
+      for (const item of items) {
+        let t = (item.ticker || item.symbol || '').toUpperCase();
+        if (!t) continue;
+        
+        // Map the backend returned OSI/symbol back to the original UI ticker (e.g. "SPY @735 CALL")
+        if (osiToOriginalMap[t]) {
+           t = osiToOriginalMap[t];
+        }
+
+        // Extract live market price
+        const livePrice = parseFloat(item.price || item.last_price || item.last || item.current_price || item.mid || ((parseFloat(item.bid || 0) + parseFloat(item.ask || 0))/2)) || 0;
+        
+        // Extract previous close for variance formula
+        const prevClose = parseFloat(item.previous_close || item.prev_close || item.close || item.previousClose) || livePrice;
+        
+        let change24h = 0;
+        if (item.change_percent !== undefined) {
+           change24h = parseFloat(item.change_percent);
+        } else if (item.change !== undefined && prevClose > 0) {
+           change24h = (parseFloat(item.change) / prevClose) * 100;
+        } else if (livePrice > 0 && prevClose > 0) {
+           change24h = ((livePrice - prevClose) / prevClose) * 100;
+        }
+
+        fetchedResults[t] = {
+           price: livePrice,
+           change24h: change24h || 0,
+           name: item.name || t
+        };
       }
     } else {
-      console.warn('[updateLivePrices] Server price fetch returned', res.status);
+      console.warn('[updateLivePrices] Secure Proxy fetch returned', res.status);
     }
   } catch (err) {
     console.warn('[updateLivePrices] Server unreachable, using cached prices:', err.message);

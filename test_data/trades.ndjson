@@ -5,3 +5,4 @@
 {"ticker":"AVGO","shares":1,"price":31,"action":"BUY","assetType":"stocks","date":"2026-07-10T11:13:12","comment":"","stopLoss":0}
 {"ticker":"AVGO@400 CALL","shares":1,"price":31,"action":"BUY","assetType":"options","date":"2026-07-10T09:15:05","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"AVGO@400 CALL","shares":1,"price":32,"action":"BUY","assetType":"options","date":"2026-07-13T05:04:44.867Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"TWLO","shares":28,"price":215.36,"action":"BUY","assetType":"stocks","date":"2026-07-07T09:13:46","comment":"","stopLoss":0}

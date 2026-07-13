@@ -388,6 +388,7 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
 
     let runningShares = 0;
     let realizedPLInRange = 0;
+    let realizedPLAllTime = 0;
     let buyQtyInRange = 0;
     let buyValInRange = 0;
     let sellQtyInRange = 0;
@@ -395,12 +396,11 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
     let hasSellInRange = false;
     const inRangeTransactions = [];
 
-    // Buy layers queue for FIFO calculations
-    const buyQueue = [];
-
     // Rolling balance as of end date
     let netSharesAsOfEndDate = 0;
+    let runningAvgBuy = 0;
     let avgBuyAsOfEndDate = 0;
+    let avgShortAsOfEndDate = 0;
 
     g.transactions.forEach(tx => {
       const sharesNum = parseFloat(tx.shares) || 0;
@@ -411,58 +411,86 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
       const inRange = txDate >= start && txDate <= end;
 
       if (action === 'BUY') {
-        runningShares += sharesNum;
-        buyQueue.push({ shares: sharesNum, price: priceNum });
+        let realizedPnL = 0;
+        if (runningShares < 0) {
+          // Covering a short
+          const coverShares = Math.min(sharesNum, Math.abs(runningShares));
+          realizedPnL = coverShares * (runningAvgBuy - priceNum); // Inverted logic for shorts
+
+          runningShares += sharesNum;
+          if (runningShares > 0) {
+            runningAvgBuy = priceNum; // Flipped to long
+          } else if (runningShares === 0) {
+            runningAvgBuy = 0;
+          }
+        } else {
+          // Adding to long
+          if (runningShares + sharesNum > 0) {
+            runningAvgBuy = ((runningShares * runningAvgBuy) + (sharesNum * priceNum)) / (runningShares + sharesNum);
+          }
+          runningShares += sharesNum;
+        }
+
+        if (isBeforeOrOnEnd && realizedPnL !== 0) {
+          realizedPLAllTime += realizedPnL;
+        }
 
         if (inRange) {
           buyQtyInRange += sharesNum;
           buyValInRange += sharesNum * priceNum;
+          if (realizedPnL !== 0) {
+            realizedPLInRange += realizedPnL;
+          }
           inRangeTransactions.push(tx);
         }
       } else if (action === 'SELL') {
-        let remainingToSell = sharesNum;
-        let sellPnL = 0;
+        let realizedPnL = 0;
+        if (runningShares > 0) {
+          // Closing a long
+          const sellShares = Math.min(sharesNum, runningShares);
+          realizedPnL = sellShares * (priceNum - runningAvgBuy); // Standard logic for longs
 
-        while (remainingToSell > 0 && buyQueue.length > 0) {
-          const oldestLayer = buyQueue[0];
-          if (oldestLayer.shares <= remainingToSell) {
-            sellPnL += oldestLayer.shares * (priceNum - oldestLayer.price);
-            remainingToSell -= oldestLayer.shares;
-            buyQueue.shift();
-          } else {
-            sellPnL += remainingToSell * (priceNum - oldestLayer.price);
-            oldestLayer.shares -= remainingToSell;
-            remainingToSell = 0;
+          runningShares -= sharesNum;
+          if (runningShares < 0) {
+            runningAvgBuy = priceNum; // Flipped to short
+          } else if (runningShares === 0) {
+            runningAvgBuy = 0;
           }
+        } else {
+          // Adding to short
+          if (Math.abs(runningShares) + sharesNum > 0) {
+            runningAvgBuy = ((Math.abs(runningShares) * runningAvgBuy) + (sharesNum * priceNum)) / (Math.abs(runningShares) + sharesNum);
+          }
+          runningShares -= sharesNum;
         }
 
-        // If there's short selling or no match, assume 0 P&L for excess
-        if (remainingToSell > 0) {
-          remainingToSell = 0;
+        if (isBeforeOrOnEnd && realizedPnL !== 0) {
+          realizedPLAllTime += realizedPnL;
         }
-
-        runningShares = Math.max(0, runningShares - sharesNum);
 
         if (inRange) {
           sellQtyInRange += sharesNum;
           sellValInRange += sharesNum * priceNum;
-          realizedPLInRange += sellPnL;
-          hasSellInRange = true;
+          if (realizedPnL !== 0) {
+            realizedPLInRange += realizedPnL;
+            hasSellInRange = true;
+          }
           inRangeTransactions.push(tx);
         }
       }
 
       if (isBeforeOrOnEnd) {
         netSharesAsOfEndDate = runningShares;
-
-        // Compute average cost of remaining layers in buyQueue
-        let totalRemainingCost = 0;
-        let totalRemainingShares = 0;
-        buyQueue.forEach(layer => {
-          totalRemainingCost += layer.shares * layer.price;
-          totalRemainingShares += layer.shares;
-        });
-        avgBuyAsOfEndDate = totalRemainingShares > 0 ? (totalRemainingCost / totalRemainingShares) : 0;
+        if (runningShares > 0) {
+          avgBuyAsOfEndDate = runningAvgBuy;
+          avgShortAsOfEndDate = 0;
+        } else if (runningShares < 0) {
+          avgShortAsOfEndDate = runningAvgBuy;
+          avgBuyAsOfEndDate = 0;
+        } else {
+          avgBuyAsOfEndDate = 0;
+          avgShortAsOfEndDate = 0;
+        }
       }
     });
 
@@ -481,7 +509,7 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
         allTimeBuyQty += sharesNum;
         allTimeBuyVal += sharesNum * priceNum;
       } else if (action === 'SELL') {
-        runningSharesAllTime = Math.max(0, runningSharesAllTime - sharesNum);
+        runningSharesAllTime -= sharesNum;
         allTimeSellQty += sharesNum;
         allTimeSellVal += sharesNum * priceNum;
       }
@@ -490,7 +518,7 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
     const allTimeSellAvg = allTimeSellQty > 0 ? (allTimeSellVal / allTimeSellQty) : 0;
     const allTimeBuyAvg = allTimeBuyQty > 0 ? (allTimeBuyVal / allTimeBuyQty) : 0;
 
-    if (netSharesAsOfEndDate > 0 || hasSellInRange) {
+    if (netSharesAsOfEndDate !== 0 || hasSellInRange) {
       const avgBuy = buyQtyInRange > 0 ? (buyValInRange / buyQtyInRange) : (avgBuyAsOfEndDate || allTimeBuyAvg);
       const avgSell = sellQtyInRange > 0 ? (sellValInRange / sellQtyInRange) : allTimeSellAvg;
 
@@ -503,11 +531,13 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
         sellAvg: avgSell,
         netShares: netSharesAsOfEndDate,
         realizedPL: realizedPLInRange,
+        realizedPLAllTime: realizedPLAllTime,
         transactions: g.transactions,
         inRangeTransactions: inRangeTransactions,
         hasSellInRange: hasSellInRange,
         currentSharesToday: currentSharesToday,
-        avgBuyAsOfEndDate: avgBuyAsOfEndDate
+        avgBuyAsOfEndDate: avgBuyAsOfEndDate,
+        avgShortAsOfEndDate: avgShortAsOfEndDate
       });
     }
   }
@@ -657,7 +687,7 @@ function createMasterCardHTML(cardData, listType) {
   }
 
   // 3-Tier P&L calculations
-  const realizedPL = cardData.realizedPL * multiplier;
+  const realizedPL = (listType === 'active' && cardData.realizedPLAllTime !== undefined ? cardData.realizedPLAllTime : cardData.realizedPL) * multiplier;
   const unrealizedPL = (cardData.netShares * currentPrice - cardData.netShares * buyAvgVal) * multiplier;
 
   let rightColumnHTML = '';
@@ -808,9 +838,21 @@ function createMasterCardHTML(cardData, listType) {
 
   let pnlDisplayHTML = '';
   if (listType === 'active') {
+    let activeRealizedHTML = '';
+    if (Math.abs(realizedPL) > 0.001) {
+      activeRealizedHTML = `
+        <div style="margin-top: 4px; font-size: 12px; text-align: left;">
+          <span style="color: var(--text-muted); font-size: 11px;">Realized P&L:</span> <strong class="realized-val ${realizedClass}" style="font-size: 13px;">${realizedSign}$${Math.abs(realizedPL).toFixed(2)}</strong>
+        </div>
+      `;
+    }
+
     pnlDisplayHTML = `
-      <div class="pnl-single-display" style="margin-top: 10px; font-size: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main); text-align: left;">
-        <span style="color: var(--text-muted); font-size: 11px;">Unrealized P&L:</span> <strong class="unrealized-val ${unrealizedClass}" style="font-size: 13px;">${unrealizedSign}$${Math.abs(unrealizedPL).toFixed(2)}</strong>
+      <div class="pnl-single-display" style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main); display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 12px; text-align: left;">
+          <span style="color: var(--text-muted); font-size: 11px;">Unrealized P&L:</span> <strong class="unrealized-val ${unrealizedClass}" style="font-size: 13px;">${unrealizedSign}$${Math.abs(unrealizedPL).toFixed(2)}</strong>
+        </div>
+        ${activeRealizedHTML}
       </div>
     `;
   } else {
@@ -924,24 +966,12 @@ function renderLedger(rangeType, startDate, endDate) {
     g.netShares = netSharesAsOfEndDate;
 
     if (badge && badge.type === 'partial') {
-      // Partially closed: split into active (remaining) and completed (sold)
+      // Partially closed: keep only in active, no badge
       const activePortion = {
         ...g,
         badgeOverride: null // No badge under active positions
       };
       activeCards.push(activePortion);
-
-      const completedPortion = {
-        ...g,
-        netShares: 0,
-        badgeOverride: {
-          type: 'partial',
-          label: 'Partially Closed',
-          class: 'badge-partial',
-          icon: '🔵'
-        }
-      };
-      completedCards.push(completedPortion);
     } else if (badge && badge.type === 'sold_later') {
       // Sold later: active at the time, closed later
       const activePortion = {
@@ -1137,15 +1167,29 @@ function initDropdownFilters() {
       if (type === 'monthly') {
         displayText = value.split(' ')[0];
       }
-      const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
-      button.innerHTML = `${capitalizedType}: ${displayText} <span class="chevron">⌵</span>`;
+      
+      const typeAbbreviation = {
+        'daily': 'D',
+        'weekly': 'W',
+        'monthly': 'M',
+        'quarterly': 'Q',
+        'yearly': 'Y'
+      }[type] || type.charAt(0).toUpperCase();
+      
+      button.innerHTML = `${typeAbbreviation}: ${displayText} <span class="chevron">⌵</span>`;
 
       containers.forEach(c => {
         if (c !== container) {
           const otherType = c.getAttribute('data-type') || c.querySelector('.dropdown-toggle')?.getAttribute('data-type');
           const otherButton = c.querySelector('.dropdown-toggle');
-          const capitalizedOtherType = otherType.charAt(0).toUpperCase() + otherType.slice(1);
-          otherButton.innerHTML = `${capitalizedOtherType} <span class="chevron">⌵</span>`;
+          const typeAbbr = {
+            'daily': 'D',
+            'weekly': 'W',
+            'monthly': 'M',
+            'quarterly': 'Q',
+            'yearly': 'Y'
+          }[otherType] || otherType.charAt(0).toUpperCase();
+          otherButton.innerHTML = `${typeAbbr} <span class="chevron">⌵</span>`;
           const otherDropdown = c.querySelector('.glass-dropdown');
           if (otherDropdown) {
             otherDropdown.querySelectorAll('li').forEach(item => {
@@ -1626,7 +1670,9 @@ function calculateSection1Metrics(rangeType, startDate, endDate) {
     closedPL += pos.realizedPL * multiplier;
 
     // Active P&L
-    if (pos.netShares > 0) {
+    if (pos.netShares !== 0) {
+      const isShort = pos.netShares < 0;
+      const activeShares = Math.abs(pos.netShares);
       const marketEntry = getVal(marketPrices, pos.ticker) || {};
       const costBasis = pos.avgBuyAsOfEndDate || pos.buyAvg || 0;
       let currentPrice = parseFloat(marketEntry.currentPrice);
@@ -1634,16 +1680,52 @@ function calculateSection1Metrics(rangeType, startDate, endDate) {
         const defaultAsset = getDefaultAsset(pos.ticker) || {};
         currentPrice = parseFloat(defaultAsset.currentPrice) || costBasis || 0;
       }
-      const unrealizedPL = (pos.netShares * currentPrice - pos.netShares * costBasis) * multiplier;
+      
+      let unrealizedPL = 0;
+      if (rangeType === 'daily') {
+        const change24h = parseFloat(marketEntry.change24h) || 0;
+        const yesterdayClosePrice = currentPrice / (1 + (change24h / 100));
+        
+        const sharesBoughtToday = Math.min(pos.buyQty || 0, activeShares);
+        const sharesFromYesterday = activeShares - sharesBoughtToday;
+        
+        const todayPurchasePrice = pos.buyAvg || costBasis;
+
+        let pnlTodayShares = 0;
+        let pnlYesterdayShares = 0;
+        
+        if (isShort) {
+          pnlTodayShares = sharesBoughtToday * (todayPurchasePrice - currentPrice);
+          pnlYesterdayShares = sharesFromYesterday * (yesterdayClosePrice - currentPrice);
+        } else {
+          pnlTodayShares = sharesBoughtToday * (currentPrice - todayPurchasePrice);
+          pnlYesterdayShares = sharesFromYesterday * (currentPrice - yesterdayClosePrice);
+        }
+        
+        unrealizedPL = (pnlTodayShares + pnlYesterdayShares) * multiplier;
+      } else {
+        // Scenario 2: For larger filters, use Active Shares * (Live Price - Average Buy Price)
+        if (isShort) {
+          unrealizedPL = activeShares * (costBasis - currentPrice) * multiplier;
+        } else {
+          unrealizedPL = activeShares * (currentPrice - costBasis) * multiplier;
+        }
+      }
+      
       activePL += unrealizedPL;
     }
   });
 
   let totalAssetValue = 0;
   allGroups.forEach(pos => {
-    if (pos.netShares > 0) {
+    if (pos.netShares !== 0) {
       const marketEntry = getVal(marketPrices, pos.ticker) || {};
-      const costBasis = pos.avgBuyAsOfEndDate || pos.buyAvg || 0;
+      let costBasis = 0;
+      if (pos.netShares < 0) {
+        costBasis = pos.avgShortAsOfEndDate || pos.sellAvg || 0;
+      } else {
+        costBasis = pos.avgBuyAsOfEndDate || pos.buyAvg || 0;
+      }
       let currentPrice = parseFloat(marketEntry.currentPrice);
       if (isNaN(currentPrice)) {
         const defaultAsset = getDefaultAsset(pos.ticker) || {};
@@ -1651,7 +1733,16 @@ function calculateSection1Metrics(rangeType, startDate, endDate) {
       }
       const isOption = pos.assetType === 'options' || (/\$\d/.test(pos.ticker) && /\b(call|put)\b/i.test(pos.ticker));
       const multiplier = isOption ? 100 : 1;
-      totalAssetValue += pos.netShares * currentPrice * multiplier;
+      
+      const isShort = pos.netShares < 0;
+      const activeShares = Math.abs(pos.netShares);
+      const rawAssetValue = activeShares * currentPrice * multiplier;
+      
+      if (isShort) {
+        totalAssetValue -= rawAssetValue;
+      } else {
+        totalAssetValue += rawAssetValue;
+      }
     }
   });
 

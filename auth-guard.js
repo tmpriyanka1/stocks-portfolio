@@ -73,9 +73,10 @@
                     
     if (isBackend) {
       var currentRole = window.getSessionRole ? window.getSessionRole() : 'production';
+      var currentUser = window.getSessionUser ? window.getSessionUser().toLowerCase() : '';
       
       // 1. Dynamic Routing
-      if (currentRole.toLowerCase() !== 'tester') {
+      if (currentUser !== 'tester') {
         if (url.indexOf('http://localhost:5001/api/') === 0) {
           url = url.replace('http://localhost:5001/api/', 'https://vanai-portfolio-backend.onrender.com/api/');
         } else if (url.indexOf('/api/') === 0) {

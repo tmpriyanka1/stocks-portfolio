@@ -17,7 +17,7 @@ const defaultAssetData = {
   'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
   'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
   'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
-  'SPY': { name: 'SPDR S&P 500 ETF Trust', currentPrice: 512.42, stopLoss: 490.00, change24h: 0.45, icon: 'SP' },
+  'SPY': { name: 'SPDR S&P 500 ETF Trust', currentPrice: 753.00, stopLoss: 490.00, change24h: 0.45, icon: 'SP' },
   'SPX': { name: 'S&P 500 Index', currentPrice: 5120.30, stopLoss: 5000.00, change24h: 0.52, icon: 'SX' },
   'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open', currentPrice: 18.50, stopLoss: 12.00, change24h: 20.31, icon: 'OC' },
   'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
@@ -199,7 +199,13 @@ function generateSparklinePath(points, width, height) {
   }).join(' ');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+const CACHE_VERSION = '2.6';
+if (localStorage.getItem('cache_version') !== CACHE_VERSION) {
+  localStorage.removeItem('portfolio_market_prices');
+  localStorage.setItem('cache_version', CACHE_VERSION);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   // Apply saved color theme
   const savedAccent = localStorage.getItem('portfolio_accent_color');
   if (savedAccent) {
@@ -723,13 +729,40 @@ function updateBalanceMetrics() {
     const sharesNum = Number(tx.shares) || 0;
     const priceNum = parseFloat(tx.price) || 0;
     if (tx.action === 'BUY') {
-      const newShares = pos.shares + sharesNum;
-      if (newShares > 0) {
-        pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
+      if (pos.shares < 0) {
+        // Covering a short
+        pos.shares += sharesNum;
+        if (pos.shares > 0) {
+          pos.avgCost = priceNum; // Flipped to long
+        } else if (pos.shares === 0) {
+          pos.avgCost = 0;
+        }
+      } else {
+        // Adding to long
+        const newShares = pos.shares + sharesNum;
+        if (newShares > 0) {
+          pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
+        }
+        pos.shares = newShares;
       }
-      pos.shares = newShares;
     } else if (tx.action === 'SELL') {
-      pos.shares = Math.max(0, pos.shares - sharesNum);
+      if (pos.shares > 0) {
+        // Closing a long
+        pos.shares -= sharesNum;
+        if (pos.shares < 0) {
+          pos.avgCost = priceNum; // Flipped to short
+        } else if (pos.shares === 0) {
+          pos.avgCost = 0;
+        }
+      } else {
+        // Adding to short
+        const currentShortShares = Math.abs(pos.shares);
+        const newShortShares = currentShortShares + sharesNum;
+        if (newShortShares > 0) {
+          pos.avgCost = (currentShortShares * pos.avgCost + sharesNum * priceNum) / newShortShares;
+        }
+        pos.shares -= sharesNum;
+      }
     }
   });
 
@@ -741,7 +774,7 @@ function updateBalanceMetrics() {
   for (const ticker in openPositions) {
     if (ticker === 'CASH') continue;
     const pos = openPositions[ticker];
-    if (pos.shares <= 0) continue;
+    if (pos.shares === 0) continue;
 
     // Resolve live price: cloud marketPrices → defaultAssetData → avgCost fallback
     const marketEntry = marketPrices[ticker] || getDefaultAsset(ticker) || {};
@@ -753,14 +786,27 @@ function updateBalanceMetrics() {
       || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
     const multiplier = isOpt ? 100 : 1;
 
-    const assetValue = Number(pos.shares) * parseFloat(currentPrice) * multiplier;
-    // Previous-day estimate for today's change display
-    const prevValue = assetValue / (1 + change24h / 100);
+    const isShort = Number(pos.shares) < 0;
+    const activeShares = Math.abs(Number(pos.shares));
+    const rawAssetValue = activeShares * parseFloat(currentPrice) * multiplier;
 
-    totalAssetEquity += assetValue;
+    if (isShort) {
+      totalAssetEquity -= rawAssetValue;
+    } else {
+      totalAssetEquity += rawAssetValue;
+    }
+
+    // Previous-day estimate for today's change display
+    let prevValue = 0;
+    if (isShort) {
+      prevValue = -(rawAssetValue / (1 + change24h / 100));
+    } else {
+      prevValue = (rawAssetValue / (1 + change24h / 100));
+    }
+    
     totalPrevEquity += prevValue;
 
-    if (isOpt) optionContractsCount += pos.shares;
+    if (isOpt) optionContractsCount += activeShares;
   }
 
   // ── 4. NET PORTFOLIO VALUE = CASH (buying power) + OPEN POSITION EQUITY ──
@@ -808,17 +854,26 @@ function updateBalanceMetrics() {
   for (const ticker in openPositions) {
     if (ticker === 'CASH') continue;
     const pos = openPositions[ticker];
-    if (pos.shares <= 0) continue;
+    if (pos.shares === 0) continue;
     const marketEntry = marketPrices[ticker] || getDefaultAsset(ticker) || {};
     const currentPrice = parseFloat(marketEntry.currentPrice) || pos.avgCost || 0;
     const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
     const multiplier = isOpt ? 100 : 1;
-    unrealizedPL += pos.shares * (currentPrice - pos.avgCost) * multiplier;
+    
+    const isShort = pos.shares < 0;
+    const activeShares = Math.abs(pos.shares);
+    if (isShort) {
+      unrealizedPL += activeShares * (pos.avgCost - currentPrice) * multiplier;
+    } else {
+      unrealizedPL += activeShares * (currentPrice - pos.avgCost) * multiplier;
+    }
   }
 
   let realizedPL = 0;
-  const buyQueues = {}; // ticker -> array of { shares, price }
+  const longQueues = {}; // ticker -> array of { shares, price }
+  const shortQueues = {}; // ticker -> array of { shares, price }
   const sortedTxs = localTransactions.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  
   sortedTxs.forEach(tx => {
     if (!tx || !tx.ticker) return;
     if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
@@ -830,31 +885,101 @@ function updateBalanceMetrics() {
     const isOpt = tx.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
     const multiplier = isOpt ? 100 : 1;
 
-    if (!buyQueues[ticker]) {
-      buyQueues[ticker] = [];
-    }
+    if (!longQueues[ticker]) longQueues[ticker] = [];
+    if (!shortQueues[ticker]) shortQueues[ticker] = [];
 
     if (action === 'BUY') {
-      buyQueues[ticker].push({ shares: sharesNum, price: priceNum });
+      let remainingToCover = sharesNum;
+      let coverPnL = 0;
+
+      while (remainingToCover > 0 && shortQueues[ticker].length > 0) {
+        const oldestShort = shortQueues[ticker][0];
+        if (oldestShort.shares <= remainingToCover) {
+          // Explicit formula: Covered Shares * (Initial Short Sale Price of Oldest Available Short - Current Buy-back Execution Price) * Multiplier
+          coverPnL += oldestShort.shares * (oldestShort.price - priceNum) * multiplier;
+          remainingToCover -= oldestShort.shares;
+          shortQueues[ticker].shift();
+        } else {
+          coverPnL += remainingToCover * (oldestShort.price - priceNum) * multiplier;
+          oldestShort.shares -= remainingToCover;
+          remainingToCover = 0;
+        }
+      }
+      realizedPL += coverPnL;
+
+      if (remainingToCover > 0) {
+        longQueues[ticker].push({ shares: remainingToCover, price: priceNum });
+      }
     } else if (action === 'SELL') {
       let remainingToSell = sharesNum;
       let sellPnL = 0;
 
-      while (remainingToSell > 0 && buyQueues[ticker].length > 0) {
-        const oldestLayer = buyQueues[ticker][0];
-        if (oldestLayer.shares <= remainingToSell) {
-          sellPnL += oldestLayer.shares * (priceNum - oldestLayer.price) * multiplier;
-          remainingToSell -= oldestLayer.shares;
-          buyQueues[ticker].shift();
+      while (remainingToSell > 0 && longQueues[ticker].length > 0) {
+        const oldestLong = longQueues[ticker][0];
+        if (oldestLong.shares <= remainingToSell) {
+          sellPnL += oldestLong.shares * (priceNum - oldestLong.price) * multiplier; // Standard
+          remainingToSell -= oldestLong.shares;
+          longQueues[ticker].shift();
         } else {
-          sellPnL += remainingToSell * (priceNum - oldestLayer.price) * multiplier;
-          oldestLayer.shares -= remainingToSell;
+          sellPnL += remainingToSell * (priceNum - oldestLong.price) * multiplier; // Standard
+          oldestLong.shares -= remainingToSell;
           remainingToSell = 0;
         }
       }
       realizedPL += sellPnL;
+
+      if (remainingToSell > 0) {
+        shortQueues[ticker].push({ shares: remainingToSell, price: priceNum });
+      }
     }
   });
+
+  // Options Expiration Realization Safeguard
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  const processExpiration = (queues, isShort) => {
+    Object.keys(queues).forEach(ticker => {
+      const q = queues[ticker];
+      if (q.length === 0) return;
+      const isOpt = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
+      if (!isOpt) return;
+
+      const pos = openPositions[ticker];
+      let expiryStr = pos ? pos.expiryDate : null;
+      if (!expiryStr) {
+        expiryStr = getOptionExpiry(ticker, null);
+      }
+      if (!expiryStr) {
+        const match = ticker.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+        if (match) expiryStr = match[1];
+      }
+
+      if (expiryStr) {
+        const expDate = new Date(expiryStr);
+        if (expDate < todayDate) {
+          let expirationPnL = 0;
+          q.forEach(layer => {
+            if (isShort) {
+              // Expired Shorts Profit = Contracts * Initial Short Premium Received * 100
+              expirationPnL += layer.shares * layer.price * 100;
+            } else {
+              // Bought long, expires at $0.00
+              expirationPnL += layer.shares * (0 - layer.price) * 100;
+            }
+          });
+          realizedPL += expirationPnL;
+          q.length = 0; // Clear the queue
+          
+          // Force remove from openPositions to avoid hanging active equity
+          if (pos) pos.shares = 0;
+        }
+      }
+    });
+  };
+
+  processExpiration(longQueues, false);
+  processExpiration(shortQueues, true);
 
   // If the user has manually overridden the display value in Settings, use it.
   const portfolioValueOverride = localStorage.getItem('portfolio_value_override');
@@ -875,8 +1000,9 @@ function updateBalanceMetrics() {
     totalBalanceEl2.textContent = formattedBalance;
   }
 
-  const totalChange = totalAssetEquity - totalPrevEquity;
-  const denominator = totalPrevEquity + buyingPower;
+  const yesterdayNetPortfolioValue = totalPrevEquity + buyingPower;
+  const totalChange = netPortfolioValue - yesterdayNetPortfolioValue;
+  const denominator = yesterdayNetPortfolioValue;
   const totalChangePct = denominator > 0 ? (totalChange / denominator) * 100 : 0;
   const isPositive = totalChange >= 0;
 
@@ -1009,6 +1135,14 @@ function renderAssetsTable(filterMode) {
   }
 
   if (!tableBody) return;
+
+  // Preserve the currently open drawer state across re-renders
+  let openDrawerTicker = null;
+  const openRows = tableBody.querySelectorAll('.asset-row.drawer-open');
+  if (openRows.length > 0) {
+    openDrawerTicker = openRows[0].dataset.ticker;
+  }
+
   tableBody.innerHTML = '';
 
   let marketPrices = {};
@@ -1097,7 +1231,7 @@ function renderAssetsTable(filterMode) {
     const underlyingMatch = asset.ticker.match(/^([A-Za-z]+)/);
     const underlyingTicker = underlyingMatch ? underlyingMatch[1].toUpperCase() : mainTicker;
     const underlyingEntry = marketPrices[underlyingTicker] || getDefaultAsset(underlyingTicker) || {};
-    const underlyingPrice = parseFloat(underlyingEntry.currentPrice) || parseFloat(underlyingEntry.price) || (underlyingTicker === 'SPX' ? 5120.30 : (underlyingTicker === 'SPY' ? 512.42 : 100.00));
+    const underlyingPrice = parseFloat(underlyingEntry.currentPrice) || parseFloat(underlyingEntry.price) || (underlyingTicker === 'SPX' ? 5120.30 : (underlyingTicker === 'SPY' ? 753.00 : 100.00));
 
     if (isOption) {
       const underlyingCompany = resolveAssetName(underlyingTicker);
@@ -1190,18 +1324,22 @@ function renderAssetsTable(filterMode) {
         return;
       }
 
-      const isVisible = drawer.style.display !== 'none';
+      const isVisible = row.classList.contains('drawer-open');
 
       // Collapse all other drawers first
-      const allDrawers = tableBody.querySelectorAll('.asset-details-drawer');
-      allDrawers.forEach(d => {
-        d.style.display = 'none';
+      const allRows = tableBody.querySelectorAll('.asset-row');
+      allRows.forEach(r => {
+        r.classList.remove('drawer-open');
+        const d = r.querySelector('.asset-details-drawer');
+        if (d) d.style.display = 'none';
       });
 
       // Toggle current drawer
       if (isVisible) {
+        row.classList.remove('drawer-open');
         drawer.style.display = 'none';
       } else {
+        row.classList.add('drawer-open');
         drawer.style.display = 'flex';
       }
     });
@@ -1281,6 +1419,16 @@ function renderAssetsTable(filterMode) {
       }
     }
   });
+
+  // Restore the open drawer if one was open before the re-render
+  if (openDrawerTicker) {
+    const rowToOpen = tableBody.querySelector(`.asset-row[data-ticker="${CSS.escape(openDrawerTicker)}"]`);
+    if (rowToOpen) {
+      rowToOpen.classList.add('drawer-open');
+      const d = rowToOpen.querySelector('.asset-details-drawer');
+      if (d) d.style.display = 'flex';
+    }
+  }
 }
 
 /**
@@ -1487,9 +1635,9 @@ function initNotificationToggle() {
   // Load and apply initial state on boot (default to true)
   const isEnabled = localStorage.getItem('portfolio_notifications_enabled') !== 'false';
   syncNotificationUI(isEnabled);
-  if (isEnabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
+  // if (isEnabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+  //   Notification.requestPermission();
+  // }
 
   // Bell click quick toggle
   if (bellBtn) {
@@ -1626,7 +1774,16 @@ async function updateLivePrices() {
   // Build a deduplicated list of tickers to fetch
   const tickerSet = new Set();
   for (const asset of portfolioAssets) {
-    if (asset.ticker) tickerSet.add(asset.ticker.toUpperCase());
+    if (asset.ticker) {
+      tickerSet.add(asset.ticker.toUpperCase());
+      const isOption = asset.type === 'options' || (/\$\d/.test(asset.ticker) && /\b(call|put)\b/i.test(asset.ticker)) || asset.ticker.includes('@');
+      if (isOption) {
+        const baseMatch = asset.ticker.match(/^([A-Za-z]+)/);
+        if (baseMatch) {
+          tickerSet.add(baseMatch[1].toUpperCase());
+        }
+      }
+    }
   }
   const tickersToFetch = [...tickerSet];
   if (tickersToFetch.length === 0) return;

@@ -133,6 +133,15 @@ describe('Visual Regression UI Tests', () => {
       }
     });
 
+    // Mock local API server prices endpoints to keep visual checks deterministic
+    await page.route('**/api/prices/fetch*', route => {
+      route.fulfill({
+        status: 500,
+        contentType: 'text/plain',
+        body: 'Offline mock: local server pull disabled for visual tests'
+      });
+    });
+
     // Mock global Date to 2026-06-03T12:00:00 to align with ledger transaction filters
     await page.addInitScript(() => {
       const mockDate = new Date('2026-06-03T12:00:00');

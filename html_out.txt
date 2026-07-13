@@ -1,0 +1,326 @@
+TABLE HTML: <div class="table-container" id="holdings-container">
+          <!-- Holdings Table Header Row (Fixed / Sticky) -->
+          <div class="holdings-header">
+            <span>Asset</span>
+            <span>SHR / CON</span>
+            <span>ST LIMIT</span>
+            <span>Live Price</span>
+            <span style="text-align: right;">Value</span>
+          </div>
+
+          <!-- Skeletons (Pulse lines shown during data loading states) -->
+          <div class="skeleton-layout" id="skeleton-loader" style="display: none;">
+            <div class="skeleton-row">
+              <div class="skeleton-icon pulse"></div>
+              <div class="skeleton-info">
+                <div class="skeleton-line title pulse"></div>
+                <div class="skeleton-line subtitle pulse"></div>
+              </div>
+              <div class="skeleton-value">
+                <div class="skeleton-line title pulse align-right"></div>
+                <div class="skeleton-line subtitle pulse align-right"></div>
+              </div>
+            </div>
+            <div class="skeleton-row">
+              <div class="skeleton-icon pulse"></div>
+              <div class="skeleton-info">
+                <div class="skeleton-line title pulse"></div>
+                <div class="skeleton-line subtitle pulse"></div>
+              </div>
+              <div class="skeleton-value">
+                <div class="skeleton-line title pulse align-right"></div>
+                <div class="skeleton-line subtitle pulse align-right"></div>
+              </div>
+            </div>
+            <div class="skeleton-row">
+              <div class="skeleton-icon pulse"></div>
+              <div class="skeleton-info">
+                <div class="skeleton-line title pulse"></div>
+                <div class="skeleton-line subtitle pulse"></div>
+              </div>
+              <div class="skeleton-value">
+                <div class="skeleton-line title pulse align-right"></div>
+                <div class="skeleton-line subtitle pulse align-right"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real Portfolio Asset List (populated/hidden via script) -->
+          <div class="holdings-list" id="tableBody">
+      <div class="asset-row" data-ticker="ORCL" role="button" tabindex="0">
+        <!-- Column 1: Ticker & Name (No Icon Box) -->
+        <div class="asset-col-ticker">
+          <div class="ticker-text-container" style="align-items: flex-start;">
+            <span class="asset-ticker">ORCL</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              
+              <span class="asset-sub-ticker">Oracle</span>
+            </div>
+            
+            
+          </div>
+        </div>
+        
+        <!-- Column 2: Number of contracts/shares @ avg cost -->
+        <div class="asset-col-shares-avg">
+          <span class="asset-shares-qty">50</span>
+          <span class="asset-avg-cost">@ $170.12</span>
+        </div>
+        
+        <!-- Column 3: Stop Loss (SL) -->
+        <div class="asset-col-sl">
+          <span class="sl-price-val">—</span>
+        </div>
+        
+        <!-- Column 4: Live price per contract -->
+        <div class="asset-col-live-price">
+          <span class="live-price-val">$140.64</span>
+          
+          
+        </div>
+        
+        <!-- Column 5: Total position value -->
+        <div class="asset-col-total-graph">
+          <div class="total-value-row">
+            <span class="asset-total-val">$7,032.00</span>
+            <span class="asset-row-perf negative">▼ $1,474.05</span>
+          </div>
+        </div>
+        
+        <!-- Expanded Details Drawer (Covers full grid span) -->
+        <div class="asset-details-drawer" style="display: none; grid-column: 1 / -1; width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); flex-direction: column; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
+            <span>ORCL is currently trading at $140.64 (up 0.00%) today.</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
+              <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
+              <button class="edit-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600; transition: all 0.2s;">Edit</button>
+              <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
+              <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      <div class="asset-row" data-ticker="SPY@735" role="button" tabindex="0">
+        <!-- Column 1: Ticker & Name (No Icon Box) -->
+        <div class="asset-col-ticker">
+          <div class="ticker-text-container" style="align-items: flex-start;">
+            <span class="asset-ticker">SPY@735</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              
+              <span class="asset-sub-ticker">SPDR S&amp;P 500 ETF Trust</span>
+            </div>
+            <span class="asset-sub-ticker" style="color: var(--text-muted); font-size: 10px;">Exp 8/31/26</span>
+            
+          </div>
+        </div>
+        
+        <!-- Column 2: Number of contracts/shares @ avg cost -->
+        <div class="asset-col-shares-avg">
+          <span class="asset-shares-qty">3</span>
+          <span class="asset-avg-cost">@ $17.95</span>
+        </div>
+        
+        <!-- Column 3: Stop Loss (SL) -->
+        <div class="asset-col-sl">
+          <span class="sl-price-val">—</span>
+        </div>
+        
+        <!-- Column 4: Live price per contract -->
+        <div class="asset-col-live-price">
+          <span class="live-price-val">$17.95</span>
+          <span class="option-multiplier-hint-text">×100</span>
+          <div class="underlying-price-pill" title="Underlying Asset Price">SPY: $512.42</div>
+        </div>
+        
+        <!-- Column 5: Total position value -->
+        <div class="asset-col-total-graph">
+          <div class="total-value-row">
+            <span class="asset-total-val">$5,385.00</span>
+            <span class="asset-row-perf positive">▲ $0.00</span>
+          </div>
+        </div>
+        
+        <!-- Expanded Details Drawer (Covers full grid span) -->
+        <div class="asset-details-drawer" style="display: none; grid-column: 1 / -1; width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); flex-direction: column; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
+            <span>SPY@735 is currently trading at $17.95 (up 0.00%) today.</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
+              <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
+              <button class="edit-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600; transition: all 0.2s;">Edit</button>
+              <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
+              <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      <div class="asset-row" data-ticker="SPY @734 PUT" role="button" tabindex="0">
+        <!-- Column 1: Ticker & Name (No Icon Box) -->
+        <div class="asset-col-ticker">
+          <div class="ticker-text-container" style="align-items: flex-start;">
+            <span class="asset-ticker">SPY @734 PUT</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span class="color-pillar put" title="PUT"></span>
+              <span class="asset-sub-ticker">SPDR S&amp;P 500 ETF Trust</span>
+            </div>
+            <span class="asset-sub-ticker" style="color: var(--text-muted); font-size: 10px;">Exp 7/31/26</span>
+            <div class="option-badges-row"><span class="option-badge put">PUT</span></div>
+          </div>
+        </div>
+        
+        <!-- Column 2: Number of contracts/shares @ avg cost -->
+        <div class="asset-col-shares-avg">
+          <span class="asset-shares-qty">10</span>
+          <span class="asset-avg-cost">@ $14.10</span>
+        </div>
+        
+        <!-- Column 3: Stop Loss (SL) -->
+        <div class="asset-col-sl">
+          <span class="sl-price-val">—</span>
+        </div>
+        
+        <!-- Column 4: Live price per contract -->
+        <div class="asset-col-live-price">
+          <span class="live-price-val">$14.10</span>
+          <span class="option-multiplier-hint-text">×100</span>
+          <div class="underlying-price-pill" title="Underlying Asset Price">SPY: $512.42</div>
+        </div>
+        
+        <!-- Column 5: Total position value -->
+        <div class="asset-col-total-graph">
+          <div class="total-value-row">
+            <span class="asset-total-val">$14,100.00</span>
+            <span class="asset-row-perf positive">▲ $0.00</span>
+          </div>
+        </div>
+        
+        <!-- Expanded Details Drawer (Covers full grid span) -->
+        <div class="asset-details-drawer" style="display: none; grid-column: 1 / -1; width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); flex-direction: column; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
+            <span>SPY @734 PUT is currently trading at $14.10 (up 0.00%) today.</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
+              <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
+              <button class="edit-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600; transition: all 0.2s;">Edit</button>
+              <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
+              <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      <div class="asset-row" data-ticker="NBIS" role="button" tabindex="0">
+        <!-- Column 1: Ticker & Name (No Icon Box) -->
+        <div class="asset-col-ticker">
+          <div class="ticker-text-container" style="align-items: flex-start;">
+            <span class="asset-ticker">NBIS</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              
+              <span class="asset-sub-ticker">Nebius Group N.v</span>
+            </div>
+            
+            
+          </div>
+        </div>
+        
+        <!-- Column 2: Number of contracts/shares @ avg cost -->
+        <div class="asset-col-shares-avg">
+          <span class="asset-shares-qty">70</span>
+          <span class="asset-avg-cost">@ $240.64</span>
+        </div>
+        
+        <!-- Column 3: Stop Loss (SL) -->
+        <div class="asset-col-sl">
+          <span class="sl-price-val">—</span>
+        </div>
+        
+        <!-- Column 4: Live price per contract -->
+        <div class="asset-col-live-price">
+          <span class="live-price-val">$251.86</span>
+          
+          
+        </div>
+        
+        <!-- Column 5: Total position value -->
+        <div class="asset-col-total-graph">
+          <div class="total-value-row">
+            <span class="asset-total-val">$17,630.20</span>
+            <span class="asset-row-perf positive">▲ $785.75</span>
+          </div>
+        </div>
+        
+        <!-- Expanded Details Drawer (Covers full grid span) -->
+        <div class="asset-details-drawer" style="display: none; grid-column: 1 / -1; width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); flex-direction: column; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
+            <span>NBIS is currently trading at $251.86 (up 0.00%) today.</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
+              <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
+              <button class="edit-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600; transition: all 0.2s;">Edit</button>
+              <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
+              <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      <div class="asset-row" data-ticker="NVDA" role="button" tabindex="0">
+        <!-- Column 1: Ticker & Name (No Icon Box) -->
+        <div class="asset-col-ticker">
+          <div class="ticker-text-container" style="align-items: flex-start;">
+            <span class="asset-ticker">NVDA</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              
+              <span class="asset-sub-ticker">NVIDIA</span>
+            </div>
+            
+            
+          </div>
+        </div>
+        
+        <!-- Column 2: Number of contracts/shares @ avg cost -->
+        <div class="asset-col-shares-avg">
+          <span class="asset-shares-qty">1</span>
+          <span class="asset-avg-cost">@ $12.00</span>
+        </div>
+        
+        <!-- Column 3: Stop Loss (SL) -->
+        <div class="asset-col-sl">
+          <span class="sl-price-val">—</span>
+        </div>
+        
+        <!-- Column 4: Live price per contract -->
+        <div class="asset-col-live-price">
+          <span class="live-price-val">$485.00</span>
+          
+          
+        </div>
+        
+        <!-- Column 5: Total position value -->
+        <div class="asset-col-total-graph">
+          <div class="total-value-row">
+            <span class="asset-total-val">$485.00</span>
+            <span class="asset-row-perf positive">▲ $473.00</span>
+          </div>
+        </div>
+        
+        <!-- Expanded Details Drawer (Covers full grid span) -->
+        <div class="asset-details-drawer" style="display: none; grid-column: 1 / -1; width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); flex-direction: column; align-items: flex-start; gap: 10px;">
+          <div style="font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
+            <span>NVDA is currently trading at $485.00 (up 0.00%) today.</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
+              <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
+              <button class="edit-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600; transition: all 0.2s;">Edit</button>
+              <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
+              <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+        </div>

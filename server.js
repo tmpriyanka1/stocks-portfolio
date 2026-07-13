@@ -210,14 +210,15 @@ function loadPrices(req) {
 }
 
 function savePrices(req, prices) {
-  // Only save prices if running on Render to avoid local git diff noise
-  if (!process.env.GIT_TOKEN && !process.env.RENDER) {
-    return;
-  }
-  
   ensureDbExists(req);
   try {
     const pricesPath = getDatabasePath(req, 'prices.json');
+    
+    // Only save production prices if running on Render to avoid local git diff noise
+    if (!pricesPath.includes('test_data') && !process.env.GIT_TOKEN && !process.env.RENDER) {
+      return;
+    }
+    
     fs.writeFileSync(pricesPath, JSON.stringify(prices, null, 2), 'utf8');
   } catch (err) {
     console.error('Failed to write prices.json:', err);
@@ -225,15 +226,14 @@ function savePrices(req, prices) {
 }
 
 /**
- * General helper to fetch and parse JSON from a Yahoo Finance API URL using allorigins proxy.
+ * General helper to fetch and parse JSON from a Yahoo Finance API URL.
  */
 function fetchYahooUrl(targetUrl) {
   return new Promise((resolve) => {
-    const url = `http://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
     const args = [
       '-s', '-L', '--max-time', '12',
       '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      url
+      targetUrl
     ];
     execFile('curl', args, { timeout: 15000 }, (err, stdout, stderr) => {
       if (err) {
@@ -241,14 +241,10 @@ function fetchYahooUrl(targetUrl) {
         return resolve(null);
       }
       try {
-        const wrapper = JSON.parse(stdout);
-        if (!wrapper || !wrapper.contents) {
-          console.warn(`[fetchYahooUrl] No contents in proxy wrapper for ${targetUrl}`);
-          return resolve(null);
-        }
-        resolve(JSON.parse(wrapper.contents));
+        const data = JSON.parse(stdout);
+        resolve(data);
       } catch (parseErr) {
-        console.warn(`[fetchYahooUrl] JSON parse/proxy wrapper error for ${targetUrl}:`, parseErr.message);
+        console.warn(`[fetchYahooUrl] JSON parse error for ${targetUrl}:`, parseErr.message, stdout.substring(0, 100));
         resolve(null);
       }
     });
@@ -261,7 +257,7 @@ function fetchYahooUrl(targetUrl) {
  */
 function fetchYahooPrice(ticker) {
   return new Promise(async (resolve) => {
-    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
+    const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
     const json = await fetchYahooUrl(targetUrl);
     if (!json) return resolve(null);
     try {
@@ -386,19 +382,9 @@ app.get('/api/prices/fetch', async (req, res) => {
         const expiryDate = expiryMap[ticker];
 
         data = await fetchYahooOptionPrice(ticker, expiryDate);
-
-        // If option fetching failed, fallback to underlying price
+        
         if (!data) {
-          console.warn(`[prices/fetch] Option fetch failed for ${ticker}. Falling back to underlying price for ${baseMatch}.`);
-          const underlyingCached = priceCache[baseMatch];
-          if (underlyingCached && (now - underlyingCached.timestamp < CACHE_TTL_MS)) {
-            data = underlyingCached.data;
-          } else {
-            data = await fetchYahooPrice(baseMatch);
-            if (data) {
-              priceCache[baseMatch] = { data, timestamp: now };
-            }
-          }
+          console.warn(`[prices/fetch] Option fetch failed for ${ticker}.`);
         }
       } else {
         data = await fetchYahooPrice(ticker);
@@ -427,7 +413,7 @@ app.get('/api/prices/fetch', async (req, res) => {
       };
     } else {
       // Fallback to cached price in prices.json
-      const cached = prices[ticker] !== undefined ? prices[ticker] : prices[baseMatch];
+      const cached = prices[ticker] !== undefined ? prices[ticker] : (isOption ? undefined : prices[baseMatch]);
       if (cached !== undefined) {
         results[ticker] = {
           ticker,

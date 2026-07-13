@@ -16,3 +16,4 @@
 {"ticker":"ORCL","shares":1,"price":140.64,"action":"BUY","assetType":"stocks","date":"2026-07-12T06:09:13.640Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"ORCL","shares":5,"price":140.64,"action":"BUY","assetType":"stocks","date":"2026-07-12T06:13:11.092Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"NVDA","shares":1,"price":12,"action":"BUY","assetType":"stocks","date":"2026-07-11T23:28:18","comment":"","stopLoss":0}
+{"ticker":"NVDA","shares":2,"price":210.96,"action":"BUY","assetType":"stocks","date":"2026-07-13T05:17:16.680Z","comment":"Quick buy from portfolio drawer","stopLoss":0}

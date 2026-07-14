@@ -1783,7 +1783,7 @@ async function updateLivePrices() {
         if (!expiry) {
           expiry = getOptionExpiry(asset.ticker, asset.name);
         }
-        const osi = getYahooOptionSymbol(asset.ticker, expiry, asset.comment, asset.type);
+        const osi = getOSIOptionSymbol(asset.ticker, expiry, asset.comment, asset.type);
         if (osi && osi.length === 21) {
           tickerSet.add(osi);
           osiToOriginalMap[osi] = asset.ticker.toUpperCase();
@@ -2354,7 +2354,7 @@ async function deleteAsset(ticker) {
   }
 }
 
-function getYahooOptionSymbol(ticker, expiryStr, comment, assetType) {
+function getOSIOptionSymbol(ticker, expiryStr, comment, assetType) {
   // Underlying ticker
   const rootMatch = ticker.match(/^([A-Za-z]+)/);
   if (!rootMatch) return null;

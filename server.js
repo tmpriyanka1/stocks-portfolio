@@ -25,13 +25,13 @@ app.use((req, res, next) => {
       if (req.headers['x-user-role'] === 'tester') {
         return;
       }
-      
+
       const excludePaths = ['/api/login', '/api/forgot-password/otp', '/api/forgot-password/login'];
       if (!excludePaths.includes(req.path) && req.path.startsWith('/api/')) {
         const timestamp = new Date().toISOString();
         const message = `Data modification ${timestamp}`;
-        const remote = process.env.GIT_TOKEN 
-          ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git` 
+        const remote = process.env.GIT_TOKEN
+          ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git`
           : 'origin';
         exec(`git config user.name "Portfolio Bot" && git config user.email "bot@portfolio.com" && git add data/ && (git commit -m "${message}" || true) && git push ${remote} HEAD:main`, { cwd: __dirname }, (err, stdout, stderr) => {
           if (err) {
@@ -51,16 +51,16 @@ app.use((req, res, next) => {
 const USERS_DB_PATH = path.join(__dirname, 'data', 'users.ndjson');
 
 function getDatabasePath(req, fileName) {
-    const userRole = req && req.headers['x-user-role'] || 'production';
-    const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
-    
-    // Auto-create folder if missing so the user doesn't have to do it manually
-    const folderPath = path.join(__dirname, targetFolder);
-    if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-    }
-    
-    return path.join(folderPath, fileName);
+  const userRole = req && req.headers['x-user-role'] || 'production';
+  const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
+
+  // Auto-create folder if missing so the user doesn't have to do it manually
+  const folderPath = path.join(__dirname, targetFolder);
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true });
+  }
+
+  return path.join(folderPath, fileName);
 }
 
 const DEFAULT_PRICES = {
@@ -215,12 +215,12 @@ function savePrices(req, prices) {
   ensureDbExists(req);
   try {
     const pricesPath = getDatabasePath(req, 'prices.json');
-    
+
     // Only save production prices if running on Render to avoid local git diff noise
     if (!pricesPath.includes('test_data') && !process.env.GIT_TOKEN && !process.env.RENDER) {
       return;
     }
-    
+
     fs.writeFileSync(pricesPath, JSON.stringify(prices, null, 2), 'utf8');
   } catch (err) {
     console.error('Failed to write prices.json:', err);
@@ -234,21 +234,23 @@ app.get('/api/market-prices', async (req, res) => {
   if (!uwToken) {
     return res.status(500).send("Server environment token configuration missing.");
   }
-  
+
   const { tickers } = req.query;
+  console.log('tickers', tickers);
   if (!tickers) return res.status(200).json([]);
 
   const tickerArray = tickers.split(',').map(t => t.trim()).filter(Boolean);
-  
+
+  console.log('Fetching market prices for:', tickerArray);
   try {
     const fetchPromises = tickerArray.map(async (symbol) => {
       let url = '';
       if (symbol.length === 21) {
-        url = `https://api.unusualwhales.com/api/option-contract/${symbol}`;
+        url = `https://api.unusualwhales.com/api/option-contract/${symbol}/intraday`;
       } else {
-        url = `https://api.unusualwhales.com/api/stock/${symbol}/spot`;
+        url = `https://api.unusualwhales.com/api/stock/${symbol}/stock-state`;
       }
-      
+
       try {
         const response = await fetch(url, {
           method: 'GET',
@@ -257,11 +259,23 @@ app.get('/api/market-prices', async (req, res) => {
             'Accept': 'application/json'
           }
         });
-        
+
         if (response.ok) {
           const item = await response.json();
-          // Ensure the requested symbol is attached so the frontend can map it back
-          return { symbol, ...item };
+          
+          let priceData = item;
+          if (Array.isArray(item.data) && item.data.length > 0) {
+             priceData = item.data[0];
+          } else if (item.data && typeof item.data === 'object') {
+             priceData = item.data;
+          }
+
+          // Ensure the requested symbol is attached and 'price' is present so the frontend can map it back
+          return { 
+            symbol, 
+            price: priceData.close || priceData.last_price || priceData.price,
+            ...priceData 
+          };
         } else {
           console.warn(`[UW Proxy] Fetch failed for ${symbol} with status: ${response.status}`);
           return null;

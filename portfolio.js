@@ -1754,8 +1754,8 @@ function startLivePriceEngine() {
   if (livePriceIntervalId) clearInterval(livePriceIntervalId);
   // Execute an immediate update of prices on startup/refresh
   updateLivePrices();
-  // Set interval to update prices locally every 15 seconds
-  livePriceIntervalId = setInterval(updateLivePrices, 15000);
+  // Set interval to update prices locally every 15 minutes (900,000 ms)
+  livePriceIntervalId = setInterval(updateLivePrices, 900000);
 }
 
 async function updateLivePrices() {

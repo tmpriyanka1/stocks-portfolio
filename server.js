@@ -23,13 +23,13 @@ app.use((req, res, next) => {
       if (req.headers['x-user-role'] === 'tester') {
         return;
       }
-      
+
       const excludePaths = ['/api/login', '/api/forgot-password/otp', '/api/forgot-password/login'];
       if (!excludePaths.includes(req.path) && req.path.startsWith('/api/')) {
         const timestamp = new Date().toISOString();
         const message = `Data modification ${timestamp}`;
-        const remote = process.env.GIT_TOKEN 
-          ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git` 
+        const remote = process.env.GIT_TOKEN
+          ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git`
           : 'origin';
         exec(`git config user.name "Portfolio Bot" && git config user.email "bot@portfolio.com" && git add data/ && (git commit -m "${message}" || true) && git push ${remote} HEAD:main`, { cwd: __dirname }, (err, stdout, stderr) => {
           if (err) {
@@ -49,16 +49,16 @@ app.use((req, res, next) => {
 const USERS_DB_PATH = path.join(__dirname, 'data', 'users.ndjson');
 
 function getDatabasePath(req, fileName) {
-    const userRole = req && req.headers['x-user-role'] || 'production';
-    const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
-    
-    // Auto-create folder if missing so the user doesn't have to do it manually
-    const folderPath = path.join(__dirname, targetFolder);
-    if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-    }
-    
-    return path.join(folderPath, fileName);
+  const userRole = req && req.headers['x-user-role'] || 'production';
+  const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
+
+  // Auto-create folder if missing so the user doesn't have to do it manually
+  const folderPath = path.join(__dirname, targetFolder);
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true });
+  }
+
+  return path.join(folderPath, fileName);
 }
 
 const DEFAULT_PRICES = {
@@ -213,12 +213,12 @@ function savePrices(req, prices) {
   ensureDbExists(req);
   try {
     const pricesPath = getDatabasePath(req, 'prices.json');
-    
+
     // Only save production prices if running on Render to avoid local git diff noise
     if (!pricesPath.includes('test_data') && !process.env.GIT_TOKEN && !process.env.RENDER) {
       return;
     }
-    
+
     fs.writeFileSync(pricesPath, JSON.stringify(prices, null, 2), 'utf8');
   } catch (err) {
     console.error('Failed to write prices.json:', err);
@@ -283,7 +283,7 @@ function fetchYahooPrice(ticker) {
  * Helper to construct a standard OCC option symbol.
  * Returns the symbol string (e.g. "SPY260731P00734000") or null.
  */
-function getYahooOptionSymbol(ticker, expiryDate) {
+function getOptionSymbol(ticker, expiryDate) {
   if (!expiryDate) return null;
   const baseMatch = ticker.match(/^([A-Z]+)/i);
   if (!baseMatch) return null;
@@ -308,10 +308,10 @@ function getYahooOptionSymbol(ticker, expiryDate) {
  * Fetches a live price from Yahoo Finance for a specific option contract.
  * Returns { price, change24h, name } or null on failure.
  */
-async function fetchYahooOptionPrice(ticker, expiryDate) {
-  const occSymbol = getYahooOptionSymbol(ticker, expiryDate);
+async function fetchOptionPrice(ticker, expiryDate) {
+  const occSymbol = getOptionSymbol(ticker, expiryDate);
   if (!occSymbol) {
-    console.warn(`[fetchYahooOptionPrice] Could not parse OCC symbol for ticker=${ticker}, expiryDate=${expiryDate}`);
+    console.warn(`[fetchOptionPrice] Could not parse OCC symbol for ticker=${ticker}, expiryDate=${expiryDate}`);
     return null;
   }
   const data = await fetchYahooPrice(occSymbol);
@@ -381,8 +381,8 @@ app.get('/api/prices/fetch', async (req, res) => {
       if (isOption) {
         const expiryDate = expiryMap[ticker];
 
-        data = await fetchYahooOptionPrice(ticker, expiryDate);
-        
+        data = await fetchOptionPrice(ticker, expiryDate);
+
         if (!data) {
           console.warn(`[prices/fetch] Option fetch failed for ${ticker}.`);
         }

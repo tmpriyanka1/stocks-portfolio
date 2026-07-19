@@ -245,7 +245,7 @@ app.get('/api/market-prices', async (req, res) => {
   try {
     const fetchPromises = tickerArray.map(async (symbol) => {
       let url = '';
-      if (symbol.length === 21) {
+      if (/^[A-Z]{1,6}\d{6}[CP]\d{8}$/i.test(symbol)) {
         url = `https://api.unusualwhales.com/api/option-contract/${symbol}/intraday`;
       } else {
         url = `https://api.unusualwhales.com/api/stock/${symbol}/stock-state`;

@@ -803,7 +803,7 @@ function updateBalanceMetrics() {
     } else {
       prevValue = (rawAssetValue / (1 + change24h / 100));
     }
-    
+
     totalPrevEquity += prevValue;
 
     if (isOpt) optionContractsCount += activeShares;
@@ -859,7 +859,7 @@ function updateBalanceMetrics() {
     const currentPrice = parseFloat(marketEntry.currentPrice) || pos.avgCost || 0;
     const isOpt = pos.assetType === 'options' || (/\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker));
     const multiplier = isOpt ? 100 : 1;
-    
+
     const isShort = pos.shares < 0;
     const activeShares = Math.abs(pos.shares);
     if (isShort) {
@@ -873,7 +873,7 @@ function updateBalanceMetrics() {
   const longQueues = {}; // ticker -> array of { shares, price }
   const shortQueues = {}; // ticker -> array of { shares, price }
   const sortedTxs = localTransactions.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
-  
+
   sortedTxs.forEach(tx => {
     if (!tx || !tx.ticker) return;
     if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
@@ -970,7 +970,7 @@ function updateBalanceMetrics() {
           });
           realizedPL += expirationPnL;
           q.length = 0; // Clear the queue
-          
+
           // Force remove from openPositions to avoid hanging active equity
           if (pos) pos.shares = 0;
         }
@@ -1495,7 +1495,7 @@ function initManualRefreshBtn() {
     btn.classList.add('spinning');
     try {
       await pullCloudData();
-      showToast('🔄 Portfolio Valuation Refreshed!');
+      showToast('🔄 Portfolio Valuation Refreshedd!');
     } catch (e) {
       showToast('⚠️ Cloud sync failed. Check connection.', true);
     } finally {
@@ -1777,14 +1777,15 @@ async function updateLivePrices() {
   for (const asset of portfolioAssets) {
     if (asset.ticker) {
       const isOption = asset.type === 'options' || (/\$\d/.test(asset.ticker) && /\b(call|put)\b/i.test(asset.ticker)) || asset.ticker.includes('@');
-      
+
       if (isOption) {
         let expiry = asset.expiryDate;
         if (!expiry) {
           expiry = getOptionExpiry(asset.ticker, asset.name);
         }
         const osi = getOSIOptionSymbol(asset.ticker, expiry, asset.comment, asset.type);
-        if (osi && osi.length === 21) {
+        console.log("osi", osi);
+        if (osi && /^[A-Z]{1,6}\d{6}[CP]\d{8}$/i.test(osi)) {
           tickerSet.add(osi);
           osiToOriginalMap[osi] = asset.ticker.toUpperCase();
         } else {
@@ -1803,6 +1804,7 @@ async function updateLivePrices() {
     }
   }
   const tickersToFetch = [...tickerSet];
+  console.log("tickersToFetch", tickersToFetch);
   if (tickersToFetch.length === 0) return;
 
   // ── Fetch all prices in one server call (Secure Proxy to Unusual Whales) ──
@@ -1814,7 +1816,7 @@ async function updateLivePrices() {
     );
     if (res.ok) {
       const uwPayload = await res.json();
-      
+
       // Flexibly parse the JSON payload from Unusual Whales (array, {data:[]}, or ticker map)
       let items = [];
       if (Array.isArray(uwPayload)) {
@@ -1831,31 +1833,31 @@ async function updateLivePrices() {
       for (const item of items) {
         let t = (item.ticker || item.symbol || '').toUpperCase();
         if (!t) continue;
-        
+
         // Map the backend returned OSI/symbol back to the original UI ticker (e.g. "SPY @735 CALL")
         if (osiToOriginalMap[t]) {
-           t = osiToOriginalMap[t];
+          t = osiToOriginalMap[t];
         }
 
         // Extract live market price
-        const livePrice = parseFloat(item.price || item.last_price || item.last || item.current_price || item.mid || ((parseFloat(item.bid || 0) + parseFloat(item.ask || 0))/2)) || 0;
-        
+        const livePrice = parseFloat(item.price || item.last_price || item.last || item.current_price || item.mid || ((parseFloat(item.bid || 0) + parseFloat(item.ask || 0)) / 2)) || 0;
+
         // Extract previous close for variance formula
         const prevClose = parseFloat(item.previous_close || item.prev_close || item.close || item.previousClose) || livePrice;
-        
+
         let change24h = 0;
         if (item.change_percent !== undefined) {
-           change24h = parseFloat(item.change_percent);
+          change24h = parseFloat(item.change_percent);
         } else if (item.change !== undefined && prevClose > 0) {
-           change24h = (parseFloat(item.change) / prevClose) * 100;
+          change24h = (parseFloat(item.change) / prevClose) * 100;
         } else if (livePrice > 0 && prevClose > 0) {
-           change24h = ((livePrice - prevClose) / prevClose) * 100;
+          change24h = ((livePrice - prevClose) / prevClose) * 100;
         }
 
         fetchedResults[t] = {
-           price: livePrice,
-           change24h: change24h || 0,
-           name: item.name || t
+          price: livePrice,
+          change24h: change24h || 0,
+          name: item.name || t
         };
       }
     } else {

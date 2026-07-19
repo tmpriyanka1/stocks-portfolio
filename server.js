@@ -26,13 +26,10 @@ app.use((req, res, next) => {
         return;
       }
 
-
       const excludePaths = ['/api/login', '/api/forgot-password/otp', '/api/forgot-password/login'];
       if (!excludePaths.includes(req.path) && req.path.startsWith('/api/')) {
         const timestamp = new Date().toISOString();
         const message = `Data modification ${timestamp}`;
-        const remote = process.env.GIT_TOKEN
-          ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git`
         const remote = process.env.GIT_TOKEN
           ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git`
           : 'origin';
@@ -54,16 +51,6 @@ app.use((req, res, next) => {
 const USERS_DB_PATH = path.join(__dirname, 'data', 'users.ndjson');
 
 function getDatabasePath(req, fileName) {
-  const userRole = req && req.headers['x-user-role'] || 'production';
-  const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
-
-  // Auto-create folder if missing so the user doesn't have to do it manually
-  const folderPath = path.join(__dirname, targetFolder);
-  if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true });
-  }
-
-  return path.join(folderPath, fileName);
   const userRole = req && req.headers['x-user-role'] || 'production';
   const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
 
@@ -229,12 +216,10 @@ function savePrices(req, prices) {
   try {
     const pricesPath = getDatabasePath(req, 'prices.json');
 
-
     // Only save production prices if running on Render to avoid local git diff noise
     if (!pricesPath.includes('test_data') && !process.env.GIT_TOKEN && !process.env.RENDER) {
       return;
     }
-
 
     fs.writeFileSync(pricesPath, JSON.stringify(prices, null, 2), 'utf8');
   } catch (err) {

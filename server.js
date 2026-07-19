@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -7,6 +8,7 @@ const { execFile } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const uwToken = process.env.UW_TOKEN;
 
 // Enable CORS and JSON body parsing
 app.use(cors());
@@ -24,10 +26,13 @@ app.use((req, res, next) => {
         return;
       }
 
+
       const excludePaths = ['/api/login', '/api/forgot-password/otp', '/api/forgot-password/login'];
       if (!excludePaths.includes(req.path) && req.path.startsWith('/api/')) {
         const timestamp = new Date().toISOString();
         const message = `Data modification ${timestamp}`;
+        const remote = process.env.GIT_TOKEN
+          ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git`
         const remote = process.env.GIT_TOKEN
           ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git`
           : 'origin';
@@ -49,6 +54,16 @@ app.use((req, res, next) => {
 const USERS_DB_PATH = path.join(__dirname, 'data', 'users.ndjson');
 
 function getDatabasePath(req, fileName) {
+  const userRole = req && req.headers['x-user-role'] || 'production';
+  const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
+
+  // Auto-create folder if missing so the user doesn't have to do it manually
+  const folderPath = path.join(__dirname, targetFolder);
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true });
+  }
+
+  return path.join(folderPath, fileName);
   const userRole = req && req.headers['x-user-role'] || 'production';
   const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
 
@@ -214,10 +229,12 @@ function savePrices(req, prices) {
   try {
     const pricesPath = getDatabasePath(req, 'prices.json');
 
+
     // Only save production prices if running on Render to avoid local git diff noise
     if (!pricesPath.includes('test_data') && !process.env.GIT_TOKEN && !process.env.RENDER) {
       return;
     }
+
 
     fs.writeFileSync(pricesPath, JSON.stringify(prices, null, 2), 'utf8');
   } catch (err) {
@@ -225,106 +242,72 @@ function savePrices(req, prices) {
   }
 }
 
-/**
- * General helper to fetch and parse JSON from a Yahoo Finance API URL.
- */
-function fetchYahooUrl(targetUrl) {
-  return new Promise((resolve) => {
-    const args = [
-      '-s', '-L', '--max-time', '12',
-      '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      targetUrl
-    ];
-    execFile('curl', args, { timeout: 15000 }, (err, stdout, stderr) => {
-      if (err) {
-        console.warn(`[fetchYahooUrl] curl error for ${targetUrl}:`, err.message, "Stderr:", stderr);
-        return resolve(null);
+
+
+// GET /api/market-prices - Secure pass-through proxy for Unusual Whales API
+app.get('/api/market-prices', async (req, res) => {
+  if (!uwToken) {
+    return res.status(500).send("Server environment token configuration missing.");
+  }
+
+  const { tickers } = req.query;
+  console.log('tickers', tickers);
+  if (!tickers) return res.status(200).json([]);
+
+  const tickerArray = tickers.split(',').map(t => t.trim()).filter(Boolean);
+
+  console.log('Fetching market prices for:', tickerArray);
+  try {
+    const fetchPromises = tickerArray.map(async (symbol) => {
+      let url = '';
+      if (symbol.length === 21) {
+        url = `https://api.unusualwhales.com/api/option-contract/${symbol}/intraday`;
+      } else {
+        url = `https://api.unusualwhales.com/api/stock/${symbol}/stock-state`;
       }
+
       try {
-        const data = JSON.parse(stdout);
-        resolve(data);
-      } catch (parseErr) {
-        console.warn(`[fetchYahooUrl] JSON parse error for ${targetUrl}:`, parseErr.message, stdout.substring(0, 100));
-        resolve(null);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${uwToken}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const item = await response.json();
+
+          let priceData = item;
+          if (Array.isArray(item.data) && item.data.length > 0) {
+            priceData = item.data[0];
+          } else if (item.data && typeof item.data === 'object') {
+            priceData = item.data;
+          }
+
+          // Ensure the requested symbol is attached and 'price' is present so the frontend can map it back
+          return {
+            symbol,
+            price: priceData.close || priceData.last_price || priceData.price,
+            ...priceData
+          };
+        } else {
+          console.warn(`[UW Proxy] Fetch failed for ${symbol} with status: ${response.status}`);
+          return null;
+        }
+      } catch (err) {
+        console.warn(`[UW Proxy] Network error for ${symbol}:`, err.message);
+        return null;
       }
     });
-  });
-}
 
-/**
- * Fetches a live price from Yahoo Finance for a stock/underlying index.
- * Returns { price, change24h, name } or null on failure.
- */
-function fetchYahooPrice(ticker) {
-  return new Promise(async (resolve) => {
-    const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
-    const json = await fetchYahooUrl(targetUrl);
-    if (!json) return resolve(null);
-    try {
-      const result = json.chart && json.chart.result && json.chart.result[0];
-      if (result && result.meta && result.meta.regularMarketPrice !== undefined) {
-        const price = result.meta.regularMarketPrice;
-        const prevClose = result.meta.chartPreviousClose || result.meta.previousClose || price;
-        const change24h = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
-        const name = result.meta.longName || result.meta.shortName || ticker;
-        resolve({ price, change24h: parseFloat(change24h.toFixed(4)), name });
-      } else {
-        console.warn(`[fetchYahooPrice] No price data in response for ${ticker}`);
-        resolve(null);
-      }
-    } catch (err) {
-      console.warn(`[fetchYahooPrice] Error parsing response for ${ticker}:`, err.message);
-      resolve(null);
-    }
-  });
-}
-
-/**
- * Helper to construct a standard OCC option symbol.
- * Returns the symbol string (e.g. "SPY260731P00734000") or null.
- */
-function getOptionSymbol(ticker, expiryDate) {
-  if (!expiryDate) return null;
-  const baseMatch = ticker.match(/^([A-Z]+)/i);
-  if (!baseMatch) return null;
-  const underlying = baseMatch[1].toUpperCase();
-  const strikeMatch = ticker.match(/(?:@|\$|\s)(\d+(?:\.\d+)?)/);
-  if (!strikeMatch) return null;
-  const strikeNum = parseFloat(strikeMatch[1]);
-  const dateObj = new Date(expiryDate);
-  if (isNaN(dateObj.getTime())) return null;
-  const yy = String(dateObj.getUTCFullYear()).slice(-2);
-  const mm = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(dateObj.getUTCDate()).padStart(2, '0');
-  const expiryStr = `${yy}${mm}${dd}`;
-  const isPut = /\b(put|p)\b/i.test(ticker);
-  const type = isPut ? 'P' : 'C';
-  const strikeCents = Math.round(strikeNum * 1000);
-  const strikeStr = String(strikeCents).padStart(8, '0');
-  return `${underlying}${expiryStr}${type}${strikeStr}`;
-}
-
-/**
- * Fetches a live price from Yahoo Finance for a specific option contract.
- * Returns { price, change24h, name } or null on failure.
- */
-async function fetchOptionPrice(ticker, expiryDate) {
-  const occSymbol = getOptionSymbol(ticker, expiryDate);
-  if (!occSymbol) {
-    console.warn(`[fetchOptionPrice] Could not parse OCC symbol for ticker=${ticker}, expiryDate=${expiryDate}`);
-    return null;
+    const results = (await Promise.all(fetchPromises)).filter(Boolean);
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error proxying to Unusual Whales:', error);
+    res.status(500).json({ error: 'Internal Server Error while proxying request.' });
   }
-  const data = await fetchYahooPrice(occSymbol);
-  if (data) {
-    // Retain OCC symbol as name for tracking
-    data.name = occSymbol;
-  }
-  return data;
-}
-
-// Server-side cache for fetched prices to prevent rate limiting (5 min TTL)
-const priceCache = {};
-const CACHE_TTL_MS = 300000; // 5 minutes
+});
 
 // GET /api/prices - Return the cached prices.json
 app.get('/api/prices', (req, res) => {
@@ -336,105 +319,7 @@ app.get('/api/prices', (req, res) => {
   }
 });
 
-// GET /api/prices/fetch?tickers=AAPL,TSLA,SPY
-// Fetches live prices from Yahoo Finance server-side (no CORS proxy needed),
-// persists to prices.json, and returns the result.
-app.get('/api/prices/fetch', async (req, res) => {
-  const tickerParam = (req.query.tickers || '').trim();
-  if (!tickerParam) {
-    return res.status(400).json({ error: 'Query param "tickers" is required (comma-separated).' });
-  }
 
-  const tickers = tickerParam.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
-  const prices = loadPrices(req);
-  const results = {};
-  const errors = {};
-
-  // Build expiry Map from trades database to match option expiries
-  const trades = loadTrades(req);
-  const expiryMap = {};
-  trades.forEach(t => {
-    if (t && t.ticker && (t['Expiry Date'] || t.expiryDate || t.expiry)) {
-      expiryMap[t.ticker.toUpperCase().trim()] = t['Expiry Date'] || t.expiryDate || t.expiry;
-    }
-  });
-
-  // Track which tickers have already been fetched in current request batch to avoid duplicates
-  const fetchedTickers = {};
-
-  // Process sequentially with a short delay to avoid Yahoo Finance rate limiting
-  for (const ticker of tickers) {
-    const isOption = /[@$]|\b(call|put)\b/i.test(ticker);
-    const baseMatch = ticker.split(/[\s$@]/)[0].toUpperCase();
-
-    let data = null;
-    const now = Date.now();
-    const cachedEntry = priceCache[ticker];
-
-    if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL_MS)) {
-      // Use server-side cache
-      data = cachedEntry.data;
-    } else if (fetchedTickers[ticker]) {
-      // Reuse already-fetched data in current request batch
-      data = fetchedTickers[ticker];
-    } else {
-      if (isOption) {
-        const expiryDate = expiryMap[ticker];
-
-        data = await fetchOptionPrice(ticker, expiryDate);
-
-        if (!data) {
-          console.warn(`[prices/fetch] Option fetch failed for ${ticker}.`);
-        }
-      } else {
-        data = await fetchYahooPrice(ticker);
-      }
-
-      fetchedTickers[ticker] = data; // cache for current request batch (null means failed)
-      if (data) {
-        priceCache[ticker] = {
-          data: data,
-          timestamp: now
-        };
-      }
-      // Small delay between requests to respect rate limits
-      await new Promise(r => setTimeout(r, 300));
-    }
-
-    if (data) {
-      prices[ticker] = data.price;
-      results[ticker] = {
-        ticker,
-        baseTicker: baseMatch,
-        price: data.price,
-        change24h: data.change24h,
-        name: data.name,
-        isOption
-      };
-    } else {
-      // Fallback to cached price in prices.json
-      const cached = prices[ticker] !== undefined ? prices[ticker] : (isOption ? undefined : prices[baseMatch]);
-      if (cached !== undefined) {
-        results[ticker] = {
-          ticker,
-          baseTicker: baseMatch,
-          price: cached,
-          change24h: 0,
-          name: ticker,
-          isOption,
-          fromCache: true
-        };
-      } else {
-        errors[ticker] = 'Fetch failed and no cached price available';
-      }
-    }
-  }
-
-  // Persist updated prices
-  savePrices(req, prices);
-
-  res.status(200).json({ results, errors, updatedAt: new Date().toISOString() });
-});
 
 
 // GET /api/trades - Read and parse all trades

@@ -1,3 +1,0 @@
-{"ticker":"ORACLE","shares":49,"price":178.78,"action":"BUY","assetType":"stocks","date":"2026-06-11T10:48:09","comment":"","stopLoss":0}
-{"ticker":"SPY@750 CALL","shares":1,"price":13,"action":"BUY","assetType":"options","date":"2026-07-18T23:13:17","comment":"","stopLoss":0,"Expiry Date":"2026-07-23"}
-{"ticker":"SPY@800 PUT","shares":1,"price":4,"action":"BUY","assetType":"options","date":"2026-08-31T23:30:54","comment":"","stopLoss":0,"Expiry Date":"2026-08-31"}

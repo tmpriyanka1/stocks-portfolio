@@ -1,1 +1,2 @@
 {"ticker":"SOLT","shares":35,"price":180.9,"action":"BUY","assetType":"stocks","date":"2026-07-19T00:01:17","comment":"","stopLoss":0}
+{"ticker":"ANET@190 CALL","shares":2,"price":19.4,"action":"BUY","assetType":"options","date":"2026-07-19T00:02:06","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}

@@ -37,6 +37,11 @@ app.use((req, res, next) => {
         return;
       }
 
+      // Do not auto-commit for automatic live price syncs
+      if (req.body && req.body.action && req.body.action.trim().toUpperCase() === 'UPDATEPRICE') {
+        return;
+      }
+
       const excludePaths = ['/api/login', '/api/forgot-password/otp', '/api/forgot-password/login'];
       if (!excludePaths.includes(req.path) && req.path.startsWith('/api/')) {
         const timestamp = new Date().toISOString();
@@ -1532,6 +1537,30 @@ app.get('/api/ai-prompt-builder', async (req, res) => {
     res.status(500).json({ error: 'Failed to build AI prompt context.' });
   }
 });
+// Hourly Git Push Scheduler for prices.json
+setInterval(() => {
+  console.log('[Scheduler] Checking for hourly prices.json updates...');
+  exec('git status --porcelain data/prices.json', { cwd: __dirname }, (err, stdout) => {
+    if (stdout.trim()) {
+      const timestamp = new Date().toISOString();
+      const message = `Hourly price sync ${timestamp}`;
+      const remote = process.env.GIT_TOKEN
+        ? `https://${process.env.GIT_TOKEN}@github.com/tmpriyanka1/stocks-portfolio.git`
+        : 'origin';
+      
+      exec(`git config user.name "Portfolio Bot" && git config user.email "bot@portfolio.com" && git add data/prices.json && (git commit -m "${message}" || true) && git push ${remote} HEAD:main`, { cwd: __dirname }, (commitErr, commitStdout, commitStderr) => {
+        if (commitErr) {
+          console.error("[Scheduler] Error Message:", commitErr.message);
+        } else {
+          console.log("[Scheduler] Success:", commitStdout.trim());
+        }
+      });
+    } else {
+      console.log('[Scheduler] No changes to prices.json detected.');
+    }
+  });
+}, 60 * 60 * 1000);
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Express server is running on http://localhost:${PORT}`);

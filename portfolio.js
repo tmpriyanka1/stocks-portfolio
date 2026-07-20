@@ -1761,12 +1761,50 @@ let livePriceIntervalId = null;
 let lastCloudSyncTime = 0;
 const CLOUD_SYNC_INTERVAL = 300000; // Throttle sheet sync to once every 5 minutes to preserve API limits
 
+function isMarketOpen() {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour12: false,
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric'
+  });
+  
+  const parts = formatter.formatToParts(new Date());
+  let weekday, hour, minute;
+  for (const part of parts) {
+    if (part.type === 'weekday') weekday = part.value;
+    if (part.type === 'hour') hour = parseInt(part.value, 10);
+    if (part.type === 'minute') minute = parseInt(part.value, 10);
+  }
+
+  // Market is closed on Saturday and Sunday
+  if (weekday === 'Sat' || weekday === 'Sun') return false;
+
+  // Time in minutes from midnight ET
+  const totalMinutes = hour * 60 + minute;
+  // 9:30 AM = 9 * 60 + 30 = 570
+  // 4:00 PM = 16 * 60 = 960
+  
+  return totalMinutes >= 570 && totalMinutes < 960;
+}
+
+function scheduleNextPriceUpdate() {
+  if (livePriceIntervalId) clearTimeout(livePriceIntervalId);
+  
+  const isOpen = isMarketOpen();
+  const nextInterval = isOpen ? 60000 : 900000; // 1 min vs 15 mins
+  console.log(`[Market Poller] Market is ${isOpen ? 'OPEN' : 'CLOSED'}. Next update in ${nextInterval / 1000} seconds.`);
+  
+  livePriceIntervalId = setTimeout(() => {
+    updateLivePrices().finally(() => scheduleNextPriceUpdate());
+  }, nextInterval);
+}
+
 function startLivePriceEngine() {
-  if (livePriceIntervalId) clearInterval(livePriceIntervalId);
+  if (livePriceIntervalId) clearTimeout(livePriceIntervalId);
   // Execute an immediate update of prices on startup/refresh
-  updateLivePrices();
-  // Set interval to update prices locally every 15 minutes (900,000 ms)
-  livePriceIntervalId = setInterval(updateLivePrices, 900000);
+  updateLivePrices().finally(() => scheduleNextPriceUpdate());
 }
 
 async function updateLivePrices() {

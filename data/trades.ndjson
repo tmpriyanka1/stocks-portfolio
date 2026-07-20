@@ -8,3 +8,4 @@
 {"ticker":"NBIS","shares":35,"price":233.57,"action":"BUY","assetType":"stocks","date":"2026-07-02T19:07:27","comment":"","stopLoss":0}
 {"ticker":"CRDO","shares":28,"price":269.7,"action":"BUY","assetType":"stocks","date":"2026-07-06T19:08:34","comment":"","stopLoss":0}
 {"ticker":"TWLO","shares":28,"price":215.36,"action":"BUY","assetType":"stocks","date":"2026-07-07T19:11:05","comment":"","stopLoss":0}
+{"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-06-22T19:12:00","comment":"","stopLoss":0}

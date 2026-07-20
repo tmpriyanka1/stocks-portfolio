@@ -5,3 +5,4 @@
 {"ticker":"AVGX","shares":105,"price":52.29,"action":"BUY","assetType":"stocks","date":"2026-07-10T19:04:14","comment":"","stopLoss":0}
 {"ticker":"MRNA","shares":105,"price":70.63,"action":"BUY","assetType":"stocks","date":"2026-07-10T19:05:24","comment":"","stopLoss":0}
 {"ticker":"MRNA","shares":105,"price":68.66,"action":"BUY","assetType":"stocks","date":"2026-07-13T19:06:10","comment":"","stopLoss":0}
+{"ticker":"NBIS","shares":35,"price":233.57,"action":"BUY","assetType":"stocks","date":"2026-07-02T19:07:27","comment":"","stopLoss":0}

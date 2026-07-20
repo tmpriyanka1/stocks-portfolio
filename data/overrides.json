@@ -1,1 +1,4 @@
-{"buyingPowerOverride":16000,"portfolioValueOverride":""}
+{
+  "buyingPowerOverride": 10000,
+  "portfolioValueOverride": ""
+}

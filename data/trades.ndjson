@@ -11,3 +11,4 @@
 {"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-06-22T19:12:00","comment":"","stopLoss":0}
 {"ticker":"ORCL","shares":49,"price":178.78,"action":"BUY","assetType":"stocks","date":"2026-06-11T19:12:46","comment":"","stopLoss":0}
 {"ticker":"SOXS","shares":42,"price":191.59,"action":"BUY","assetType":"stocks","date":"2026-04-19T19:14:01","comment":"","stopLoss":0}
+{"ticker":"RH","shares":120,"price":180.23,"action":"BUY","assetType":"stocks","date":"2026-07-19T19:16:31","comment":"","stopLoss":0}

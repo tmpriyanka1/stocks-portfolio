@@ -726,7 +726,7 @@ function showConfirmModal(options, onConfirm) {
 
 const BASE_BACKEND_URL = '/api/';
 
-const CLOUD_SPREADSHEET_CONFIG = {
+const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"
 };
 

@@ -10,7 +10,7 @@
  */
 const BASE_BACKEND_URL = '/api/';
 
-const CLOUD_SPREADSHEET_CONFIG = {
+const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"
 };
 
@@ -490,7 +490,7 @@ function initFormSubmit() {
 }
 
 async function pushTradeToCloud(tx, resolvedName) {
-  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  const url = LOCAL_BACKEND_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL")) {
     showToast("Trade saved locally (Offline Mode)", true);
     return;
@@ -528,7 +528,7 @@ async function pushTradeToCloud(tx, resolvedName) {
 
 
 async function pullCloudData() {
-  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  const url = LOCAL_BACKEND_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL")) return;
 
   try {

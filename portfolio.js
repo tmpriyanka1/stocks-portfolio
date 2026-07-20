@@ -11,7 +11,7 @@
  */
 const BASE_BACKEND_URL = '/api/';
 
-const CLOUD_SPREADSHEET_CONFIG = {
+const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"
 };
 
@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function pullCloudData() {
-  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  const url = LOCAL_BACKEND_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL")) return;
 
   try {
@@ -1758,8 +1758,8 @@ function showToast(message, isError) {
 // AUTOMATED LIVE PRICE PULLING & SHEETDB SYNC ENGINE
 // --------------------------------------------------------------------------
 let livePriceIntervalId = null;
-let lastCloudSyncTime = 0;
-const CLOUD_SYNC_INTERVAL = 300000; // Throttle sheet sync to once every 5 minutes to preserve API limits
+let lastServerSyncTime = 0;
+const SERVER_SYNC_INTERVAL = 300000; // Throttle server sync to once every 5 minutes to preserve API limits
 
 function isMarketOpen() {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -1818,7 +1818,7 @@ async function updateLivePrices() {
   }
 
   const now = Date.now();
-  const shouldSyncCloud = (now - lastCloudSyncTime) >= CLOUD_SYNC_INTERVAL || lastCloudSyncTime === 0;
+  const shouldSyncServer = (now - lastServerSyncTime) >= SERVER_SYNC_INTERVAL || lastServerSyncTime === 0;
 
   // Build a deduplicated list of tickers to fetch
   const tickerSet = new Set();
@@ -1973,9 +1973,9 @@ async function updateLivePrices() {
 
     updatedAny = true;
 
-    // Sync to cloud (throttled)
-    if (shouldSyncCloud && price > 0) {
-      syncPriceToCloud(ticker, price);
+    // Sync to server (throttled)
+    if (shouldSyncServer && price > 0) {
+      syncPriceToServer(ticker, price);
     }
   }
 
@@ -1985,15 +1985,15 @@ async function updateLivePrices() {
     updateBalanceMetrics();
     renderAssetsTable(activeFilterMode);
 
-    if (shouldSyncCloud) {
-      lastCloudSyncTime = now;
+    if (shouldSyncServer) {
+      lastServerSyncTime = now;
     }
   }
 }
 
 
-async function syncPriceToCloud(ticker, price) {
-  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+async function syncPriceToServer(ticker, price) {
+  const url = LOCAL_BACKEND_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL")) {
     return; // offline/fallback mode
   }
@@ -2010,12 +2010,12 @@ async function syncPriceToCloud(ticker, price) {
       })
     });
     if (response.ok) {
-      console.log(`Successfully synced live price $${price.toFixed(2)} for ${ticker} to Google Sheets.`);
+      console.log(`Successfully synced live price $${price.toFixed(2)} for ${ticker} to the backend server.`);
     } else {
-      console.warn(`Failed to sync price for ${ticker} to Google Sheets.`);
+      console.warn(`Failed to sync price for ${ticker} to the backend server.`);
     }
   } catch (e) {
-    console.error(`Error syncing price for ${ticker} to Google Sheets:`, e);
+    console.error(`Error syncing price for ${ticker} to the backend server:`, e);
   }
 }
 

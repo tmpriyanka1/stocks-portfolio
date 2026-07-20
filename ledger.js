@@ -11,7 +11,7 @@
  */
 const BASE_BACKEND_URL = '/api/';
 
-const CLOUD_SPREADSHEET_CONFIG = {
+const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"
 };
 
@@ -1434,7 +1434,7 @@ function initNavigationRedirects() {
 }
 
 async function pullCloudData() {
-  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  const url = LOCAL_BACKEND_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL")) return;
 
   try {
@@ -1954,7 +1954,7 @@ async function fetchAIJournalSummary(transactions, currentRange) {
     return cleanText;
   };
 
-  const url = CLOUD_SPREADSHEET_CONFIG.endpointUrl;
+  const url = LOCAL_BACKEND_CONFIG.endpointUrl;
   if (!url || url.includes("YOUR_API_URL") || url.includes("localhost") || url.includes("127.0.0.1")) {
     briefTextEl.textContent = compileLocalSummary(matchedNotes, currentRange);
     return;

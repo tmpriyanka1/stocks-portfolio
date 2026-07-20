@@ -1506,7 +1506,8 @@ function initManualRefreshBtn() {
     btn.classList.add('spinning');
     try {
       await pullCloudData();
-      showToast('🔄 Portfolio Valuation Refreshedd!');
+      startLivePriceEngine();
+      showToast('🔄 Portfolio Valuation Refreshed!');
     } catch (e) {
       showToast('⚠️ Cloud sync failed. Check connection.', true);
     } finally {

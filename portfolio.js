@@ -7,7 +7,7 @@
  * 3. ASSET AGGREGATION: Processes all transactions to build a live map of current open positions, active shares, and cost basis for both Stocks and Options.
  * 4. LIVE PRICING POLLER: Fires off periodically to fetch the latest stock/options prices from the Unusual Whales proxy in server.js. Maps OSI symbols correctly.
  * 5. PORTFOLIO CALCULATION: Combines open positions with live market prices to calculate unrealized/realized P&L, daily changes, buying power, and total net liquidity.
- * 6. UI RENDERER: Updates the DOM with glassmorphic cards, dynamic progress bars, and the main asset table based on calculated metrics.
+ * 6. UI RENDERER: Updates the DOM with glassmorphic cards, dynamic progress bars, and the main asset table based on calculated metrics..
  */
 const BASE_BACKEND_URL = '/api/';
 
@@ -1769,7 +1769,7 @@ function isMarketOpen() {
     hour: 'numeric',
     minute: 'numeric'
   });
-  
+
   const parts = formatter.formatToParts(new Date());
   let weekday, hour, minute;
   for (const part of parts) {
@@ -1785,17 +1785,17 @@ function isMarketOpen() {
   const totalMinutes = hour * 60 + minute;
   // 9:30 AM = 9 * 60 + 30 = 570
   // 4:00 PM = 16 * 60 = 960
-  
+
   return totalMinutes >= 570 && totalMinutes < 960;
 }
 
 function scheduleNextPriceUpdate() {
   if (livePriceIntervalId) clearTimeout(livePriceIntervalId);
-  
+
   const isOpen = isMarketOpen();
   const nextInterval = isOpen ? 60000 : 900000; // 1 min vs 15 mins
   console.log(`[Market Poller] Market is ${isOpen ? 'OPEN' : 'CLOSED'}. Next update in ${nextInterval / 1000} seconds.`);
-  
+
   livePriceIntervalId = setTimeout(() => {
     updateLivePrices().finally(() => scheduleNextPriceUpdate());
   }, nextInterval);

@@ -1,3 +1,14 @@
+/**
+ * SERVER.JS - Node.js Express Backend
+ * 
+ * CODE FLOW & ARCHITECTURE:
+ * 1. INITIALIZATION: Loads environment variables, configures Express server, and sets up CORS middleware.
+ * 2. DATABASE BOOTSTRAP: On startup, checks the /data directory and initializes local JSON/NDJSON databases (trades, users, prices, overrides).
+ * 3. AUTHENTICATION API: Manages login, registration, password/OTP validation, and provides JWT-like token authorization headers.
+ * 4. MARKET DATA PROXY: Acts as a secure intermediary between the frontend and the Unusual Whales API (so frontend doesn't leak API keys). Fetches stock and options prices.
+ * 5. CRUD ENDPOINTS: Provides REST APIs (GET, POST, PUT, DELETE) for the frontend to manipulate Trades, Cash Ledger, Users, and Dashboard Overrides.
+ * 6. PERSISTENCE: Writes all updates synchronously to the local NDJSON flat-files in the /data folder.
+ */
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -236,12 +247,9 @@ app.get('/api/market-prices', async (req, res) => {
   }
 
   const { tickers } = req.query;
-  console.log('tickers', tickers);
   if (!tickers) return res.status(200).json([]);
 
   const tickerArray = tickers.split(',').map(t => t.trim()).filter(Boolean);
-
-  console.log('Fetching market prices for:', tickerArray);
   try {
     const fetchPromises = tickerArray.map(async (symbol) => {
       let url = '';

@@ -1,3 +1,13 @@
+/**
+ * ENTRY.JS - Trade Submission & Asset Management
+ * 
+ * CODE FLOW & ARCHITECTURE:
+ * 1. FORM BINDING: Attaches to the main Trade Entry form UI to capture user inputs for Buy/Sell, Stocks/Options, Quantities, and Dates.
+ * 2. OPTION PARSING: Dynamically parses option tickers (like "SPY 500 CALL") and handles strike prices, expiration date formats, and OSI generation logic.
+ * 3. VALIDATION: Ensures that users cannot sell shares they don't own, and enforces strictly positive quantities and correct date formats before submission.
+ * 4. SUBMISSION FLOW: Constructs the final clean JSON payload and POSTs it to `/api/trades` or `/api/cash` on the backend.
+ * 5. SUCCESS HANDLING: Clears the form inputs upon a 201 Created response, triggers success toast animations, and updates the local cache before redirecting/re-rendering.
+ */
 const BASE_BACKEND_URL = '/api/';
 
 const CLOUD_SPREADSHEET_CONFIG = {
@@ -244,34 +254,7 @@ async function fetchAssetName(ticker) {
     }
   }
 
-  const capitalized = ticker.trim().toUpperCase();
-  const isOption = /\$\d/.test(ticker) && /\b(call|put)\b/i.test(ticker);
-  let queryTicker = isOption ? ticker.split(' ')[0].toUpperCase() : capitalized;
-
-  try {
-    const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${queryTicker}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-    const res = await fetch(proxyUrl);
-    if (res.ok) {
-      const wrapper = await res.json();
-      if (wrapper && wrapper.contents) {
-        const json = JSON.parse(wrapper.contents);
-        if (json && json.quotes && json.quotes.length > 0) {
-          const match = json.quotes.find(q => q.symbol === queryTicker) || json.quotes[0];
-          let name = match.longname || match.shortname || queryTicker;
-          name = name.replace(/\b(Corporation|Corp|Inc|Incorporated|LLC|Ltd|Co|Class\s+[A-Z]|Common\s+Stock|Ordinary\s+Shares|PLC)\b\.?/gi, '').trim();
-          name = name.replace(/[,.\-\s]+$/, '').trim();
-          // Title case it
-          name = name.toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-          return name;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to fetch name from Yahoo search API:', e);
-  }
-
-  return queryTicker;
+  return ticker.trim().toUpperCase();
 }
 
 /**

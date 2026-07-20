@@ -1,3 +1,14 @@
+/**
+ * LEDGER.JS - Transaction History & Advanced Filtering
+ * 
+ * CODE FLOW & ARCHITECTURE:
+ * 1. INITIALIZATION: Sets up the transaction viewer, handles date range picker logic (30d, YTD, All Time), and sets up filter buttons.
+ * 2. DATA FETCHING: Retrieves raw trades and cash ledger actions from the backend API (`/api/trades` and `/api/cash`).
+ * 3. FILTERING PIPELINE: Sorts and filters the historical transactions based on the user's active selections (Asset Type, Action, Date Ranges).
+ * 4. HISTORICAL P&L CALCULATION: Reconstructs closed positions by matching past BUY/SELL batches (FIFO logic) to calculate Historical Realized P&L accurately.
+ * 5. TABLE RENDERING: Maps over the filtered transaction list and renders the detailed HTML table, including profit badges, stop-losses, and exact transaction timestamps.
+ * 6. EDITING MODALS: Houses the logic to click any historical transaction, open an edit modal, and send PUT/DELETE requests to correct mistakes in the backend.
+ */
 const BASE_BACKEND_URL = '/api/';
 
 const CLOUD_SPREADSHEET_CONFIG = {
@@ -1492,18 +1503,7 @@ async function pullCloudData() {
           }
           marketPrices[ticker] = priceEntry;
 
-          const queryTicker = assetType === 'options' ? ticker.split(/[\s$@]/)[0].toUpperCase() : ticker;
-          if (!marketPrices[queryTicker] || !marketPrices[queryTicker].name || marketPrices[queryTicker].name === queryTicker) {
-            fetchTickerNameFromInternet(queryTicker).then(fetchedName => {
-              if (fetchedName) {
-                let mp = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
-                if (!mp[queryTicker]) mp[queryTicker] = {};
-                mp[queryTicker].name = fetchedName;
-                localStorage.setItem('portfolio_market_prices', JSON.stringify(mp));
-                renderLedger(currentRangeType, currentStartDate, currentEndDate);
-              }
-            });
-          }
+
         }
 
         const expiryDate = tx['Expiry Date'] || tx.expiryDate || tx.expiry || '';
@@ -2198,24 +2198,4 @@ function initAINotesCollapsible() {
   }
 }
 
-async function fetchTickerNameFromInternet(ticker) {
-  try {
-    const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-    const res = await fetch(proxyUrl);
-    if (res.ok) {
-      const wrapper = await res.json();
-      if (wrapper && wrapper.contents) {
-        const json = JSON.parse(wrapper.contents);
-        if (json && json.quotes && json.quotes[0]) {
-          const name = json.quotes[0].longname || json.quotes[0].shortname;
-          if (name) return name;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn(`Failed to fetch ticker name for ${ticker} from internet:`, e);
-  }
-  return null;
-}
 

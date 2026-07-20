@@ -1,3 +1,14 @@
+/**
+ * PORTFOLIO.JS - Main Dashboard & Real-Time Valuation UI
+ * 
+ * CODE FLOW & ARCHITECTURE:
+ * 1. INITIALIZATION: On DOM Load, verifies user authentication and sets up the global UI event listeners.
+ * 2. DATA HYDRATION: Calls `pullCloudData()` to fetch the user's latest transaction history and cash ledger from the Node backend.
+ * 3. ASSET AGGREGATION: Processes all transactions to build a live map of current open positions, active shares, and cost basis for both Stocks and Options.
+ * 4. LIVE PRICING POLLER: Fires off periodically to fetch the latest stock/options prices from the Unusual Whales proxy in server.js. Maps OSI symbols correctly.
+ * 5. PORTFOLIO CALCULATION: Combines open positions with live market prices to calculate unrealized/realized P&L, daily changes, buying power, and total net liquidity.
+ * 6. UI RENDERER: Updates the DOM with glassmorphic cards, dynamic progress bars, and the main asset table based on calculated metrics.
+ */
 const BASE_BACKEND_URL = '/api/';
 
 const CLOUD_SPREADSHEET_CONFIG = {
@@ -1784,7 +1795,6 @@ async function updateLivePrices() {
           expiry = getOptionExpiry(asset.ticker, asset.name);
         }
         const osi = getOSIOptionSymbol(asset.ticker, expiry, asset.comment, asset.type);
-        console.log("osi", osi);
         if (osi && /^[A-Z]{1,6}\d{6}[CP]\d{8}$/i.test(osi)) {
           tickerSet.add(osi);
           osiToOriginalMap[osi] = asset.ticker.toUpperCase();
@@ -1804,7 +1814,6 @@ async function updateLivePrices() {
     }
   }
   const tickersToFetch = [...tickerSet];
-  console.log("tickersToFetch", tickersToFetch);
   if (tickersToFetch.length === 0) return;
 
   // ── Fetch all prices in one server call (Secure Proxy to Unusual Whales) ──
@@ -2419,27 +2428,6 @@ function getOSIOptionSymbol(ticker, expiryStr, comment, assetType) {
   const strikeFormatted = String(integerPart).padStart(5, '0') + String(fractionalPart).padEnd(3, '0');
 
   return `${root}${yymmdd}${optionTypeChar}${strikeFormatted}`;
-}
-
-async function fetchTickerNameFromInternet(ticker) {
-  try {
-    const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-    const res = await fetch(proxyUrl);
-    if (res.ok) {
-      const wrapper = await res.json();
-      if (wrapper && wrapper.contents) {
-        const json = JSON.parse(wrapper.contents);
-        if (json && json.quotes && json.quotes[0]) {
-          const name = json.quotes[0].longname || json.quotes[0].shortname;
-          if (name) return name;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn(`Failed to fetch ticker name for ${ticker} from internet:`, e);
-  }
-  return null;
 }
 
 

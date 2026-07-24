@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Enforce admin-only visibility on the Administrative Control Zone
   const adminZone = document.querySelector('.admin-control-zone');
   if (adminZone) {
-    if (sessionRole !== 'admin') {
+    if (sessionRole !== 'admin' && sessionRole !== 'tester') {
       adminZone.style.display = 'none';
     }
   }
@@ -538,7 +538,8 @@ function initPortfolioOverrides() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             buyingPowerOverride: bpVal,
-            portfolioValueOverride: pvVal
+            portfolioValueOverride: pvVal,
+            buyingPowerOverrideTimestamp: localStorage.getItem('portfolio_buying_power_timestamp') || null
           })
         })
           .then(() => showToast('✅ Portfolio overrides saved!'))
@@ -739,7 +740,8 @@ function showConfirmModal(options, onConfirm) {
   cancelBtn.addEventListener('click', handleCancel);
 }
 
-const BASE_BACKEND_URL = '/api/';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const BASE_BACKEND_URL = isLocalhost ? 'http://127.0.0.1:5001/api/' : '/api/';
 
 const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"
@@ -848,7 +850,8 @@ async function executeCashAdjustment(actionType, amount, reason) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       buyingPowerOverride: localStorage.getItem('portfolio_buying_power') || '0',
-      portfolioValueOverride: localStorage.getItem('portfolio_value_override') || ''
+      portfolioValueOverride: localStorage.getItem('portfolio_value_override') || '',
+      buyingPowerOverrideTimestamp: localStorage.getItem('portfolio_buying_power_timestamp') || null
     })
   }).catch(err => console.error('Failed to sync overrides:', err));
 

@@ -947,7 +947,7 @@ app.get('/api/overrides', (req, res) => {
 app.post('/api/overrides', (req, res) => {
   try {
     ensureDbExists(req);
-    const { buyingPowerOverride, buyingPowerAdjust, portfolioValueOverride } = req.body;
+    const { buyingPowerOverride, buyingPowerAdjust, portfolioValueOverride, buyingPowerOverrideTimestamp } = req.body;
 
     let bpVal = null;
     if (buyingPowerOverride !== undefined) {
@@ -958,14 +958,16 @@ app.post('/api/overrides', (req, res) => {
 
     const finalBuyingPowerOverride = (bpVal !== null && !isNaN(bpVal) && bpVal >= 0) ? bpVal : null;
     const finalPortfolioValueOverride = portfolioValueOverride !== undefined ? String(portfolioValueOverride).trim() : '';
+    const finalTimestamp = buyingPowerOverrideTimestamp !== undefined ? buyingPowerOverrideTimestamp : null;
 
     const overrides = {
       buyingPowerOverride: finalBuyingPowerOverride,
-      portfolioValueOverride: finalPortfolioValueOverride
+      portfolioValueOverride: finalPortfolioValueOverride,
+      buyingPowerOverrideTimestamp: finalTimestamp
     };
     const overridesPath = getDatabasePath(req, 'overrides.json');
     fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2), 'utf8');
-    console.log(`[Overrides] Saved overrides: buyingPowerOverride=${overrides.buyingPowerOverride}, portfolioValueOverride=${overrides.portfolioValueOverride}`);
+    console.log(`[Overrides] Saved overrides: buyingPowerOverride=${overrides.buyingPowerOverride}, portfolioValueOverride=${overrides.portfolioValueOverride}, timestamp=${overrides.buyingPowerOverrideTimestamp}`);
     res.status(200).json(overrides);
   } catch (error) {
     console.error('Failed to save overrides:', error);

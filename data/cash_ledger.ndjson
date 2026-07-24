@@ -1,4 +1,0 @@
-{"ticker":"CASH","shares":0,"price":100,"action":"DEPOSIT","assetType":"CASH","date":"2026-07-24T12:00:00","comment":"Test","author":"Admin"}
-{"ticker":"CASH","shares":0,"price":400,"action":"DEPOSIT","assetType":"CASH","date":"2026-07-24T00:51:21","comment":"","author":"admin"}
-{"ticker":"CASH","shares":0,"price":124706.53,"action":"DEPOSIT","assetType":"CASH","date":"2026-07-24T01:04:29","comment":"Initial cash update from Robin hood","author":"admin"}
-{"ticker":"CASH","shares":0,"price":124706,"action":"DEPOSIT","assetType":"CASH","date":"2026-07-24T14:19:59","comment":"","author":"admin"}

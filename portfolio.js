@@ -9,7 +9,8 @@
  * 5. PORTFOLIO CALCULATION: Combines open positions with live market prices to calculate unrealized/realized P&L, daily changes, buying power, and total net liquidity.
  * 6. UI RENDERER: Updates the DOM with glassmorphic cards, dynamic progress bars, and the main asset table based on calculated metrics..
  */
-const BASE_BACKEND_URL = '/api/';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const BASE_BACKEND_URL = isLocalhost ? 'http://127.0.0.1:5001/api/' : '/api/';
 
 const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"
@@ -240,9 +241,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (overrides.buyingPowerOverride !== null && overrides.buyingPowerOverride !== undefined && !isNaN(parseFloat(overrides.buyingPowerOverride))) {
           localStorage.setItem('portfolio_buying_power_user_set', 'true');
           localStorage.setItem('portfolio_buying_power', parseFloat(overrides.buyingPowerOverride).toFixed(2));
+          if (overrides.buyingPowerOverrideTimestamp) {
+            localStorage.setItem('portfolio_buying_power_timestamp', overrides.buyingPowerOverrideTimestamp);
+          } else {
+            localStorage.removeItem('portfolio_buying_power_timestamp');
+          }
         } else {
           localStorage.removeItem('portfolio_buying_power_user_set');
           localStorage.removeItem('portfolio_buying_power');
+          localStorage.removeItem('portfolio_buying_power_timestamp');
         }
         if (overrides.portfolioValueOverride && String(overrides.portfolioValueOverride).trim() !== '') {
           localStorage.setItem('portfolio_value_override', String(overrides.portfolioValueOverride).trim());
@@ -1991,16 +1998,31 @@ async function updateLivePrices() {
     }
 
     // Stop Loss Alert
-    if (asset.stopLoss && asset.stopLoss > 0 && price > 0 && price <= asset.stopLoss) {
-      const alertKey = `portfolio_sl_alert_fired_${ticker}_${asset.stopLoss}`;
-      if (!sessionStorage.getItem(alertKey)) {
-        sessionStorage.setItem(alertKey, 'true');
-        const title = `⚠️ Stop Limit Hit for ${ticker}!`;
-        const body = `${name || ticker} live price is $${price.toFixed(2)}, which has met your Stop Limit of $${asset.stopLoss.toFixed(2)}.`;
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          try { new Notification(title, { body }); } catch (e) { console.warn('Notification failed:', e); }
+    if (asset.stopLoss && asset.stopLoss > 0 && price > 0) {
+      if (price <= asset.stopLoss) {
+        const alertKey = `portfolio_sl_alert_fired_${ticker}_${asset.stopLoss}`;
+        if (!sessionStorage.getItem(alertKey)) {
+          sessionStorage.setItem(alertKey, 'true');
+          const title = `⚠️ Stop Limit Hit for ${ticker}!`;
+          const body = `${name || ticker} live price is $${price.toFixed(2)}, which has met your Stop Limit of $${asset.stopLoss.toFixed(2)}.`;
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            try { new Notification(title, { body }); } catch (e) { console.warn('Notification failed:', e); }
+          }
+          showToast(`🚨 ${title} ${body}`, true);
+          addStoredNotification(title, body);
         }
-        showToast(`🚨 ${title} ${body}`, true);
+      } else if (price <= asset.stopLoss + 1) {
+        const alertKey = `portfolio_sl_alert_warning_${ticker}_${asset.stopLoss}`;
+        if (!sessionStorage.getItem(alertKey)) {
+          sessionStorage.setItem(alertKey, 'true');
+          const title = `⚠️ Approaching Stop Limit for ${ticker}!`;
+          const body = `${name || ticker} live price is $${price.toFixed(2)}, which is within $1.00 of your Stop Limit ($${asset.stopLoss.toFixed(2)}).`;
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            try { new Notification(title, { body }); } catch (e) { console.warn('Notification failed:', e); }
+          }
+          showToast(`⚠️ ${title} ${body}`);
+          addStoredNotification(title, body);
+        }
       }
     }
 
@@ -2509,5 +2531,88 @@ function getOSIOptionSymbol(ticker, expiryStr, comment, assetType) {
 
   return `${root}${yymmdd}${optionTypeChar}${strikeFormatted}`;
 }
+
+// --- Notification Center Logic ---
+function getStoredNotifications() {
+  try {
+    return JSON.parse(localStorage.getItem('portfolio_unread_notifications') || '[]');
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveStoredNotifications(notifs) {
+  localStorage.setItem('portfolio_unread_notifications', JSON.stringify(notifs));
+  renderNotificationCenter();
+}
+
+function addStoredNotification(title, body) {
+  const notifs = getStoredNotifications();
+  notifs.unshift({
+    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+    title,
+    body,
+    timestamp: new Date().toISOString()
+  });
+  // Keep max 50 notifications
+  if (notifs.length > 50) notifs.pop();
+  saveStoredNotifications(notifs);
+}
+
+function renderNotificationCenter() {
+  const notifs = getStoredNotifications();
+  const badge = document.getElementById('notification-badge');
+  const list = document.getElementById('notification-list');
+  
+  if (badge) {
+    if (notifs.length > 0) {
+      badge.textContent = notifs.length > 99 ? '99+' : notifs.length;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  if (list) {
+    if (notifs.length === 0) {
+      list.innerHTML = '<div class="notification-empty">No new notifications</div>';
+    } else {
+      list.innerHTML = notifs.map(n => `
+        <div class="notification-item">
+          <div class="notification-title">${n.title}</div>
+          <div class="notification-body">${n.body}</div>
+          <div class="notification-time">${new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(n.timestamp).toLocaleDateString()}</div>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderNotificationCenter();
+
+  const bellBtn = document.getElementById('notification-bell');
+  const dropdown = document.getElementById('notification-dropdown');
+  const clearBtn = document.getElementById('clear-notifications-btn');
+
+  if (bellBtn && dropdown) {
+    bellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      saveStoredNotifications([]);
+    });
+  }
+});
 
 

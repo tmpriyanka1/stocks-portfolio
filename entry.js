@@ -8,7 +8,8 @@
  * 4. SUBMISSION FLOW: Constructs the final clean JSON payload and POSTs it to `/api/trades` or `/api/cash` on the backend.
  * 5. SUCCESS HANDLING: Clears the form inputs upon a 201 Created response, triggers success toast animations, and updates the local cache before redirecting/re-rendering.
  */
-const BASE_BACKEND_URL = '/api/';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const BASE_BACKEND_URL = isLocalhost ? 'http://127.0.0.1:5001/api/' : '/api/';
 
 const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"

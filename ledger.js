@@ -9,7 +9,8 @@
  * 5. TABLE RENDERING: Maps over the filtered transaction list and renders the detailed HTML table, including profit badges, stop-losses, and exact transaction timestamps.
  * 6. EDITING MODALS: Houses the logic to click any historical transaction, open an edit modal, and send PUT/DELETE requests to correct mistakes in the backend.
  */
-const BASE_BACKEND_URL = '/api/';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const BASE_BACKEND_URL = isLocalhost ? 'http://127.0.0.1:5001/api/' : '/api/';
 
 const LOCAL_BACKEND_CONFIG = {
   endpointUrl: BASE_BACKEND_URL + "trades"

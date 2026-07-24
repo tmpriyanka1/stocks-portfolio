@@ -311,14 +311,9 @@ function initFormSubmit() {
       cashTxs.push(tx);
       localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
 
-      // Deduct or add to buying power locally
-      let bp = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
-      if (cashAction === 'DEPOSIT') {
-        bp += amountFloat;
-      } else if (cashAction === 'WITHDRAWAL') {
-        bp -= amountFloat;
-      }
-      localStorage.setItem('portfolio_buying_power', bp.toFixed(2));
+      // We no longer mutate portfolio_buying_power here, it is strictly a baseline.
+      if (typeof recalculateBuyingPower === 'function') recalculateBuyingPower();
+      if (typeof updateBalanceMetrics === 'function') updateBalanceMetrics();
 
       resetFormAndNotifications();
       pushCashToCloud(tx);
@@ -402,16 +397,9 @@ function initFormSubmit() {
     }
     localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
 
-    // Deduct or add buying power
-    if (action === 'BUY') {
-      let bp = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
-      bp -= sharesInt * priceFloat;
-      localStorage.setItem('portfolio_buying_power', bp.toFixed(2));
-    } else if (action === 'SELL') {
-      let bp = parseFloat(localStorage.getItem('portfolio_buying_power') || '12342.90');
-      bp += sharesInt * priceFloat;
-      localStorage.setItem('portfolio_buying_power', bp.toFixed(2));
-    }
+    // We no longer mutate portfolio_buying_power here, it is strictly a baseline.
+    if (typeof recalculateBuyingPower === 'function') recalculateBuyingPower();
+    if (typeof updateBalanceMetrics === 'function') updateBalanceMetrics();
 
     // Reset fields and notification immediately
     resetFormAndNotifications();

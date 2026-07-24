@@ -442,7 +442,7 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
           runningShares += sharesNum;
         }
 
-        if (isBeforeOrOnEnd && realizedPnL !== 0) {
+        if (realizedPnL !== 0) {
           realizedPLAllTime += realizedPnL;
         }
 
@@ -475,7 +475,7 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
           runningShares -= sharesNum;
         }
 
-        if (isBeforeOrOnEnd && realizedPnL !== 0) {
+        if (realizedPnL !== 0) {
           realizedPLAllTime += realizedPnL;
         }
 
@@ -697,8 +697,30 @@ function createMasterCardHTML(cardData, listType) {
     currentPrice = parseFloat(defaultAsset.currentPrice) || buyAvgVal || 0;
   }
 
+  // Inject dynamic badges based on state matrix check (using calculateTradeStatus)
+  const badge = cardData.hasOwnProperty('badgeOverride') && cardData.badgeOverride
+    ? cardData.badgeOverride
+    : calculateTradeStatus(cardData);
+  
+  let badgeHTML = '';
+  if (badge) {
+    badgeHTML = `<span class="badge ${badge.class}">${badge.icon} ${badge.label}</span>`;
+  }
+
+  const isSoldLater = badge && badge.type === 'sold_later';
+
   // 3-Tier P&L calculations
-  const realizedPL = (listType === 'active' && cardData.realizedPLAllTime !== undefined ? cardData.realizedPLAllTime : cardData.realizedPL) * multiplier;
+  let realizedPL = 0;
+  if (listType === 'active') {
+    if (isSoldLater) {
+      realizedPL = (cardData.realizedPLAllTime || 0) * multiplier;
+    } else {
+      realizedPL = (cardData.realizedPL || 0) * multiplier;
+    }
+  } else {
+    realizedPL = (cardData.realizedPL || 0) * multiplier;
+  }
+  
   const unrealizedPL = (cardData.netShares * currentPrice - cardData.netShares * buyAvgVal) * multiplier;
 
   let rightColumnHTML = '';
@@ -718,22 +740,19 @@ function createMasterCardHTML(cardData, listType) {
   // Class / sign formatting
   let realizedClass = 'pnl-neutral';
   let realizedSign = '';
-  if (realizedPL > 0) { realizedClass = 'pnl-up'; realizedSign = '+'; }
-  else if (realizedPL < 0) { realizedClass = 'pnl-down'; realizedSign = '-'; }
+  if (isSoldLater) {
+    realizedClass = 'pnl-warning" style="color: #f59e0b;'; // Orange/Yellow
+    if (realizedPL > 0) realizedSign = '+';
+    else if (realizedPL < 0) realizedSign = '-';
+  } else {
+    if (realizedPL > 0) { realizedClass = 'pnl-up'; realizedSign = '+'; }
+    else if (realizedPL < 0) { realizedClass = 'pnl-down'; realizedSign = '-'; }
+  }
 
   let unrealizedClass = 'pnl-neutral';
   let unrealizedSign = '';
   if (unrealizedPL > 0) { unrealizedClass = 'pnl-up'; unrealizedSign = '+'; }
   else if (unrealizedPL < 0) { unrealizedClass = 'pnl-down'; unrealizedSign = '-'; }
-
-  // Inject dynamic badges based on state matrix check (using calculateTradeStatus)
-  let badgeHTML = '';
-  const badge = cardData.hasOwnProperty('badgeOverride') && cardData.badgeOverride
-    ? cardData.badgeOverride
-    : calculateTradeStatus(cardData);
-  if (badge) {
-    badgeHTML = `<span class="badge ${badge.class}">${badge.icon} ${badge.label}</span>`;
-  }
 
   const assetTypeLabel = isOption ? 'Option' : 'Stock';
 
@@ -850,7 +869,7 @@ function createMasterCardHTML(cardData, listType) {
   let pnlDisplayHTML = '';
   if (listType === 'active') {
     let activeRealizedHTML = '';
-    if (Math.abs(realizedPL) > 0.001) {
+    if (Math.abs(realizedPL) > 0.001 || isSoldLater) {
       activeRealizedHTML = `
         <div style="margin-top: 4px; font-size: 12px; text-align: left;">
           <span style="color: var(--text-muted); font-size: 11px;">Realized P&L:</span> <strong class="realized-val ${realizedClass}" style="font-size: 13px;">${realizedSign}$${Math.abs(realizedPL).toFixed(2)}</strong>
@@ -858,11 +877,18 @@ function createMasterCardHTML(cardData, listType) {
       `;
     }
 
-    pnlDisplayHTML = `
-      <div class="pnl-single-display" style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main); display: flex; flex-direction: column; gap: 4px;">
+    let unrealizedHTML = '';
+    if (!isSoldLater) {
+      unrealizedHTML = `
         <div style="font-size: 12px; text-align: left;">
           <span style="color: var(--text-muted); font-size: 11px;">Unrealized P&L:</span> <strong class="unrealized-val ${unrealizedClass}" style="font-size: 13px;">${unrealizedSign}$${Math.abs(unrealizedPL).toFixed(2)}</strong>
         </div>
+      `;
+    }
+
+    pnlDisplayHTML = `
+      <div class="pnl-single-display" style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; font-family: var(--font-main); display: flex; flex-direction: column; gap: 4px;">
+        ${unrealizedHTML}
         ${activeRealizedHTML}
       </div>
     `;
@@ -1682,37 +1708,14 @@ function calculateSection1Metrics(rangeType, startDate, endDate) {
       }
       
       let unrealizedPL = 0;
-      if (rangeType === 'daily') {
-        const change24h = parseFloat(marketEntry.change24h) || 0;
-        const yesterdayClosePrice = currentPrice / (1 + (change24h / 100));
-        
-        const sharesBoughtToday = Math.min(pos.buyQty || 0, activeShares);
-        const sharesFromYesterday = activeShares - sharesBoughtToday;
-        
-        const todayPurchasePrice = pos.buyAvg || costBasis;
-
-        let pnlTodayShares = 0;
-        let pnlYesterdayShares = 0;
-        
-        if (isShort) {
-          pnlTodayShares = sharesBoughtToday * (todayPurchasePrice - currentPrice);
-          pnlYesterdayShares = sharesFromYesterday * (yesterdayClosePrice - currentPrice);
-        } else {
-          pnlTodayShares = sharesBoughtToday * (currentPrice - todayPurchasePrice);
-          pnlYesterdayShares = sharesFromYesterday * (currentPrice - yesterdayClosePrice);
-        }
-        
-        unrealizedPL = (pnlTodayShares + pnlYesterdayShares) * multiplier;
+      if (isShort) {
+        unrealizedPL = activeShares * (costBasis - currentPrice) * multiplier;
       } else {
-        // Scenario 2: For larger filters, use Active Shares * (Live Price - Average Buy Price)
-        if (isShort) {
-          unrealizedPL = activeShares * (costBasis - currentPrice) * multiplier;
-        } else {
-          unrealizedPL = activeShares * (currentPrice - costBasis) * multiplier;
-        }
+        unrealizedPL = activeShares * (currentPrice - costBasis) * multiplier;
       }
       
       activePL += unrealizedPL;
+
     }
   });
 
@@ -1803,7 +1806,6 @@ function calculateSection1Metrics(rangeType, startDate, endDate) {
       totalValueEl.textContent = trimmedOverride;
     }
   }
-
   if (startValEl) startValEl.textContent = "$" + periodOpenCost.toFixed(2);
   if (currentValEl) currentValEl.textContent = "$" + periodCurrentValue.toFixed(2);
 
@@ -2197,5 +2199,3 @@ function initAINotesCollapsible() {
     });
   }
 }
-
-

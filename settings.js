@@ -497,13 +497,15 @@ function initPortfolioOverrides() {
   // ── Save handler ──────────────────────────────────────────────────────────
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
-      const bpVal = bpInput ? parseFloat(bpInput.value) : NaN;
+      const bpValStr = bpInput ? bpInput.value.trim() : '';
       const pvVal = pvInput ? pvInput.value.trim() : '';
 
-      const bpValid = !isNaN(bpVal) && bpVal >= 0;
+      const isBlank = bpValStr === '';
+      const bpVal = isBlank ? NaN : parseFloat(bpValStr);
+      const bpValid = isBlank || (!isNaN(bpVal) && bpVal >= 0);
 
       if (!bpValid) {
-        showToast('⚠️ Please enter a valid buying power value.', true);
+        showToast('⚠️ Please enter a valid buying power value or leave it blank.', true);
         return;
       }
 
@@ -513,8 +515,15 @@ function initPortfolioOverrides() {
         message: 'Are you sure you want to save these custom cash and portfolio overrides?'
       }, () => {
         // Save buying power override
-        localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
-        localStorage.setItem('portfolio_buying_power_user_set', 'true');
+        if (!isBlank) {
+          localStorage.setItem('portfolio_buying_power', bpVal.toFixed(2));
+          localStorage.setItem('portfolio_buying_power_user_set', 'true');
+          localStorage.setItem('portfolio_buying_power_timestamp', new Date().toISOString());
+        } else {
+          localStorage.removeItem('portfolio_buying_power');
+          localStorage.removeItem('portfolio_buying_power_user_set');
+          localStorage.removeItem('portfolio_buying_power_timestamp');
+        }
 
         // Save portfolio value override (empty string clears it)
         if (pvVal !== '') {
@@ -539,10 +548,16 @@ function initPortfolioOverrides() {
           });
 
         // Update previews
-        if (bpPreview) bpPreview.textContent = 'Current Override: ' + fmt(bpVal);
+        if (bpPreview) bpPreview.textContent = !isBlank ? 'Current Override: ' + fmt(bpVal) : 'Live calculation active';
         if (pvPreview) pvPreview.textContent = pvVal !== '' ? 'Master Override verbatim active: ' + pvVal : 'Live calculation active';
 
         recalculateBuyingPower();
+        if (typeof updateBalanceMetrics === 'function') {
+          updateBalanceMetrics();
+        }
+        if (typeof renderAssetsTable === 'function' && typeof activeFilterMode !== 'undefined') {
+          renderAssetsTable(activeFilterMode);
+        }
       });
     });
   }
@@ -816,31 +831,28 @@ async function executeCashAdjustment(actionType, amount, reason) {
   // 1. Save locally in cash ledger immediately
   saveCashLocally(tx);
 
-  // 2. Always update buying power directly — deposits add, withdrawals subtract.
-  //    If no override is set, activate it now so user can see the running balance.
-  const currentBP = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
-  const adjustedBP = Math.max(0, currentBP + (actionType === 'DEPOSIT' ? amount : -amount));
-  localStorage.setItem('portfolio_buying_power', adjustedBP.toFixed(2));
-  localStorage.setItem('portfolio_buying_power_user_set', 'true');
+  // 2. We no longer artificially update portfolio_buying_power directly here,
+  // because portfolio_buying_power is now strictly the BASELINE.
+  // Recalculate dynamic buying power instead.
+  recalculateBuyingPower();
+  if (typeof updateBalanceMetrics === 'function') {
+    updateBalanceMetrics();
+  }
+  if (typeof renderAssetsTable === 'function' && typeof activeFilterMode !== 'undefined') {
+    renderAssetsTable(activeFilterMode);
+  }
 
   // Persist to server so portfolio tab loads the correct value on next visit
   fetch(CLOUD_ENDPOINT.endpointUrl + 'overrides', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      buyingPowerOverride: adjustedBP,
+      buyingPowerOverride: localStorage.getItem('portfolio_buying_power') || '0',
       portfolioValueOverride: localStorage.getItem('portfolio_value_override') || ''
     })
   }).catch(err => console.error('Failed to sync overrides:', err));
 
-  // 3. Update the override input preview on settings page
-  const bpInputEl = document.getElementById('buyingPowerInput');
-  const bpPreviewEl = document.getElementById('buyingPowerPreview');
-  if (bpInputEl) bpInputEl.value = adjustedBP.toFixed(2);
-  if (bpPreviewEl) {
-    const fmt = v => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
-    bpPreviewEl.textContent = 'Current Override: ' + fmt(adjustedBP);
-  }
+  // (Preview is updated automatically by recalculateBuyingPower)
 
   // 4. Stream to cloud — AWAIT so the server has persisted the record (with reason)
   //    before initTransactionHistory re-fetches the server list.
@@ -1068,7 +1080,7 @@ function initSecuritySettings() {
 }
 
 function calculateNetCash(txs, cashTxs) {
-  let cash = 0;
+  let cash = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
 
   // 1. Process cash ledger
   cashTxs.forEach(t => {
@@ -1113,33 +1125,20 @@ function calculateNetCash(txs, cashTxs) {
 }
 
 function recalculateBuyingPower() {
-  // ── Clean model ──────────────────────────────────────────────────────────
-  // When an override is set, portfolio_buying_power IS the canonical balance.
-  // Deposits/withdrawals have already adjusted it directly in executeCashAdjustment.
-  // When no override is set, fall back to pure netCash from all transactions.
-  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
-
-  let buyingPower = 0;
-  if (isUserSet) {
-    // Already maintained directly — just read it
-    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
-  } else {
-    // No override: derive from trade + cash ledger history
-    let txs = [];
-    try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) { }
-    let cashTxs = [];
-    try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) { }
-    buyingPower = Math.max(0, calculateNetCash(txs, cashTxs));
-    localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
-  }
+  let txs = [];
+  try { txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]'); } catch (e) { }
+  let cashTxs = [];
+  try { cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]'); } catch (e) { }
+  
+  let buyingPower = Math.max(0, calculateNetCash(txs, cashTxs));
 
   // Update inputs on Settings page if present
   const bpInput = document.getElementById('buyingPowerInput');
-  const bpPreview = document.getElementById('buyingPowerPreview');
-  if (bpInput) bpInput.value = buyingPower.toFixed(2);
+  const baseline = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+  if (bpInput) bpInput.value = baseline.toFixed(2);
   if (bpPreview) {
     const fmt = v => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
-    bpPreview.textContent = (isUserSet ? 'Current Override: ' : 'Current: ') + fmt(buyingPower);
+    bpPreview.textContent = 'Current Net BP: ' + fmt(buyingPower);
   }
 }
 

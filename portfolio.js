@@ -223,6 +223,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyAccentColor(savedAccent);
   }
 
+  // Display user name in header
+  const usernameDisplay = document.getElementById('header-username-display');
+  if (usernameDisplay) {
+    usernameDisplay.textContent = typeof window.getSessionUser === 'function' ? window.getSessionUser() : 'Admin';
+  }
+
   // ── Load server-persisted overrides into localStorage FIRST ──────────────
   // This fixes buying power showing $0.00 on reload: the server stores the
   // canonical override values (startingCash, buyingPowerOverride) and we must
@@ -821,44 +827,53 @@ function updateBalanceMetrics() {
   }
 
   // ── 4. NET PORTFOLIO VALUE = CASH (buying power) + OPEN POSITION EQUITY ──
-  // Clean model: if override is set, portfolio_buying_power is the canonical balance
-  // maintained directly by deposits/withdrawals and override saves.
-  // Only recalculate from ledger history when no override is active.
-  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
-  let buyingPower = 0;
+  // Option B Implementation: Override is the true LIVE cash balance at the exact moment it was saved.
+  let baseCashStr = localStorage.getItem('portfolio_buying_power');
+  let bpTimestampStr = localStorage.getItem('portfolio_buying_power_timestamp');
+  
+  let baseCash = parseFloat(baseCashStr);
+  let bpTimestamp = null;
 
-  if (isUserSet) {
-    // Override is active — use the stored value directly
-    buyingPower = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
-  } else {
-    // No override: derive from cash ledger and trade costs
-    let cashTxs = [];
-    try {
-      cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
-    } catch (e) { cashTxs = []; }
-
-    let dynamicCash = 0;
-    cashTxs.forEach(tx => {
-      if (!tx) return;
-      const action = String(tx.action || '').toUpperCase();
-      const amount = parseFloat(tx.price) || 0;
-      if (action === 'DEPOSIT') dynamicCash += amount;
-      else if (action === 'WITHDRAWAL') dynamicCash -= amount;
-    });
-    localTransactions.forEach(tx => {
-      if (!tx || !tx.ticker) return;
-      if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
-      const action = String(tx.action || '').toUpperCase();
-      const sharesNum = parseFloat(tx.shares) || 0;
-      const priceNum = parseFloat(tx.price) || 0;
-      const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
-      const cost = sharesNum * priceNum * (isOpt ? 100 : 1);
-      if (action === 'BUY') dynamicCash -= cost;
-      else if (action === 'SELL') dynamicCash += cost;
-    });
-    buyingPower = Math.max(0, dynamicCash);
-    localStorage.setItem('portfolio_buying_power', buyingPower.toFixed(2));
+  if (isNaN(baseCash)) {
+    baseCash = 0; // No override set
+  } else if (bpTimestampStr) {
+    bpTimestamp = new Date(bpTimestampStr);
   }
+  
+  let cashTxs = [];
+  try {
+    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
+  } catch (e) { cashTxs = []; }
+
+  let dynamicCash = baseCash;
+  
+  cashTxs.forEach(tx => {
+    if (!tx) return;
+    // Skip transactions logged before the override timestamp
+    if (bpTimestamp && tx.date && new Date(tx.date) <= bpTimestamp) return;
+
+    const action = String(tx.action || '').toUpperCase();
+    const amount = parseFloat(tx.price) || 0;
+    if (action === 'DEPOSIT') dynamicCash += amount;
+    else if (action === 'WITHDRAWAL') dynamicCash -= amount;
+  });
+  
+  localTransactions.forEach(tx => {
+    if (!tx || !tx.ticker) return;
+    if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
+    // Skip trade cash flow that occurred before the override timestamp
+    if (bpTimestamp && tx.date && new Date(tx.date) <= bpTimestamp) return;
+
+    const action = String(tx.action || '').toUpperCase();
+    const sharesNum = parseFloat(tx.shares) || 0;
+    const priceNum = parseFloat(tx.price) || 0;
+    const isOpt = tx.assetType === 'options' || (/\$\d/.test(tx.ticker) && /\b(call|put)\b/i.test(tx.ticker));
+    const cost = sharesNum * priceNum * (isOpt ? 100 : 1);
+    if (action === 'BUY') dynamicCash -= cost;
+    else if (action === 'SELL') dynamicCash += cost;
+  });
+  
+  let buyingPower = Math.max(0, dynamicCash);
 
   // Calculate Unrealized P&L and Realized P&L (FIFO queue method)
   let unrealizedPL = 0;
@@ -992,7 +1007,11 @@ function updateBalanceMetrics() {
   processExpiration(longQueues, false);
   processExpiration(shortQueues, true);
 
-  // If the user has manually overridden the display value in Settings, use it.
+  // IF the Master Portfolio Value Override input is set (not blank/empty):
+  // Set Total Portfolio Value directly to that forced override number.
+  // IF the Master Portfolio Value Override input is left BLANK (default live mode):
+  // Calculate Total Portfolio Value dynamically as:
+  // Total Portfolio Value = currentBuyingPower + Total Live Market Value of Open Positions.
   const portfolioValueOverride = localStorage.getItem('portfolio_value_override');
   const hasValueOverride = portfolioValueOverride !== null && portfolioValueOverride.trim() !== '';
   const netPortfolioValue = hasValueOverride
@@ -1809,8 +1828,6 @@ function startLivePriceEngine() {
 }
 
 async function updateLivePrices() {
-  if (!portfolioAssets || portfolioAssets.length === 0) return;
-
   let marketPrices = {};
   try {
     marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
@@ -1824,7 +1841,17 @@ async function updateLivePrices() {
   // Build a deduplicated list of tickers to fetch
   const tickerSet = new Set();
   const osiToOriginalMap = {};
-  for (const asset of portfolioAssets) {
+  let allAssetsToFetch = [...portfolioAssets];
+  try {
+    const txs = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
+    txs.forEach(tx => {
+      if (tx.ticker && !allAssetsToFetch.some(a => a.ticker === tx.ticker)) {
+        allAssetsToFetch.push({ ticker: tx.ticker, type: tx.assetType || 'stocks' });
+      }
+    });
+  } catch(e) {}
+
+  for (const asset of allAssetsToFetch) {
     if (asset.ticker) {
       const isOption = asset.type === 'options' || (/\$\d/.test(asset.ticker) && /\b(call|put)\b/i.test(asset.ticker)) || asset.ticker.includes('@');
 
@@ -1873,9 +1900,14 @@ async function updateLivePrices() {
         items = uwPayload.data;
       } else if (uwPayload.results && Array.isArray(uwPayload.results)) {
         items = uwPayload.results;
-      } else if (typeof uwPayload === 'object') {
-        // Fallback for ticker-mapped objects { "AAPL": { price: 150 } }
-        items = Object.keys(uwPayload).map(k => ({ symbol: k, ...uwPayload[k] }));
+      } else if (typeof uwPayload === 'object' && uwPayload !== null) {
+        // Fallback for ticker-mapped objects { "AAPL": { price: 150 } } or { "DRAM": 58.28 }
+        items = Object.keys(uwPayload).map(k => {
+          if (typeof uwPayload[k] === 'object' && uwPayload[k] !== null) {
+            return { symbol: k, ...uwPayload[k] };
+          }
+          return { symbol: k, price: uwPayload[k] };
+        });
       }
 
       for (const item of items) {
@@ -1917,7 +1949,7 @@ async function updateLivePrices() {
 
   let updatedAny = false;
 
-  for (const asset of portfolioAssets) {
+  for (const asset of allAssetsToFetch) {
     const ticker = asset.ticker;
     if (!ticker) continue;
 

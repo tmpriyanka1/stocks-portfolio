@@ -842,7 +842,7 @@ async function executeCashAdjustment(actionType, amount, reason) {
     renderAssetsTable(activeFilterMode);
   }
 
-  // Persist to server so portfolio tab loads the correct value on next visit
+  // Persist overrides to server
   fetch(CLOUD_ENDPOINT.endpointUrl + 'overrides', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1080,11 +1080,23 @@ function initSecuritySettings() {
 }
 
 function calculateNetCash(txs, cashTxs) {
-  let cash = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
+  let baseCashStr = localStorage.getItem('portfolio_buying_power');
+  let bpTimestampStr = localStorage.getItem('portfolio_buying_power_timestamp');
+  
+  let cash = parseFloat(baseCashStr);
+  let bpTimestamp = null;
+
+  if (isNaN(cash)) {
+    cash = 0;
+  } else if (bpTimestampStr) {
+    bpTimestamp = new Date(bpTimestampStr);
+  }
 
   // 1. Process cash ledger
   cashTxs.forEach(t => {
     if (!t) return;
+    if (bpTimestamp && t.date && new Date(t.date) <= bpTimestamp) return;
+
     const action = String(t.action || '').toUpperCase();
     const amount = parseFloat(t.price) || 0;
     if (action === 'DEPOSIT') {
@@ -1097,6 +1109,8 @@ function calculateNetCash(txs, cashTxs) {
   // 2. Process trades
   txs.forEach(t => {
     if (!t || !t.ticker) return;
+    if (bpTimestamp && t.date && new Date(t.date) <= bpTimestamp) return;
+
     const ticker = t.ticker.toUpperCase();
     const action = String(t.action || '').toUpperCase();
     if (ticker === 'CASH' || t.assetType === 'CASH') {
@@ -1136,6 +1150,7 @@ function recalculateBuyingPower() {
   const bpInput = document.getElementById('buyingPowerInput');
   const baseline = parseFloat(localStorage.getItem('portfolio_buying_power') || '0');
   if (bpInput) bpInput.value = baseline.toFixed(2);
+  const bpPreview = document.getElementById('buyingPowerPreview');
   if (bpPreview) {
     const fmt = v => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
     bpPreview.textContent = 'Current Net BP: ' + fmt(buyingPower);
@@ -1148,7 +1163,7 @@ async function initTransactionHistory() {
 
   let cashTxs = [];
   try {
-    const res = await fetch(CLOUD_ENDPOINT.endpointUrl + 'cash');
+    const res = await fetch(CLOUD_ENDPOINT.endpointUrl + 'cash', { cache: 'no-store' });
     if (res.ok) {
       cashTxs = await res.json();
       localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashTxs));
@@ -1249,7 +1264,7 @@ async function initPnLGraph() {
   // Load all transactions
   let allTxs = [];
   try {
-    const res = await fetch(CLOUD_ENDPOINT.endpointUrl + 'trades');
+    const res = await fetch(CLOUD_ENDPOINT.endpointUrl + 'trades', { cache: 'no-store' });
     if (res.ok) {
       allTxs = await res.json();
     } else {

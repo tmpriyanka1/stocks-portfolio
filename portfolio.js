@@ -2182,6 +2182,7 @@ function initQuickTradeModal() {
   const submitBtn = document.getElementById('submitQuickTradeBtn');
   const sharesInput = document.getElementById('qtSharesInput');
   const priceInput = document.getElementById('qtPriceInput');
+  const dateInput = document.getElementById('qtDateInput');
   const commentInput = document.getElementById('qtCommentInput');
 
   if (!modal) return;
@@ -2191,6 +2192,7 @@ function initQuickTradeModal() {
     modal.classList.remove('active');
     if (sharesInput) sharesInput.value = '';
     if (priceInput) priceInput.value = '';
+    if (dateInput) dateInput.value = '';
     if (commentInput) commentInput.value = '';
   };
 
@@ -2217,10 +2219,17 @@ function initQuickTradeModal() {
       const asset = portfolioAssets.find(a => a.ticker === ticker);
       const assetType = asset ? (asset.type || 'stocks') : 'stocks';
 
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10);
-      const timeStr = now.toTimeString().slice(0, 8);
-      const isoDate = now.toISOString();
+      let isoDate;
+      if (dateInput && dateInput.value) {
+        const userDate = new Date(dateInput.value);
+        if (!isNaN(userDate.getTime())) {
+          isoDate = userDate.toISOString();
+        }
+      }
+      
+      if (!isoDate) {
+        isoDate = new Date().toISOString();
+      }
 
       const tx = {
         ticker: ticker.trim().toUpperCase(),

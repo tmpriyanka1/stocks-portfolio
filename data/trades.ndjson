@@ -3,8 +3,6 @@
 {"ticker":"MVLL","shares":210,"price":22.9,"action":"BUY","assetType":"stocks","date":"2026-07-16T19:02:36","comment":"","stopLoss":0}
 {"ticker":"MVLL","shares":134,"price":22.73,"action":"BUY","assetType":"stocks","date":"2026-07-17T19:03:19","comment":"","stopLoss":0}
 {"ticker":"AVGX","shares":105,"price":52.29,"action":"BUY","assetType":"stocks","date":"2026-07-10T19:04:14","comment":"","stopLoss":0}
-{"ticker":"MRNA","shares":105,"price":70.63,"action":"BUY","assetType":"stocks","date":"2026-07-10T19:05:24","comment":"","stopLoss":0}
-{"ticker":"MRNA","shares":105,"price":68.66,"action":"BUY","assetType":"stocks","date":"2026-07-13T19:06:10","comment":"","stopLoss":0}
 {"ticker":"NBIS","shares":35,"price":233.57,"action":"BUY","assetType":"stocks","date":"2026-07-02T19:07:27","comment":"","stopLoss":0}
 {"ticker":"CRDO","shares":28,"price":269.7,"action":"BUY","assetType":"stocks","date":"2026-07-06T19:08:34","comment":"","stopLoss":0}
 {"ticker":"TWLO","shares":28,"price":215.36,"action":"BUY","assetType":"stocks","date":"2026-07-07T19:11:05","comment":"","stopLoss":0}
@@ -18,3 +16,4 @@
 {"ticker":"AVGX","shares":105,"price":52.13,"action":"SELL","assetType":"stocks","date":"2026-07-24T07:27:10.939Z","comment":"Breakeven after recovered from unrealized loss","stopLoss":0}
 {"ticker":"NBIS","shares":35,"price":225.69,"action":"SELL","assetType":"stocks","date":"2026-07-24T07:29:15.546Z","comment":"Exited at loss because market crash risk","stopLoss":0}
 {"ticker":"ORCL","shares":77,"price":114.92,"action":"BUY","assetType":"stocks","date":"2026-07-24T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
+{"ticker":"MRNA","shares":210,"price":69.645,"action":"BUY","assetType":"stocks","date":"2026-07-24T22:55:23.727Z","comment":"Position adjusted via Edit Asset form","stopLoss":69}

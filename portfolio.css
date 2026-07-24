@@ -665,6 +665,26 @@
 
 /* Mobile Stack Rules & Touch Target Scaling */
 @media (max-width: 768px) {
+  /* MOBILE OPTIMIZATIONS FOR BALANCE CARD */
+  .balance-card {
+    margin: 4px 12px 8px 12px !important;
+    padding: 10px 14px !important;
+  }
+  .balance-amount {
+    font-size: 1.75rem !important;
+  }
+  .balance-change {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    font-size: 0.85rem !important;
+    gap: 4px !important;
+  }
+  .portfolio-chart-container {
+    max-height: 45px !important;
+    margin-top: 4px !important;
+  }
+
   .holdings-header {
     display: grid !important;
     grid-template-columns: 2fr 1.3fr 0.9fr 1.3fr 1.5fr !important;

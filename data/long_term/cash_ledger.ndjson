@@ -1,0 +1,2 @@
+{"ticker":"CASH","shares":0,"price":115857.69,"action":"DEPOSIT","assetType":"CASH","date":"2026-07-24T15:18:25","comment":"Initially added amount from robinhood","author":"admin"}
+{"ticker":"CASH","shares":0,"price":75781.55,"action":"DEPOSIT","assetType":"CASH","date":"2026-07-24T15:51:48","comment":"Initial account funding for proper buying power matches robinhood values","author":"admin"}

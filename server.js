@@ -70,14 +70,18 @@ function getDatabasePath(req, fileName) {
   const userRole = req && req.headers['x-user-role'] || 'production';
   const targetFolder = userRole === 'tester' ? 'test_data' : 'data';
 
+  const portfolioId = req && req.headers['x-portfolio-id'] || 'long_term';
+  const folderPath = path.join(__dirname, targetFolder, portfolioId);
+  
   // Auto-create folder if missing so the user doesn't have to do it manually
-  const folderPath = path.join(__dirname, targetFolder);
   if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath, { recursive: true });
   }
 
   return path.join(folderPath, fileName);
 }
+
+
 
 const DEFAULT_PRICES = {
   'NVDA': 485.00,
@@ -102,11 +106,14 @@ const DEFAULT_PRICES = {
  * Reports [CREATED] for newly scaffolded assets and [OK] for pre-existing ones.
  */
 function bootstrapDataLayer() {
-  const DB_PATH = path.join(__dirname, 'data', 'trades.ndjson');
-  const NOTES_DB_PATH = path.join(__dirname, 'data', 'journal_notes.ndjson');
-  const PRICES_PATH = path.join(__dirname, 'data', 'prices.json');
-  const CASH_LEDGER_PATH = path.join(__dirname, 'data', 'cash_ledger.ndjson');
-  const OVERRIDES_PATH = path.join(__dirname, 'data', 'overrides.json');
+  const longTermDir = path.join(__dirname, 'data', 'long_term');
+  if (!fs.existsSync(longTermDir)) fs.mkdirSync(longTermDir, { recursive: true });
+
+  const DB_PATH = path.join(longTermDir, 'trades.ndjson');
+  const NOTES_DB_PATH = path.join(longTermDir, 'journal_notes.ndjson');
+  const PRICES_PATH = path.join(longTermDir, 'prices.json');
+  const CASH_LEDGER_PATH = path.join(longTermDir, 'cash_ledger.ndjson');
+  const OVERRIDES_PATH = path.join(longTermDir, 'overrides.json');
 
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
@@ -196,11 +203,12 @@ function ensureDbExists(req) {
   if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath, { recursive: true });
   }
-  const dbPath = path.join(folderPath, 'trades.ndjson');
-  const notesPath = path.join(folderPath, 'journal_notes.ndjson');
-  const cashLedgerPath = path.join(folderPath, 'cash_ledger.ndjson');
-  const overridesPath = path.join(folderPath, 'overrides.json');
-  const pricesPath = path.join(folderPath, 'prices.json');
+  
+  const dbPath = getDatabasePath(req, 'trades.ndjson');
+  const notesPath = getDatabasePath(req, 'journal_notes.ndjson');
+  const cashLedgerPath = getDatabasePath(req, 'cash_ledger.ndjson');
+  const overridesPath = getDatabasePath(req, 'overrides.json');
+  const pricesPath = getDatabasePath(req, 'prices.json');
 
   const guards = [dbPath, notesPath, cashLedgerPath];
   guards.forEach(p => { if (!fs.existsSync(p)) fs.writeFileSync(p, '', 'utf8'); });

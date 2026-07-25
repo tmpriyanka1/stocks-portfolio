@@ -69,29 +69,31 @@
     // Check if the URL is hitting the backend
     var isBackend = url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0 ||
                     url.indexOf('/api/') === 0 ||
-                    url.indexOf('http://localhost:5001/api/') === 0;
+                    url.indexOf('http://localhost:5001/api/') === 0 ||
+                    url.indexOf('http://127.0.0.1:5001/api/') === 0;
                     
     if (isBackend) {
       var currentRole = window.getSessionRole ? window.getSessionRole() : 'production';
       var currentUser = window.getSessionUser ? window.getSessionUser().toLowerCase() : '';
       
       // 1. Dynamic Routing
-      if (currentUser !== 'tester') {
-        if (url.indexOf('http://localhost:5001/api/') === 0) {
-          url = url.replace('http://localhost:5001/api/', 'https://vanai-portfolio-backend.onrender.com/api/');
+      var isLocal = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' || 
+                    !window.location.hostname;
+                    
+      if (!isLocal) {
+        if (url.indexOf('http://localhost:5001/api/') === 0 || url.indexOf('http://127.0.0.1:5001/api/') === 0) {
+          url = 'https://vanai-portfolio-backend.onrender.com/api/' + url.split('/api/')[1];
         } else if (url.indexOf('/api/') === 0) {
           url = 'https://vanai-portfolio-backend.onrender.com' + url;
         }
       } else {
-        var isLocal = window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1' || 
-                      !window.location.hostname;
-        if (isLocal) {
-          if (url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0) {
-            url = url.replace('https://vanai-portfolio-backend.onrender.com/api/', 'http://localhost:5001/api/');
-          } else if (url.indexOf('/api/') === 0) {
-            url = 'http://localhost:5001' + url;
-          }
+        if (url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0) {
+          url = 'http://localhost:5001/api/' + url.split('/api/')[1];
+        } else if (url.indexOf('/api/') === 0) {
+          url = 'http://localhost:5001' + url;
+        } else if (url.indexOf('http://127.0.0.1:5001/api/') === 0) {
+          url = 'http://localhost:5001/api/' + url.split('/api/')[1];
         }
       }
       
@@ -101,14 +103,18 @@
       
       // Get the role from the guard session helper
       var currentRole = window.getSessionRole ? window.getSessionRole() : 'production';
+      var portfolioId = localStorage.getItem('active_portfolio_id') || 'long_term';
       
       // Convert headers if it's a Headers object
       if (typeof init.headers.set === 'function') {
         init.headers.set('x-user-role', currentRole);
+        init.headers.set('x-portfolio-id', portfolioId);
       } else if (Array.isArray(init.headers)) {
         init.headers.push(['x-user-role', currentRole]);
+        init.headers.push(['x-portfolio-id', portfolioId]);
       } else {
         init.headers['x-user-role'] = currentRole;
+        init.headers['x-portfolio-id'] = portfolioId;
       }
       
       if (typeof input === 'string') {
@@ -120,4 +126,49 @@
     
     return originalFetch(input, init);
   };
+  
+  // Global Portfolio Switcher UI Logic
+  function initSwitcher() {
+    var switcher = document.getElementById('global-portfolio-switcher');
+    if (switcher && !switcher.hasAttribute('data-initialized')) {
+      switcher.setAttribute('data-initialized', 'true');
+      
+      // Set the initial value
+      var currentPortfolio = localStorage.getItem('active_portfolio_id') || 'long_term';
+      switcher.value = currentPortfolio;
+      
+      var pillContainer = document.getElementById('account-pill-container');
+      if (pillContainer) {
+        if (currentPortfolio === 'long_term') {
+          pillContainer.classList.add('long-term-active');
+          pillContainer.classList.remove('short-term-active');
+        } else {
+          pillContainer.classList.add('short-term-active');
+          pillContainer.classList.remove('long-term-active');
+        }
+      }
+      
+      // Listen for changes
+      switcher.addEventListener('change', function(e) {
+        var newPortfolio = e.target.value;
+        localStorage.setItem('active_portfolio_id', newPortfolio);
+        
+        // Wipe local caches to prevent data bleeding
+        localStorage.removeItem('portfolio_transactions');
+        localStorage.removeItem('portfolio_cash_ledger');
+        localStorage.removeItem('portfolio_buying_power');
+        localStorage.removeItem('portfolio_buying_power_timestamp');
+        localStorage.removeItem('portfolio_unread_notifications');
+        
+        // Reload page to fetch new portfolio data
+        window.location.reload();
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSwitcher);
+  } else {
+    initSwitcher();
+  }
 })();

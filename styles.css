@@ -639,6 +639,41 @@ body.disable-glass-blur {
   color: var(--text-secondary);
   font-size: 13px;
 }
+.header-right-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+    padding: 16px 20px 12px 20px !important;
+    gap: 16px;
+    align-items: center;
+  }
+  .header-right-actions {
+    display: contents;
+  }
+  .profile-section {
+    order: 1;
+  }
+  .action-buttons {
+    order: 2;
+    margin-left: auto;
+  }
+  .account-pill-container {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+}
 
 .account-pill-container {
   display: flex;

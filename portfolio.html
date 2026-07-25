@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Core Styles -->
-  <link rel="stylesheet" href="styles.css?v=2.3">
+  <link rel="stylesheet" href="styles.css?v=5">
   <!-- Screen-specific Styles -->
   <link rel="stylesheet" href="portfolio.css?v=2.2">
 </head>
@@ -37,47 +37,47 @@
             <h1 class="user-title">Vanai</h1>
           </div>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <div style="margin-right: 15px; color: var(--text-muted); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span id="header-username-display">User</span>
-          </div>
-          <!-- Manual Cloud Refresh Button -->
-          <button class="notification-btn" aria-label="Refresh Portfolio" id="manualRefreshBtn" title="Sync latest prices from cloud">
-            <svg class="refresh-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <polyline points="1 20 1 14 7 14"></polyline>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
-          </button>
-          <button class="notification-btn" aria-label="Import CSV" id="openImportBtn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-          </button>
-          <div class="notification-wrapper">
-            <button class="notification-btn" aria-label="Notifications" id="notification-bell">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        <div class="header-right-actions">
+          <div id="account-pill-container" class="account-pill-container">
+            <div style="color: var(--text-muted); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
               </svg>
-              <span class="badge" id="notification-badge" style="display: none;">0</span>
+              <span id="header-username-display">User</span>
+            </div>
+            <select id="global-portfolio-switcher" class="portfolio-switcher">
+              <option value="long_term">Long Term</option>
+              <option value="short_term">Short Term</option>
+            </select>
+          </div>
+          <div class="action-buttons">
+            <!-- Manual Cloud Refresh Button -->
+            <button class="notification-btn" aria-label="Refresh Portfolio" id="manualRefreshBtn" title="Sync latest prices from cloud">
+              <svg class="refresh-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
             </button>
-            <div id="notification-dropdown" class="notification-dropdown hidden">
-              <div class="dropdown-header">
-                <h3>Notifications</h3>
-                <button id="clear-notifications-btn" class="clear-btn">Clear All</button>
-              </div>
-              <div class="dropdown-body" id="notification-list">
-                <!-- Notifications go here -->
+            <div class="notification-wrapper">
+              <button class="notification-btn" aria-label="Notifications" id="notification-bell">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span class="badge" id="notification-badge" style="display: none;">0</span>
+              </button>
+              <div id="notification-dropdown" class="notification-dropdown hidden">
+                <div class="dropdown-header">
+                  <h3>Notifications</h3>
+                  <button id="clear-notifications-btn" class="clear-btn">Clear All</button>
+                </div>
+                <div class="dropdown-body" id="notification-list">
+                  <!-- Notifications go here -->
+                </div>
               </div>
             </div>
           </div>
@@ -267,29 +267,7 @@
       </button>
     </nav>
 
-    <!-- Glassmorphic CSV Import Modal Overlay -->
-    <div class="import-modal-overlay" id="importModal">
-      <div class="import-modal-box">
-        <div class="import-modal-header">
-          <span class="import-modal-title">Spreadsheet CSV Importer</span>
-          <button class="import-close-btn" id="closeImportBtn" aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-              stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <span class="sub-title" style="font-size: 10px; text-transform: none; color: var(--text-muted);">Format:
-          Symbol,Name,Shares,CostBasis,CurrentPrice,Type,Icon</span>
-        <textarea id="csvTextarea" class="import-textarea"
-          placeholder="e.g. PLTR,Palantir Technologies,100,21.00,23.50,stocks,PL" rows="6"></textarea>
-        <div class="import-btn-row">
-          <button class="import-action-btn secondary" id="cancelImportBtn">Cancel</button>
-          <button class="import-action-btn primary" id="processImportBtn">Parse & Load Portfolio</button>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Glassmorphic Quick-Comment Modal Overlay -->
     <div class="import-modal-overlay" id="commentModal">
@@ -394,8 +372,8 @@
 
   </div>
 
-  <script src="auth-guard.js"></script>
-  <script src="portfolio.js" defer></script>
+  <script src="auth-guard.js?v=8"></script>
+  <script src="portfolio.js?v=8" defer></script>
 </body>
 
 </html>

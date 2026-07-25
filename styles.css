@@ -639,3 +639,72 @@ body.disable-glass-blur {
   color: var(--text-secondary);
   font-size: 13px;
 }
+
+.account-pill-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 6px 4px 12px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+.account-pill-container.long-term-active {
+  background: rgba(46, 204, 113, 0.05);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.1);
+}
+.account-pill-container.long-term-active #header-username-display,
+.account-pill-container.long-term-active div {
+  color: #2ecc71 !important;
+}
+.account-pill-container.short-term-active {
+  background: rgba(155, 89, 182, 0.05);
+  border: 1px solid rgba(155, 89, 182, 0.3);
+  box-shadow: 0 0 10px rgba(155, 89, 182, 0.1);
+}
+.account-pill-container.short-term-active #header-username-display,
+.account-pill-container.short-term-active div {
+  color: #9b59b6 !important;
+}
+
+.portfolio-switcher {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.account-pill-container .portfolio-switcher {
+  border: none !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 14px !important;
+  padding: 6px 12px !important;
+  color: white !important;
+  font-weight: 500;
+}
+.account-pill-container.long-term-active .portfolio-switcher {
+  background: rgba(46, 204, 113, 0.15) !important;
+  color: #2ecc71 !important;
+}
+.account-pill-container.short-term-active .portfolio-switcher {
+  background: rgba(155, 89, 182, 0.15) !important;
+  color: #9b59b6 !important;
+}
+.portfolio-switcher:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.portfolio-switcher option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}

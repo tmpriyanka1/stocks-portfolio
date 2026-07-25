@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Core Styles -->
-  <link rel="stylesheet" href="styles.css?v=2.3">
+  <link rel="stylesheet" href="styles.css?v=3">
   <!-- Screen-specific Styles -->
   <link rel="stylesheet" href="portfolio.css?v=2.2">
 </head>
@@ -38,12 +38,18 @@
           </div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <div style="margin-right: 15px; color: var(--text-muted); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span id="header-username-display">User</span>
+          <div id="account-pill-container" class="account-pill-container">
+            <div style="color: var(--text-muted); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span id="header-username-display">User</span>
+            </div>
+            <select id="global-portfolio-switcher" class="portfolio-switcher">
+              <option value="long_term">Long Term</option>
+              <option value="short_term">Short Term</option>
+            </select>
           </div>
           <!-- Manual Cloud Refresh Button -->
           <button class="notification-btn" aria-label="Refresh Portfolio" id="manualRefreshBtn" title="Sync latest prices from cloud">
@@ -394,8 +400,8 @@
 
   </div>
 
-  <script src="auth-guard.js"></script>
-  <script src="portfolio.js" defer></script>
+  <script src="auth-guard.js?v=7"></script>
+  <script src="portfolio.js?v=7" defer></script>
 </body>
 
 </html>

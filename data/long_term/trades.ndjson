@@ -18,3 +18,4 @@
 {"ticker":"ORCL","shares":77,"price":114.92,"action":"BUY","assetType":"stocks","date":"2026-07-24T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"MRNA","shares":210,"price":69.645,"action":"BUY","assetType":"stocks","date":"2026-07-24T22:57:41.590Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
 {"ticker":"SPCX","shares":11,"price":114.78,"action":"BUY","assetType":"stocks","date":"2026-07-28T09:30","comment":"Price dropped from its peak. Expected to pullup","stopLoss":111}
+{"ticker":"SPCX","shares":52,"price":113.75,"action":"BUY","assetType":"stocks","date":"2026-07-29T22:38:55.769Z","comment":"Quick buy from portfolio drawer","stopLoss":0}

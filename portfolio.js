@@ -25,15 +25,7 @@ const CLOUD_ENDPOINT = {
 // so background cloud pulls and refresh always re-render the correct view
 let activeFilterMode = 'all';
 
-const defaultAssetData = {
-  'NVDA': { name: 'NVIDIA Corporation', currentPrice: 485.00, stopLoss: 380.00, change24h: 3.25, icon: 'NV' },
-  'AAPL': { name: 'Apple Inc.', currentPrice: 175.50, stopLoss: 150.00, change24h: 1.92, icon: 'AP' },
-  'TSLA': { name: 'Tesla Inc.', currentPrice: 198.20, stopLoss: 185.00, change24h: -2.17, icon: 'TS' },
-  'SPY': { name: 'SPDR S&P 500 ETF Trust', currentPrice: 753.00, stopLoss: 490.00, change24h: 0.45, icon: 'SP' },
-  'SPX': { name: 'S&P 500 Index', currentPrice: 5120.30, stopLoss: 5000.00, change24h: 0.52, icon: 'SX' },
-  'NVDA $490 Call': { name: 'Exp 07/16/26 • Buy to Open', currentPrice: 18.50, stopLoss: 12.00, change24h: 20.31, icon: 'OC' },
-  'AAPL $180 Call': { name: 'Exp 06/18/26 • Buy to Open', currentPrice: 4.80, stopLoss: 4.00, change24h: -13.43, icon: 'OC' }
-};
+const defaultAssetData = {};
 
 let tickersDb = {};
 async function loadTickersDb() {
@@ -126,73 +118,7 @@ function resolveAssetName(ticker) {
   return capitalized;
 }
 
-// 1. CORE DASHBOARD STATE ARRAY: global hardcoded portfolio asset array
-let portfolioAssets = [
-  {
-    ticker: 'NVDA',
-    name: 'NVIDIA Corporation',
-    type: 'stocks',
-    shares: 40,
-    avgCost: 400.00,
-    currentPrice: 485.00,
-    stopLoss: 380.00,
-    change24h: 3.25,
-    icon: 'NV'
-  },
-  {
-    ticker: 'AAPL',
-    name: 'Apple Inc.',
-    type: 'stocks',
-    shares: 250,
-    avgCost: 165.00,
-    currentPrice: 175.50,
-    stopLoss: 150.00,
-    change24h: 1.92,
-    icon: 'AP'
-  },
-  {
-    ticker: 'TSLA',
-    name: 'Tesla Inc.',
-    type: 'stocks',
-    shares: 85,
-    avgCost: 210.00,
-    currentPrice: 198.20,
-    stopLoss: 185.00,
-    change24h: -2.17,
-    icon: 'TS'
-  },
-  {
-    ticker: 'NVDA $490 Call',
-    name: 'Exp 07/16/26 • Buy to Open',
-    type: 'options',
-    shares: 3,
-    avgCost: 15.20,
-    currentPrice: 18.50,
-    stopLoss: 12.00,
-    change24h: 20.31,
-    icon: 'OC'
-  },
-  {
-    ticker: 'AAPL $180 Call',
-    name: 'Exp 06/18/26 • Buy to Open',
-    type: 'options',
-    shares: 2,
-    avgCost: 5.50,
-    currentPrice: 4.80,
-    stopLoss: 4.00,
-    change24h: -13.43,
-    icon: 'OC'
-  }
-];
-
-// 2. MOCK SPARKLINE HISTORY DATA (for mini graphs)
-const sparklineData = {
-  'NVDA': [420, 435, 430, 460, 480, 485],
-  'AAPL': [160, 163, 168, 172, 174, 175.50],
-  'TSLA': [215, 212, 208, 195, 202, 198.20],
-  'NVDA $490 Call': [10.5, 12.0, 11.5, 14.0, 16.5, 18.50],
-  'AAPL $180 Call': [7.2, 6.8, 5.5, 5.0, 5.2, 4.80]
-};
+// Portfolio assets are built dynamically from trade history and live market data
 
 /**
  * Generates an SVG path string from an array of numeric data points
@@ -335,17 +261,32 @@ async function pullCloudData() {
           if (hasRealPrice) {
             priceEntry.currentPrice = rawCurrentPrice;
           }
-          // Preserve existing live price if we already have one in cache
-          const existing = marketPrices[ticker];
-          if (existing && existing.currentPrice && !hasRealPrice) {
-            priceEntry.currentPrice = existing.currentPrice;
-          }
           marketPrices[ticker] = priceEntry;
         }
 
         const expiryDate = tx['Expiry Date'] || tx.expiryDate || tx.expiry || '';
         return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss, expiryDate };
       }).filter(tx => tx.ticker !== '');
+
+      // Fetch and merge server cached prices (/api/prices)
+      try {
+        const pricesUrl = url.replace('/trades', '/prices');
+        const pricesResponse = await fetch(pricesUrl, { method: 'GET' });
+        if (pricesResponse.ok) {
+          const serverPrices = await pricesResponse.json();
+          for (const ticker in serverPrices) {
+            const priceVal = parseFloat(serverPrices[ticker]);
+            if (!isNaN(priceVal) && priceVal > 0) {
+              if (!marketPrices[ticker]) {
+                marketPrices[ticker] = getDefaultAsset(ticker) || { name: resolveAssetName(ticker), icon: ticker.slice(0, 2).toUpperCase() };
+              }
+              marketPrices[ticker].currentPrice = priceVal;
+            }
+          }
+        }
+      } catch (pricesErr) {
+        console.warn('Failed to fetch prices from server:', pricesErr);
+      }
 
       localStorage.setItem('portfolio_market_prices', JSON.stringify(marketPrices));
       localStorage.setItem('portfolio_transactions', JSON.stringify(parsedTxs));
@@ -484,25 +425,7 @@ function initCSVImporter() {
             txs = [];
           }
         } else {
-          // Fallback default mock list if never initialized
-          txs = [
-            { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 480.00, date: '2026-06-03T10:15:00', comment: 'Momentum breakout buy after consolidation at $478.' },
-            { ticker: 'NVDA', assetType: 'stocks', action: 'SELL', shares: 10, price: 495.00, date: '2026-06-03T14:30:00', comment: 'Quick day trade scalp target hit. Captured +$15.00/share profit.' },
-            { ticker: 'PLTR', assetType: 'stocks', action: 'BUY', shares: 50, price: 21.00, date: '2026-06-03T09:45:00', comment: 'Support level bounce entry. Adding PLTR for core options setup.' },
-            { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 30, price: 170.00, date: '2026-05-30T11:00:00', comment: 'Adding to core Apple position on temporary market-wide pullback.' },
-            { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 20, price: 172.00, date: '2026-05-31T13:45:00', comment: 'Averaging up on clear hourly trend confirmation and high volume.' },
-            { ticker: 'AAPL', assetType: 'SELL', shares: 50, price: 178.00, date: '2026-06-01T15:30:00', comment: 'Closed full Apple swing trade. Locked in solid gains ahead of WWDC.' },
-            { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185.00, date: '2026-05-29T10:30:00', comment: 'Long setup near key support level. Stop loss set at $180.' },
-            { ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 3, price: 15.20, date: '2026-05-28T09:35:00', comment: 'Buy to open NVDA $490 Calls. Expecting momentum push towards $500.' },
-            { ticker: 'MSFT', assetType: 'stocks', action: 'BUY', shares: 40, price: 410.00, date: '2026-05-12T10:00:00', comment: 'AI integration catalyst play. Solid earnings growth expectations.' },
-            { ticker: 'MSFT', assetType: 'stocks', action: 'SELL', shares: 20, price: 425.00, date: '2026-05-18T14:15:00', comment: 'Trimming half position at target 1 resistance. Keeping remainder.' },
-            { ticker: 'COIN', assetType: 'stocks', action: 'BUY', shares: 25, price: 220.00, date: '2026-05-10T11:30:00', comment: 'Crypto breakout momentum entry above $218. High risk.' },
-            { ticker: 'COIN', assetType: 'stocks', action: 'SELL', shares: 25, price: 205.00, date: '2026-05-15T10:10:00', comment: 'Stop loss triggered on crypto volatility. Closed for a loss.' },
-            { ticker: 'AMZN', assetType: 'stocks', action: 'BUY', shares: 100, price: 160.00, date: '2026-01-15T14:00:00', comment: 'Post-Q4 earnings selloff dip buy. Solid long-term entry opportunity.' },
-            { ticker: 'AMZN', assetType: 'stocks', action: 'SELL', shares: 100, price: 185.00, date: '2026-02-20T11:45:00', comment: 'Completed swing trade at resistance. Locked in +$2,500 total profit.' },
-            { ticker: 'META', assetType: 'stocks', action: 'BUY', shares: 50, price: 450.00, date: '2025-10-05T10:15:00', comment: 'Ad revenue recovery play. Extremely cheap valuation relative to earnings.' },
-            { ticker: 'META', assetType: 'stocks', action: 'SELL', shares: 20, price: 480.00, date: '2025-12-12T14:50:00', comment: 'Trimmed partial position for year-end tax optimization. Remaining 30 shares.' }
-          ];
+          txs = [];
         }
 
         let marketPrices = JSON.parse(localStorage.getItem('portfolio_market_prices') || '{}');
@@ -579,6 +502,7 @@ function initCSVImporter() {
 
 function refreshPortfolioAssets() {
   // Retrieve transactions from storage
+  const activePortfolio = localStorage.getItem('active_portfolio_id') || 'long_term';
   let txs = [];
   const stored = localStorage.getItem('portfolio_transactions');
   if (stored) {
@@ -587,27 +511,19 @@ function refreshPortfolioAssets() {
     } catch (e) {
       txs = [];
     }
-  } else {
-    // If not in storage yet, seed with initial list
+  } else if (activePortfolio === 'long_term') {
     txs = [
-      { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 480.00, date: '2026-06-03T10:15:00', comment: 'Momentum breakout buy after consolidation at $478.' },
-      { ticker: 'NVDA', assetType: 'stocks', action: 'SELL', shares: 10, price: 495.00, date: '2026-06-03T14:30:00', comment: 'Quick day trade scalp target hit. Captured +$15.00/share profit.' },
-      { ticker: 'PLTR', assetType: 'stocks', action: 'BUY', shares: 50, price: 21.00, date: '2026-06-03T09:45:00', comment: 'Support level bounce entry. Adding PLTR for core options setup.' },
-      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 30, price: 170.00, date: '2026-05-30T11:00:00', comment: 'Adding to core Apple position on temporary market-wide pullback.' },
-      { ticker: 'AAPL', assetType: 'stocks', action: 'BUY', shares: 20, price: 172.00, date: '2026-05-31T13:45:00', comment: 'Averaging up on clear hourly trend confirmation and high volume.' },
-      { ticker: 'AAPL', assetType: 'SELL', shares: 50, price: 178.00, date: '2026-06-01T15:30:00', comment: 'Closed full Apple swing trade. Locked in solid gains ahead of WWDC.' },
-      { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185.00, date: '2026-05-29T10:30:00', comment: 'Long setup near key support level. Stop loss set at $180.' },
-      { ticker: 'NVDA $490 Call', assetType: 'options', action: 'BUY', shares: 3, price: 15.20, date: '2026-05-28T09:35:00', comment: 'Buy to open NVDA $490 Calls. Expecting momentum push towards $500.' },
-      { ticker: 'MSFT', assetType: 'stocks', action: 'BUY', shares: 40, price: 410.00, date: '2026-05-12T10:00:00', comment: 'AI integration catalyst play. Solid earnings growth expectations.' },
-      { ticker: 'MSFT', assetType: 'stocks', action: 'SELL', shares: 20, price: 425.00, date: '2026-05-18T14:15:00', comment: 'Trimming half position at target 1 resistance. Keeping remainder.' },
-      { ticker: 'COIN', assetType: 'stocks', action: 'BUY', shares: 25, price: 220.00, date: '2026-05-10T11:30:00', comment: 'Crypto breakout momentum entry above $218. High risk.' },
-      { ticker: 'COIN', assetType: 'stocks', action: 'SELL', shares: 25, price: 205.00, date: '2026-05-15T10:10:00', comment: 'Stop loss triggered on crypto volatility. Closed for a loss.' },
-      { ticker: 'AMZN', assetType: 'stocks', action: 'BUY', shares: 100, price: 160.00, date: '2026-01-15T14:00:00', comment: 'Post-Q4 earnings selloff dip buy. Solid long-term entry opportunity.' },
-      { ticker: 'AMZN', assetType: 'stocks', action: 'SELL', shares: 100, price: 185.00, date: '2026-02-20T11:45:00', comment: 'Completed swing trade at resistance. Locked in +$2,500 total profit.' },
-      { ticker: 'META', assetType: 'stocks', action: 'BUY', shares: 50, price: 450.00, date: '2025-10-05T10:15:00', comment: 'Ad revenue recovery play. Extremely cheap valuation relative to earnings.' },
-      { ticker: 'META', assetType: 'stocks', action: 'SELL', shares: 20, price: 480.00, date: '2025-12-12T14:50:00', comment: 'Trimmed partial position for year-end tax optimization. Remaining 30 shares.' }
+      { ticker: 'CRDO', assetType: 'stocks', action: 'BUY', shares: 28, price: 269.70, date: '2026-07-06T19:08:34', comment: '' },
+      { ticker: 'TE', assetType: 'stocks', action: 'BUY', shares: 700, price: 10.18, date: '2026-06-22T19:12:00', comment: '' },
+      { ticker: 'ORCL', assetType: 'stocks', action: 'BUY', shares: 49, price: 178.78, date: '2026-06-11T19:12:46', comment: '' },
+      { ticker: 'ORCL', assetType: 'stocks', action: 'BUY', shares: 77, price: 114.92, date: '2026-07-24T00:00:00', comment: '' },
+      { ticker: 'SOXS', assetType: 'stocks', action: 'BUY', shares: 42, price: 191.59, date: '2026-04-19T19:14:01', comment: '' },
+      { ticker: 'RH', assetType: 'stocks', action: 'BUY', shares: 120, price: 180.23, date: '2026-07-19T19:16:31', comment: '' },
+      { ticker: 'MRNA', assetType: 'stocks', action: 'BUY', shares: 210, price: 69.645, date: '2026-07-24T22:57:41', comment: '' },
+      { ticker: 'SPCX', assetType: 'stocks', action: 'BUY', shares: 63, price: 110.10, date: '2026-07-24T23:00:00', comment: '', stopLoss: 115.00 }
     ];
-    localStorage.setItem('portfolio_transactions', JSON.stringify(txs));
+  } else {
+    txs = [];
   }
 
   // Aggregate holdings
@@ -727,11 +643,38 @@ function updateBalanceMetrics() {
   if (!balanceAmountEl || !balanceChangeEl) return;
 
   // ── 1. LOAD RAW DATA SOURCES ─────────────────────────────────────────────
+  const activePortfolio = localStorage.getItem('active_portfolio_id') || 'long_term';
   let localTransactions = [];
-  try {
-    localTransactions = JSON.parse(localStorage.getItem('portfolio_transactions') || '[]');
-  } catch (e) {
-    localTransactions = [];
+  const storedTx = localStorage.getItem('portfolio_transactions');
+  if (storedTx) {
+    try {
+      localTransactions = JSON.parse(storedTx);
+    } catch (e) {
+      localTransactions = [];
+    }
+  } else if (activePortfolio === 'long_term') {
+    localTransactions = [
+      { ticker: 'DRAM', shares: 105, price: 52.38, action: 'BUY', assetType: 'stocks', date: '2026-07-17T18:58:08', comment: '', stopLoss: 0 },
+      { ticker: 'DRAM', shares: 49, price: 53.54, action: 'BUY', assetType: 'stocks', date: '2026-07-17T19:00:32', comment: '', stopLoss: 0 },
+      { ticker: 'MVLL', shares: 210, price: 22.9, action: 'BUY', assetType: 'stocks', date: '2026-07-16T19:02:36', comment: '', stopLoss: 0 },
+      { ticker: 'MVLL', shares: 134, price: 22.73, action: 'BUY', assetType: 'stocks', date: '2026-07-17T19:03:19', comment: '', stopLoss: 0 },
+      { ticker: 'AVGX', shares: 105, price: 52.29, action: 'BUY', assetType: 'stocks', date: '2026-07-10T19:04:14', comment: '', stopLoss: 0 },
+      { ticker: 'NBIS', shares: 35, price: 233.57, action: 'BUY', assetType: 'stocks', date: '2026-07-02T19:07:27', comment: '', stopLoss: 0 },
+      { ticker: 'CRDO', shares: 28, price: 269.70, action: 'BUY', assetType: 'stocks', date: '2026-07-06T19:08:34', comment: '', stopLoss: 0 },
+      { ticker: 'TWLO', shares: 28, price: 215.36, action: 'BUY', assetType: 'stocks', date: '2026-07-07T19:11:05', comment: '', stopLoss: 0 },
+      { ticker: 'TE', shares: 700, price: 10.18, action: 'BUY', assetType: 'stocks', date: '2026-06-22T19:12:00', comment: '', stopLoss: 0 },
+      { ticker: 'ORCL', shares: 49, price: 178.78, action: 'BUY', assetType: 'stocks', date: '2026-06-11T19:12:46', comment: '', stopLoss: 0 },
+      { ticker: 'SOXS', shares: 42, price: 191.59, action: 'BUY', assetType: 'stocks', date: '2026-04-19T19:14:01', comment: '', stopLoss: 0 },
+      { ticker: 'RH', shares: 120, price: 180.23, action: 'BUY', assetType: 'stocks', date: '2026-07-19T19:16:31', comment: '', stopLoss: 0 },
+      { ticker: 'MVLL', shares: 344, price: 25.61, action: 'SELL', assetType: 'stocks', date: '2026-07-21T14:28:55.134Z', comment: 'Quick sell from portfolio drawer', stopLoss: 0 },
+      { ticker: 'DRAM', shares: 154, price: 56.94, action: 'SELL', assetType: 'stocks', date: '2026-07-21T14:30:14.623Z', comment: 'Quick sell from portfolio drawer', stopLoss: 0 },
+      { ticker: 'TWLO', shares: 28, price: 197.4, action: 'SELL', assetType: 'stocks', date: '2026-07-21T20:02:25.611Z', comment: 'Reached SL', stopLoss: 0 },
+      { ticker: 'AVGX', shares: 105, price: 52.13, action: 'SELL', assetType: 'stocks', date: '2026-07-24T07:27:10.939Z', comment: 'Breakeven after recovered from unrealized loss', stopLoss: 0 },
+      { ticker: 'NBIS', shares: 35, price: 225.69, action: 'SELL', assetType: 'stocks', date: '2026-07-24T07:29:15.546Z', comment: 'Exited at loss because market crash risk', stopLoss: 0 },
+      { ticker: 'ORCL', shares: 77, price: 114.92, action: 'BUY', assetType: 'stocks', date: '2026-07-24T00:00:00.000Z', comment: 'Quick buy from portfolio drawer', stopLoss: 0 },
+      { ticker: 'MRNA', shares: 210, price: 69.645, action: 'BUY', assetType: 'stocks', date: '2026-07-24T22:57:41.590Z', comment: 'Position adjusted via Edit Asset form', stopLoss: 0 },
+      { ticker: 'SPCX', shares: 63, price: 110.10, action: 'BUY', assetType: 'stocks', date: '2026-07-24T23:00:00.000Z', comment: '', stopLoss: 115.00 }
+    ];
   }
 
   let marketPrices = {};
@@ -835,22 +778,35 @@ function updateBalanceMetrics() {
 
   // ── 4. NET PORTFOLIO VALUE = CASH (buying power) + OPEN POSITION EQUITY ──
   // Option B Implementation: Override is the true LIVE cash balance at the exact moment it was saved.
+  const isUserSet = localStorage.getItem('portfolio_buying_power_user_set') === 'true';
   let baseCashStr = localStorage.getItem('portfolio_buying_power');
   let bpTimestampStr = localStorage.getItem('portfolio_buying_power_timestamp');
   
   let baseCash = parseFloat(baseCashStr);
   let bpTimestamp = null;
 
-  if (isNaN(baseCash)) {
-    baseCash = 0; // No override set
+  if (isNaN(baseCash) || !isUserSet) {
+    baseCash = 0; // No override active, derive strictly from cash ledger
   } else if (bpTimestampStr) {
     bpTimestamp = new Date(bpTimestampStr);
   }
   
   let cashTxs = [];
-  try {
-    cashTxs = JSON.parse(localStorage.getItem('portfolio_cash_ledger') || '[]');
-  } catch (e) { cashTxs = []; }
+  const storedCash = localStorage.getItem('portfolio_cash_ledger');
+  if (storedCash) {
+    try {
+      cashTxs = JSON.parse(storedCash);
+    } catch (e) {
+      cashTxs = [];
+    }
+  } else if (activePortfolio === 'long_term') {
+    cashTxs = [
+      { ticker: 'CASH', shares: 0, price: 115857.69, action: 'DEPOSIT', assetType: 'CASH', date: '2026-07-24T15:18:25', comment: 'Initially added amount from robinhood', author: 'admin' },
+      { ticker: 'CASH', shares: 0, price: 75781.55, action: 'DEPOSIT', assetType: 'CASH', date: '2026-07-24T15:51:48', comment: 'Initial account funding for proper buying power matches robinhood values', author: 'admin' }
+    ];
+  } else {
+    cashTxs = [];
+  }
 
   let dynamicCash = baseCash;
   
@@ -1236,8 +1192,8 @@ function renderAssetsTable(filterMode) {
     // Quantity label depending on asset type
     const qtySuffix = isOption ? 'CON' : 'SHR';
 
-    // Generate mini sparkline path coordinates dynamically
-    const points = sparklineData[asset.ticker] || [asset.avgCost, asset.currentPrice];
+    // Generate mini sparkline from cost basis to current price
+    const points = [asset.avgCost, asset.currentPrice];
     const sparklinePath = generateSparklinePath(points, 90, 24);
     const chartStrokeColor = isPositive ? 'var(--success)' : 'var(--danger)';
 

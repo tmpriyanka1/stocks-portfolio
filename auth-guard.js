@@ -65,22 +65,22 @@
   var originalFetch = window.fetch;
   window.fetch = function (input, init) {
     var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-    
+
     // Check if the URL is hitting the backend
     var isBackend = url.indexOf('https://vanai-portfolio-backend.onrender.com/api/') === 0 ||
-                    url.indexOf('/api/') === 0 ||
-                    url.indexOf('http://localhost:5001/api/') === 0 ||
-                    url.indexOf('http://127.0.0.1:5001/api/') === 0;
-                    
+      url.indexOf('/api/') === 0 ||
+      url.indexOf('http://localhost:5001/api/') === 0 ||
+      url.indexOf('http://127.0.0.1:5001/api/') === 0;
+
     if (isBackend) {
       var currentRole = window.getSessionRole ? window.getSessionRole() : 'production';
       var currentUser = window.getSessionUser ? window.getSessionUser().toLowerCase() : '';
-      
+
       // 1. Dynamic Routing
-      var isLocal = window.location.hostname === 'localhost' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    !window.location.hostname;
-                    
+      var isLocal = window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        !window.location.hostname;
+
       if (!isLocal) {
         if (url.indexOf('http://localhost:5001/api/') === 0 || url.indexOf('http://127.0.0.1:5001/api/') === 0) {
           url = 'https://vanai-portfolio-backend.onrender.com/api/' + url.split('/api/')[1];
@@ -96,15 +96,15 @@
           url = 'http://localhost:5001/api/' + url.split('/api/')[1];
         }
       }
-      
+
       // 2. Inject x-user-role header
       init = init || {};
       init.headers = init.headers || {};
-      
+
       // Get the role from the guard session helper
       var currentRole = window.getSessionRole ? window.getSessionRole() : 'production';
       var portfolioId = localStorage.getItem('active_portfolio_id') || 'long_term';
-      
+
       // Convert headers if it's a Headers object
       if (typeof init.headers.set === 'function') {
         init.headers.set('x-user-role', currentRole);
@@ -116,50 +116,62 @@
         init.headers['x-user-role'] = currentRole;
         init.headers['x-portfolio-id'] = portfolioId;
       }
-      
+
       if (typeof input === 'string') {
         input = url;
       } else if (input && input.url) {
         input = new Request(url, input);
       }
     }
-    
+
     return originalFetch(input, init);
   };
-  
+
   // Global Portfolio Switcher UI Logic
   function initSwitcher() {
     var switcher = document.getElementById('global-portfolio-switcher');
     if (switcher && !switcher.hasAttribute('data-initialized')) {
       switcher.setAttribute('data-initialized', 'true');
-      
+
       // Set the initial value
       var currentPortfolio = localStorage.getItem('active_portfolio_id') || 'long_term';
       switcher.value = currentPortfolio;
-      
+
       var pillContainer = document.getElementById('account-pill-container');
       if (pillContainer) {
+        pillContainer.classList.remove('long-term-active', 'short-term-active', 'kids-active');
         if (currentPortfolio === 'long_term') {
           pillContainer.classList.add('long-term-active');
-          pillContainer.classList.remove('short-term-active');
-        } else {
+        } else if (currentPortfolio === 'short_term') {
           pillContainer.classList.add('short-term-active');
-          pillContainer.classList.remove('long-term-active');
+        } else if (currentPortfolio === 'kids') {
+          pillContainer.classList.add('kids-active');
         }
       }
-      
+
+      var usernameDisplay = document.getElementById('header-username-display');
+      if (usernameDisplay) {
+        var savedUser = localStorage.getItem('logged_in_username') || 'admin';
+        usernameDisplay.textContent = savedUser;
+      }
+
       // Listen for changes
-      switcher.addEventListener('change', function(e) {
+      switcher.addEventListener('change', function (e) {
         var newPortfolio = e.target.value;
         localStorage.setItem('active_portfolio_id', newPortfolio);
-        
+
         // Wipe local caches to prevent data bleeding
         localStorage.removeItem('portfolio_transactions');
         localStorage.removeItem('portfolio_cash_ledger');
         localStorage.removeItem('portfolio_buying_power');
         localStorage.removeItem('portfolio_buying_power_timestamp');
+        localStorage.removeItem('portfolio_buying_power_user_set');
+        localStorage.removeItem('portfolio_value_override');
+        localStorage.removeItem('portfolio_custom_sl');
+        localStorage.removeItem('portfolio_notes');
         localStorage.removeItem('portfolio_unread_notifications');
-        
+        localStorage.removeItem('portfolio_market_prices');
+
         // Reload page to fetch new portfolio data
         window.location.reload();
       });

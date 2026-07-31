@@ -1,5 +1,5 @@
 {
-  "buyingPowerOverride": 0,
-  "portfolioValueOverride": "",
+  "buyingPowerOverride": null,
+  "portfolioValueOverride": null,
   "buyingPowerOverrideTimestamp": null
 }

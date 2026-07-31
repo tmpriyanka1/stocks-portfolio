@@ -302,7 +302,8 @@ body {
   position: relative;
 }
 
-.pill-btn, .filter-btn {
+.pill-btn,
+.filter-btn {
   background: transparent;
   border: none;
   flex: 1;
@@ -321,11 +322,13 @@ body {
   z-index: 2;
 }
 
-.pill-btn:hover, .filter-btn:hover {
+.pill-btn:hover,
+.filter-btn:hover {
   color: var(--text-primary);
 }
 
-.pill-btn.active, .filter-btn.active {
+.pill-btn.active,
+.filter-btn.active {
   color: #fff;
 }
 
@@ -378,10 +381,13 @@ body {
 }
 
 @keyframes pulse-opacity {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(0.99);
   }
+
   50% {
     opacity: 0.65;
     transform: scale(1.0);
@@ -470,7 +476,10 @@ body {
 }
 
 /* Global Font Resets for Form Elements & Interactive Controls */
-input, select, textarea, button {
+input,
+select,
+textarea,
+button {
   font-family: var(--font-main) !important;
 }
 
@@ -479,32 +488,41 @@ input, select, textarea, button {
   .app-header {
     padding: 12px 24px 6px 24px !important;
   }
+
   .filter-section {
     height: 44px !important;
     min-height: 44px !important;
     margin-bottom: 4px !important;
   }
+
   .pill-group {
     height: 36px !important;
   }
-  .pill-btn, .filter-btn {
+
+  .pill-btn,
+  .filter-btn {
     font-size: 12px !important;
   }
+
   .user-title {
     font-size: 16px !important;
   }
+
   .sub-title {
     font-size: 10px !important;
   }
+
   .avatar {
     width: 32px !important;
     height: 32px !important;
     font-size: 13px !important;
   }
+
   .bottom-tab-bar {
     height: 50px !important;
     min-height: 50px !important;
   }
+
   .screen-view {
     padding-bottom: 50px !important;
   }
@@ -519,10 +537,12 @@ input, select, textarea, button {
   margin-right: 6px;
   vertical-align: middle;
 }
+
 .color-pillar.call {
   background-color: var(--success, #10b981) !important;
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
+
 .color-pillar.put {
   background-color: var(--danger, #ef4444) !important;
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
@@ -539,6 +559,7 @@ body.disable-glass-blur {
 .notification-wrapper {
   position: relative;
 }
+
 .notification-dropdown {
   position: absolute;
   top: calc(100% + 12px);
@@ -548,7 +569,7 @@ body.disable-glass-blur {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 1000;
@@ -559,11 +580,13 @@ body.disable-glass-blur {
   transition: opacity 0.2s ease, transform 0.2s ease;
   overflow: hidden;
 }
+
 .notification-dropdown.hidden {
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
 }
+
 .dropdown-header {
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
@@ -572,12 +595,14 @@ body.disable-glass-blur {
   align-items: center;
   background: rgba(255, 255, 255, 0.02);
 }
+
 .dropdown-header h3 {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
 }
+
 .clear-btn {
   background: none;
   border: none;
@@ -588,57 +613,69 @@ body.disable-glass-blur {
   border-radius: 4px;
   transition: background 0.2s, color 0.2s;
 }
+
 .clear-btn:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
 }
+
 .dropdown-body {
   padding: 0;
   overflow-y: auto;
   max-height: 300px;
 }
+
 .dropdown-body::-webkit-scrollbar {
   width: 6px;
 }
+
 .dropdown-body::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
+
 .notification-item {
   padding: 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   gap: 4px;
   transition: background 0.2s;
 }
+
 .notification-item:last-child {
   border-bottom: none;
 }
+
 .notification-item:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
 }
+
 .notification-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
 }
+
 .notification-body {
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.4;
 }
+
 .notification-time {
   font-size: 10px;
   color: var(--text-tertiary);
   margin-top: 4px;
 }
+
 .notification-empty {
   padding: 32px 16px;
   text-align: center;
   color: var(--text-secondary);
   font-size: 13px;
 }
+
 .header-right-actions {
   display: flex;
   gap: 12px;
@@ -658,16 +695,20 @@ body.disable-glass-blur {
     gap: 16px;
     align-items: center;
   }
+
   .header-right-actions {
     display: contents;
   }
+
   .profile-section {
     order: 1;
   }
+
   .action-buttons {
     order: 2;
     margin-left: auto;
   }
+
   .account-pill-container {
     order: 3;
     width: 100%;
@@ -685,23 +726,38 @@ body.disable-glass-blur {
   border-radius: 20px;
   transition: all 0.3s ease;
 }
+
 .account-pill-container.long-term-active {
   background: rgba(46, 204, 113, 0.05);
   border: 1px solid rgba(46, 204, 113, 0.3);
   box-shadow: 0 0 10px rgba(46, 204, 113, 0.1);
 }
+
 .account-pill-container.long-term-active #header-username-display,
 .account-pill-container.long-term-active div {
   color: #2ecc71 !important;
 }
+
 .account-pill-container.short-term-active {
   background: rgba(155, 89, 182, 0.05);
   border: 1px solid rgba(155, 89, 182, 0.3);
   box-shadow: 0 0 10px rgba(155, 89, 182, 0.1);
 }
+
 .account-pill-container.short-term-active #header-username-display,
 .account-pill-container.short-term-active div {
   color: #9b59b6 !important;
+}
+
+.account-pill-container.kids-active {
+  background: rgba(52, 152, 219, 0.05);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.1);
+}
+
+.account-pill-container.kids-active #header-username-display,
+.account-pill-container.kids-active div {
+  color: #3498db !important;
 }
 
 .portfolio-switcher {
@@ -727,18 +783,27 @@ body.disable-glass-blur {
   color: white !important;
   font-weight: 500;
 }
+
 .account-pill-container.long-term-active .portfolio-switcher {
   background: rgba(46, 204, 113, 0.15) !important;
   color: #2ecc71 !important;
 }
+
 .account-pill-container.short-term-active .portfolio-switcher {
   background: rgba(155, 89, 182, 0.15) !important;
   color: #9b59b6 !important;
 }
+
+.account-pill-container.kids-active .portfolio-switcher {
+  background: rgba(52, 152, 219, 0.15) !important;
+  color: #3498db !important;
+}
+
 .portfolio-switcher:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
 }
+
 .portfolio-switcher option {
   background: var(--bg-surface);
   color: var(--text-primary);

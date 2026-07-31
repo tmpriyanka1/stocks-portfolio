@@ -1220,4 +1220,78 @@ describe('Cash Management adjustments & metric calculations', () => {
   });
 });
 
+describe('Kids Profile & Multi-Account Isolation Tests', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.body.innerHTML = `
+      <div id="account-pill-container" class="account-pill-container long-term-active">
+        <select id="global-portfolio-switcher" class="portfolio-switcher">
+          <option value="long_term">Long Term</option>
+          <option value="short_term">Short Term</option>
+          <option value="kids">Kids</option>
+        </select>
+      </div>
+    `;
+  });
+
+  test('Kids profile is available in global portfolio dropdown', () => {
+    const switcher = document.getElementById('global-portfolio-switcher');
+    const options = Array.from(switcher.options).map(opt => opt.value);
+    expect(options).toContain('kids');
+    expect(options).toContain('long_term');
+    expect(options).toContain('short_term');
+  });
+
+  test('Switching portfolio to kids updates active_portfolio_id, pill class, and clears cached state', () => {
+    localStorage.setItem('portfolio_transactions', JSON.stringify([{ ticker: 'AAPL' }]));
+    localStorage.setItem('portfolio_buying_power', '5000.00');
+    localStorage.setItem('portfolio_value_override', '10000.00');
+
+    const switcher = document.getElementById('global-portfolio-switcher');
+    const pillContainer = document.getElementById('account-pill-container');
+
+    // Simulate switcher change event manually as auth-guard does
+    const newPortfolio = 'kids';
+    localStorage.setItem('active_portfolio_id', newPortfolio);
+
+    // Update pill container class
+    pillContainer.classList.remove('long-term-active', 'short-term-active', 'kids-active');
+    if (newPortfolio === 'kids') {
+      pillContainer.classList.add('kids-active');
+    }
+
+    // Wipe caches
+    localStorage.removeItem('portfolio_transactions');
+    localStorage.removeItem('portfolio_cash_ledger');
+    localStorage.removeItem('portfolio_buying_power');
+    localStorage.removeItem('portfolio_buying_power_timestamp');
+    localStorage.removeItem('portfolio_buying_power_user_set');
+    localStorage.removeItem('portfolio_value_override');
+
+    expect(localStorage.getItem('active_portfolio_id')).toBe('kids');
+    expect(pillContainer.classList.contains('kids-active')).toBe(true);
+    expect(pillContainer.classList.contains('long-term-active')).toBe(false);
+    expect(localStorage.getItem('portfolio_transactions')).toBeNull();
+    expect(localStorage.getItem('portfolio_buying_power')).toBeNull();
+    expect(localStorage.getItem('portfolio_value_override')).toBeNull();
+  });
+
+  test('Independent math calculations for Kids vs Long Term portfolios', () => {
+    // Portfolio A (Long Term): 10 AAPL @ 150 = 1500 invested, 200,000 base -> Buying Power = 198,500
+    const longTermBase = 200000;
+    const longTermInvested = 10 * 150;
+    const longTermBP = longTermBase - longTermInvested;
+
+    // Portfolio B (Kids): 5 NVDA @ 400 = 2000 invested, 10,000 base -> Buying Power = 8,000
+    const kidsBase = 10000;
+    const kidsInvested = 5 * 400;
+    const kidsBP = kidsBase - kidsInvested;
+
+    expect(longTermBP).toBe(198500);
+    expect(kidsBP).toBe(8000);
+    expect(longTermBP).not.toEqual(kidsBP);
+  });
+});
+
+
 

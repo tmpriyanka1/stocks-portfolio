@@ -106,15 +106,6 @@ const DEFAULT_PRICES = {
  * Reports [CREATED] for newly scaffolded assets and [OK] for pre-existing ones.
  */
 function bootstrapDataLayer() {
-  const longTermDir = path.join(__dirname, 'data', 'long_term');
-  if (!fs.existsSync(longTermDir)) fs.mkdirSync(longTermDir, { recursive: true });
-
-  const DB_PATH = path.join(longTermDir, 'trades.ndjson');
-  const NOTES_DB_PATH = path.join(longTermDir, 'journal_notes.ndjson');
-  const PRICES_PATH = path.join(longTermDir, 'prices.json');
-  const CASH_LEDGER_PATH = path.join(longTermDir, 'cash_ledger.ndjson');
-  const OVERRIDES_PATH = path.join(longTermDir, 'overrides.json');
-
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
   console.log('║       DATA LAYER BOOTSTRAP — Initializing...         ║');
@@ -129,36 +120,49 @@ function bootstrapDataLayer() {
     console.log(`  [OK]      data/ directory → ${dataDir}`);
   }
 
-  // ── 2. Core NDJSON Ledger Files ──────────────────────────────────────────
-  const coreFiles = [
-    { label: 'trades.ndjson     ', path: DB_PATH, content: '' },
-    { label: 'cash_ledger.ndjson', path: CASH_LEDGER_PATH, content: '' },
-    { label: 'journal_notes.ndjson', path: NOTES_DB_PATH, content: '' },
-  ];
+  const portfolios = ['long_term', 'short_term', 'kids'];
 
-  coreFiles.forEach(({ label, path: filePath, content }) => {
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`  [CREATED] ${label} → ${filePath}`);
+  portfolios.forEach(portfolioId => {
+    const portfolioDir = path.join(dataDir, portfolioId);
+    if (!fs.existsSync(portfolioDir)) fs.mkdirSync(portfolioDir, { recursive: true });
+
+    const DB_PATH = path.join(portfolioDir, 'trades.ndjson');
+    const NOTES_DB_PATH = path.join(portfolioDir, 'journal_notes.ndjson');
+    const PRICES_PATH = path.join(portfolioDir, 'prices.json');
+    const CASH_LEDGER_PATH = path.join(portfolioDir, 'cash_ledger.ndjson');
+    const OVERRIDES_PATH = path.join(portfolioDir, 'overrides.json');
+
+    // ── Core NDJSON Ledger Files ──────────────────────────────────────────
+    const coreFiles = [
+      { label: `[${portfolioId}] trades.ndjson     `, path: DB_PATH, content: '' },
+      { label: `[${portfolioId}] cash_ledger.ndjson`, path: CASH_LEDGER_PATH, content: '' },
+      { label: `[${portfolioId}] journal_notes.ndjson`, path: NOTES_DB_PATH, content: '' },
+    ];
+
+    coreFiles.forEach(({ label, path: filePath, content }) => {
+      if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, content, 'utf8');
+        console.log(`  [CREATED] ${label} → ${filePath}`);
+      } else {
+        console.log(`  [OK]      ${label} → ${filePath}`);
+      }
+    });
+
+    // ── Supporting JSON Files ─────────────────────────────────────────────
+    if (!fs.existsSync(PRICES_PATH)) {
+      fs.writeFileSync(PRICES_PATH, '{}', 'utf8');
+      console.log(`  [CREATED] [${portfolioId}] prices.json       → ${PRICES_PATH}`);
     } else {
-      console.log(`  [OK]      ${label} → ${filePath}`);
+      console.log(`  [OK]      [${portfolioId}] prices.json       → ${PRICES_PATH}`);
+    }
+
+    if (!fs.existsSync(OVERRIDES_PATH)) {
+      fs.writeFileSync(OVERRIDES_PATH, '[]', 'utf8');
+      console.log(`  [CREATED] [${portfolioId}] overrides.json    → ${OVERRIDES_PATH}`);
+    } else {
+      console.log(`  [OK]      [${portfolioId}] overrides.json    → ${OVERRIDES_PATH}`);
     }
   });
-
-  // ── 3. Supporting JSON Files ─────────────────────────────────────────────
-  if (!fs.existsSync(PRICES_PATH)) {
-    fs.writeFileSync(PRICES_PATH, '{}', 'utf8');
-    console.log(`  [CREATED] prices.json       → ${PRICES_PATH}`);
-  } else {
-    console.log(`  [OK]      prices.json       → ${PRICES_PATH}`);
-  }
-
-  if (!fs.existsSync(OVERRIDES_PATH)) {
-    fs.writeFileSync(OVERRIDES_PATH, '{}', 'utf8');
-    console.log(`  [CREATED] overrides.json    → ${OVERRIDES_PATH}`);
-  } else {
-    console.log(`  [OK]      overrides.json    → ${OVERRIDES_PATH}`);
-  }
 
   // ── 4. Users Database + Default Admin Seeding ───────────────────────────
   if (!fs.existsSync(USERS_DB_PATH)) {
@@ -253,16 +257,23 @@ function savePrices(req, prices) {
 
 
 
-// GET /api/market-prices - Secure pass-through proxy for Unusual Whales API
+// GET /api/market-prices - Secure pass-through proxy for Unusual Whales API with local fallback
 app.get('/api/market-prices', async (req, res) => {
+  const { tickers } = req.query;
+  const tickerArray = tickers ? tickers.split(',').map(t => t.trim()).filter(Boolean) : [];
+  if (tickerArray.length === 0) return res.status(200).json([]);
+
+  const savedPrices = loadPrices(req);
+
   if (!uwToken) {
-    return res.status(500).send("Server environment token configuration missing.");
+    const fallbackResults = tickerArray.map(symbol => {
+      const upper = symbol.toUpperCase();
+      const p = parseFloat(savedPrices[upper]) || 0;
+      return { symbol, price: p, change_percent: 0 };
+    });
+    return res.status(200).json(fallbackResults);
   }
 
-  const { tickers } = req.query;
-  if (!tickers) return res.status(200).json([]);
-
-  const tickerArray = tickers.split(',').map(t => t.trim()).filter(Boolean);
   try {
     const fetchPromises = tickerArray.map(async (symbol) => {
       let url = '';
@@ -283,35 +294,36 @@ app.get('/api/market-prices', async (req, res) => {
 
         if (response.ok) {
           const item = await response.json();
-
           let priceData = item;
           if (Array.isArray(item.data) && item.data.length > 0) {
             priceData = item.data[0];
           } else if (item.data && typeof item.data === 'object') {
             priceData = item.data;
           }
-
-          // Ensure the requested symbol is attached and 'price' is present so the frontend can map it back
           return {
             symbol,
-            price: priceData.close || priceData.last_price || priceData.price,
+            price: priceData.close || priceData.last_price || priceData.price || parseFloat(savedPrices[symbol.toUpperCase()]) || 0,
             ...priceData
           };
         } else {
-          console.warn(`[UW Proxy] Fetch failed for ${symbol} with status: ${response.status}`);
-          return null;
+          const upper = symbol.toUpperCase();
+          return { symbol, price: parseFloat(savedPrices[upper]) || 0, change_percent: 0 };
         }
       } catch (err) {
-        console.warn(`[UW Proxy] Network error for ${symbol}:`, err.message);
-        return null;
+        const upper = symbol.toUpperCase();
+        return { symbol, price: parseFloat(savedPrices[upper]) || 0, change_percent: 0 };
       }
     });
 
-    const results = (await Promise.all(fetchPromises)).filter(Boolean);
+    const results = await Promise.all(fetchPromises);
     res.status(200).json(results);
   } catch (error) {
     console.error('Error proxying to Unusual Whales:', error);
-    res.status(500).json({ error: 'Internal Server Error while proxying request.' });
+    const fallbackResults = tickerArray.map(symbol => {
+      const upper = symbol.toUpperCase();
+      return { symbol, price: parseFloat(savedPrices[upper]) || 0, change_percent: 0 };
+    });
+    res.status(200).json(fallbackResults);
   }
 });
 
@@ -1334,12 +1346,14 @@ function readNdjsonStream(filePath) {
 // GET /api/reports - Fetch time-filtered ledger data packets
 app.get('/api/reports', async (req, res) => {
   try {
-    ensureDbExists();
+    ensureDbExists(req);
     const filter = req.query.filter ? String(req.query.filter).toLowerCase() : 'all';
+    const tradesPath = getDatabasePath(req, 'trades.ndjson');
+    const cashPath = getDatabasePath(req, 'cash_ledger.ndjson');
 
     // Ingest data files using standard filesystem streams
-    const trades = await readNdjsonStream(DB_PATH);
-    const cash = await readNdjsonStream(CASH_LEDGER_PATH);
+    const trades = await readNdjsonStream(tradesPath);
+    const cash = await readNdjsonStream(cashPath);
 
     let tradesResult = [];
     let cashResult = [];

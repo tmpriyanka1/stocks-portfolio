@@ -6,3 +6,4 @@
 {"ticker":"AVGO $400 CALL","shares":1,"price":31,"action":"BUY","assetType":"options","date":"2026-07-10T23:45:15","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"ANET $190 CALL","shares":2,"price":19.4,"action":"BUY","assetType":"options","date":"2026-07-09T23:46:28","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"AMZN $250 CALL","shares":2,"price":17.75,"action":"BUY","assetType":"options","date":"2026-07-15T23:47:26","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
+{"ticker":"AMZN $250 CALL","shares":2,"price":6.3,"action":"BUY","assetType":"options","date":"2026-07-30T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}

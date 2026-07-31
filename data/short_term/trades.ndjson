@@ -8,3 +8,4 @@
 {"ticker":"AMZN $250 CALL","shares":2,"price":17.75,"action":"BUY","assetType":"options","date":"2026-07-15T23:47:26","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"AMZN $250 CALL","shares":2,"price":6.3,"action":"BUY","assetType":"options","date":"2026-07-30T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"AMZN $250 CALL","shares":2,"price":8,"action":"SELL","assetType":"options","date":"2026-07-30T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $747 PUT","shares":14,"price":10.25,"action":"BUY","assetType":"options","date":"2026-07-30T23:58:20","comment":"","stopLoss":0,"Expiry Date":"2026-08-11"}

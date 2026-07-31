@@ -3,3 +3,4 @@
 {"ticker":"ORCL","shares":28,"price":183.7,"action":"BUY","assetType":"stocks","date":"2026-06-11T23:27:54","comment":"","stopLoss":0}
 {"ticker":"ORCL $150 CALL","shares":2,"price":15.85,"action":"BUY","assetType":"options","date":"2026-07-09T23:39:20","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
 {"ticker":"ORCL $150 CALL","shares":5,"price":10.2,"action":"BUY","assetType":"options","date":"2026-07-13T23:43:25","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
+{"ticker":"AVGO $400 CALL","shares":1,"price":31,"action":"BUY","assetType":"options","date":"2026-07-10T23:45:15","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}

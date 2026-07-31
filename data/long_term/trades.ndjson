@@ -20,3 +20,4 @@
 {"ticker":"SPCX","shares":63,"price":112.1,"action":"BUY","assetType":"stocks","date":"2026-07-30T13:33:57.721Z","comment":"Position adjusted via Edit Asset form","stopLoss":115}
 {"ticker":"SPCX","shares":63,"price":115.12,"action":"SELL","assetType":"stocks","date":"2026-07-30T13:46:17.715Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"INTC","shares":77,"price":93.44,"action":"BUY","assetType":"stocks","date":"2026-07-30T09:39:36","comment":"","stopLoss":0}
+{"ticker":"INTC","shares":77,"price":93.51,"action":"BUY","assetType":"stocks","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}

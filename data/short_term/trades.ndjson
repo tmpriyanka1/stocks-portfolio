@@ -10,3 +10,4 @@
 {"ticker":"AMZN $250 CALL","shares":2,"price":8,"action":"SELL","assetType":"options","date":"2026-07-30T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $747 PUT","shares":14,"price":10.25,"action":"BUY","assetType":"options","date":"2026-07-30T23:58:20","comment":"","stopLoss":0,"Expiry Date":"2026-08-11"}
 {"ticker":"SPY $747 PUT","shares":17,"price":8.5,"action":"BUY","assetType":"options","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"AAOX","shares":280,"price":11.23,"action":"BUY","assetType":"stocks","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}

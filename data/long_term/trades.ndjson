@@ -17,4 +17,5 @@
 {"ticker":"NBIS","shares":35,"price":225.69,"action":"SELL","assetType":"stocks","date":"2026-07-24T07:29:15.546Z","comment":"Exited at loss because market crash risk","stopLoss":0}
 {"ticker":"ORCL","shares":77,"price":114.92,"action":"BUY","assetType":"stocks","date":"2026-07-24T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"MRNA","shares":210,"price":69.645,"action":"BUY","assetType":"stocks","date":"2026-07-24T22:57:41.590Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
-{"ticker":"SPCX","shares":63,"price":110.10,"action":"BUY","assetType":"stocks","date":"2026-07-24T23:00:00.000Z","comment":"","stopLoss":115.00}
+{"ticker":"SPCX","shares":63,"price":112.1,"action":"BUY","assetType":"stocks","date":"2026-07-30T13:33:57.721Z","comment":"Position adjusted via Edit Asset form","stopLoss":115}
+{"ticker":"SPCX","shares":63,"price":115.12,"action":"SELL","assetType":"stocks","date":"2026-07-30T13:46:17.715Z","comment":"Quick sell from portfolio drawer","stopLoss":0}

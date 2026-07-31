@@ -692,29 +692,36 @@ body.disable-glass-blur {
   .app-header {
     flex-wrap: wrap;
     padding: 16px 20px 12px 20px !important;
-    gap: 16px;
+    gap: 8px;
     align-items: center;
   }
 
   .header-right-actions {
-    display: contents;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 
   .profile-section {
     order: 1;
+    flex: 1;
+    min-width: 0;
   }
 
   .action-buttons {
     order: 2;
-    margin-left: auto;
   }
 
   .account-pill-container {
     order: 3;
-    width: 100%;
     justify-content: center;
+    flex-shrink: 0;
   }
 }
+
 
 .account-pill-container {
   display: flex;

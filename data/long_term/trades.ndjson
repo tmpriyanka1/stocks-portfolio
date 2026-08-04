@@ -24,7 +24,7 @@
 {"ticker":"ONDS","shares":350,"price":7.97,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:52:41","comment":"","stopLoss":0}
 {"ticker":"DRAM","shares":140,"price":48.77,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:53:25","comment":"","stopLoss":0}
 {"ticker":"AMAT","shares":14,"price":542.31,"action":"BUY","assetType":"stocks","date":"2026-08-04T06:54:37","comment":"","stopLoss":0}
-{"ticker":"DELL","shares":21,"price":429.24,"action":"BUY","assetType":"stocks","date":"2026-08-03T17:03:47","comment":"","stopLoss":425}
 {"ticker":"INTC","shares":84,"price":99.46,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}
 {"ticker":"ORCL","shares":77,"price":144.23,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":10,"price":8.934999999999999,"action":"BUY","assetType":"options","date":"2026-08-04T17:12:24.791Z","comment":"Position adjusted via Edit Asset form","stopLoss":0,"Expiry Date":"2026-08-31"}
+{"ticker":"DELL","shares":21,"price":429.24000000000007,"action":"BUY","assetType":"stocks","date":"2026-08-04T17:12:34.390Z","comment":"Position adjusted via Edit Asset form","stopLoss":430}

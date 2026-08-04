@@ -12,3 +12,4 @@
 {"ticker":"SPY $747 PUT","shares":17,"price":8.5,"action":"BUY","assetType":"options","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"AAOX","shares":280,"price":11.23,"action":"BUY","assetType":"stocks","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"ANET $190 CALL","shares":2,"price":10.9,"action":"SELL","assetType":"options","date":"2026-07-31T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"ORCL $150 CALL","shares":7,"price":11.05,"action":"SELL","assetType":"options","date":"2026-08-03T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}

@@ -15,3 +15,4 @@
 {"ticker":"ORCL $150 CALL","shares":7,"price":11.05,"action":"SELL","assetType":"options","date":"2026-08-03T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"AMZN $250 CALL","shares":2,"price":19,"action":"SELL","assetType":"options","date":"2026-07-31T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $747 PUT","shares":17,"price":8.5,"action":"BUY","assetType":"options","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $747 PUT","shares":21,"price":4.9,"action":"BUY","assetType":"options","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}

@@ -25,3 +25,4 @@
 {"ticker":"DRAM","shares":140,"price":48.77,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:53:25","comment":"","stopLoss":0}
 {"ticker":"AMAT","shares":14,"price":542.31,"action":"BUY","assetType":"stocks","date":"2026-08-04T06:54:37","comment":"","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":5,"price":10.62,"action":"BUY","assetType":"options","date":"2026-08-04T06:55:48","comment":"","stopLoss":0,"Expiry Date":"2026-07-31"}
+{"ticker":"QQQ $670 PUT","shares":5,"price":7.25,"action":"BUY","assetType":"options","date":"2026-08-03T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}

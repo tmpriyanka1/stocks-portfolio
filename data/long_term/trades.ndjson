@@ -27,3 +27,4 @@
 {"ticker":"QQQ $670 PUT","shares":5,"price":10.62,"action":"BUY","assetType":"options","date":"2026-08-04T06:55:48","comment":"","stopLoss":0,"Expiry Date":"2026-07-31"}
 {"ticker":"QQQ $670 PUT","shares":5,"price":7.25,"action":"BUY","assetType":"options","date":"2026-08-03T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"DELL","shares":21,"price":429.24,"action":"BUY","assetType":"stocks","date":"2026-08-03T17:03:47","comment":"","stopLoss":425}
+{"ticker":"INTC","shares":84,"price":99.46,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}

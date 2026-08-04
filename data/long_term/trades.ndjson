@@ -28,3 +28,4 @@
 {"ticker":"ORCL","shares":77,"price":144.23,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":10,"price":8.934999999999999,"action":"BUY","assetType":"options","date":"2026-08-04T17:12:24.791Z","comment":"Position adjusted via Edit Asset form","stopLoss":0,"Expiry Date":"2026-08-31"}
 {"ticker":"DELL","shares":21,"price":429.24000000000007,"action":"BUY","assetType":"stocks","date":"2026-08-04T17:12:34.390Z","comment":"Position adjusted via Edit Asset form","stopLoss":430}
+{"ticker":"DELL","shares":21,"price":476.29,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"taking 10 % profit","stopLoss":0}

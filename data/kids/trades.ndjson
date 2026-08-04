@@ -1,3 +1,4 @@
 
 {"ticker":"WYFI","shares":35,"price":22.01,"action":"BUY","assetType":"stocks","date":"2026-07-27T00:04:48","comment":"","stopLoss":0}
 {"ticker":"ASTS","shares":105,"price":59.1,"action":"BUY","assetType":"stocks","date":"2026-07-31T09:50:49","comment":"","stopLoss":0}
+{"ticker":"WYFI","shares":35,"price":25.93,"action":"SELL","assetType":"stocks","date":"2026-08-03T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0}

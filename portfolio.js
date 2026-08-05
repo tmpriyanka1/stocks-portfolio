@@ -2306,9 +2306,18 @@ function initQuickTradeModal() {
 
       let isoDate;
       if (dateInput && dateInput.value) {
-        const userDate = new Date(dateInput.value);
-        if (!isNaN(userDate.getTime())) {
-          isoDate = userDate.toISOString();
+        const parts = dateInput.value.split('-');
+        if (parts.length === 3) {
+          const now = new Date();
+          if (now.getFullYear() == parts[0] && now.getMonth() == (parts[1] - 1) && now.getDate() == parts[2]) {
+            isoDate = now.toISOString();
+          } else {
+            const userDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+            if (!isNaN(userDate.getTime())) isoDate = userDate.toISOString();
+          }
+        } else {
+          const userDate = new Date(dateInput.value);
+          if (!isNaN(userDate.getTime())) isoDate = userDate.toISOString();
         }
       }
       

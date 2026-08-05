@@ -31,3 +31,4 @@
 {"ticker":"DELL","shares":21,"price":476.29,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"taking 10 % profit","stopLoss":0}
 {"ticker":"ONDS","shares":350,"price":8.86,"action":"SELL","assetType":"stocks","date":"2026-08-04T18:46:40.119Z","comment":"Taking 10% profit","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T00:00:00.000Z","comment":"Added more on the dip to bring down the average","stopLoss":0,"Expiry Date":""}
+{"ticker":"DRAM","shares":140,"price":55.2,"action":"SELL","assetType":"stocks","date":"2026-08-05T00:00:00.000Z","comment":"Sold DRAM to lock in profits ahead of SNDK earning today on aug 5th","stopLoss":0}

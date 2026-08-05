@@ -538,6 +538,7 @@ function refreshPortfolioAssets() {
         type: tx.assetType,
         shares: 0,
         avgCost: 0,
+        lots: [],
         lastPrice: tx.price,
         expiryDate: tx.expiryDate || tx['Expiry Date'] || '',
         comment: tx.comment || ''
@@ -551,14 +552,60 @@ function refreshPortfolioAssets() {
     if (tx.comment) {
       g.comment = tx.comment;
     }
+    const sharesNum = tx.shares;
+    const priceNum = tx.price;
     if (tx.action === 'BUY') {
-      const newShares = g.shares + tx.shares;
-      if (newShares > 0) {
-        g.avgCost = (g.shares * g.avgCost + tx.shares * tx.price) / newShares;
+      if (g.shares < 0) {
+        let sharesToCover = sharesNum;
+        while (sharesToCover > 0 && g.lots.length > 0) {
+          let lot = g.lots[0];
+          if (lot.shares <= sharesToCover) {
+             sharesToCover -= lot.shares;
+             g.lots.shift();
+          } else {
+             lot.shares -= sharesToCover;
+             sharesToCover = 0;
+          }
+        }
+        if (sharesToCover > 0) {
+          g.lots.push({ shares: sharesToCover, price: priceNum });
+        }
+      } else {
+        g.lots.push({ shares: sharesNum, price: priceNum });
       }
-      g.shares = newShares;
+      g.shares += sharesNum;
     } else if (tx.action === 'SELL') {
-      g.shares = Math.max(0, g.shares - tx.shares);
+      if (g.shares > 0) {
+        let sharesToClose = sharesNum;
+        while (sharesToClose > 0 && g.lots.length > 0) {
+          let lot = g.lots[0];
+          if (lot.shares <= sharesToClose) {
+             sharesToClose -= lot.shares;
+             g.lots.shift();
+          } else {
+             lot.shares -= sharesToClose;
+             sharesToClose = 0;
+          }
+        }
+        if (sharesToClose > 0) {
+          g.lots.push({ shares: sharesToClose, price: priceNum });
+        }
+      } else {
+        g.lots.push({ shares: sharesNum, price: priceNum });
+      }
+      g.shares -= sharesNum;
+    }
+
+    if (g.lots && g.lots.length > 0) {
+      let totalCost = 0;
+      let totalShares = 0;
+      g.lots.forEach(lot => {
+        totalCost += lot.shares * lot.price;
+        totalShares += lot.shares;
+      });
+      g.avgCost = totalShares > 0 ? totalCost / totalShares : 0;
+    } else {
+      g.avgCost = 0;
     }
   });
 
@@ -685,53 +732,81 @@ function updateBalanceMetrics() {
   }
 
   // ── 2. AGGREGATE OPEN POSITIONS (BUY-net shares per ticker) ──────────────
-  const openPositions = {}; // ticker → { shares, assetType, avgCost }
+  const openPositions = {}; // ticker → { shares, assetType, avgCost, lots: [] }
   localTransactions.forEach(tx => {
     if (!tx || !tx.ticker) return;
     if (tx.ticker === 'CASH' || tx.assetType === 'CASH') return;
     if (!openPositions[tx.ticker]) {
-      openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0 };
+      openPositions[tx.ticker] = { shares: 0, assetType: tx.assetType || 'stocks', avgCost: 0, lots: [] };
     }
     const pos = openPositions[tx.ticker];
     const sharesNum = Number(tx.shares) || 0;
     const priceNum = parseFloat(tx.price) || 0;
+    
     if (tx.action === 'BUY') {
       if (pos.shares < 0) {
         // Covering a short
-        pos.shares += sharesNum;
-        if (pos.shares > 0) {
-          pos.avgCost = priceNum; // Flipped to long
-        } else if (pos.shares === 0) {
-          pos.avgCost = 0;
+        let sharesToCover = sharesNum;
+        while (sharesToCover > 0 && pos.lots.length > 0) {
+          let lot = pos.lots[0];
+          if (lot.shares <= sharesToCover) {
+             sharesToCover -= lot.shares;
+             pos.lots.shift();
+          } else {
+             lot.shares -= sharesToCover;
+             sharesToCover = 0;
+          }
+        }
+        if (sharesToCover > 0) {
+          // Flipped to long
+          pos.lots.push({ shares: sharesToCover, price: priceNum });
         }
       } else {
         // Adding to long
-        const newShares = pos.shares + sharesNum;
-        if (newShares > 0) {
-          pos.avgCost = (pos.shares * pos.avgCost + sharesNum * priceNum) / newShares;
-        }
-        pos.shares = newShares;
+        pos.lots.push({ shares: sharesNum, price: priceNum });
       }
+      pos.shares += sharesNum;
     } else if (tx.action === 'SELL') {
       if (pos.shares > 0) {
         // Closing a long
-        pos.shares -= sharesNum;
-        if (pos.shares < 0) {
-          pos.avgCost = priceNum; // Flipped to short
-        } else if (pos.shares === 0) {
-          pos.avgCost = 0;
+        let sharesToClose = sharesNum;
+        while (sharesToClose > 0 && pos.lots.length > 0) {
+          let lot = pos.lots[0];
+          if (lot.shares <= sharesToClose) {
+             sharesToClose -= lot.shares;
+             pos.lots.shift();
+          } else {
+             lot.shares -= sharesToClose;
+             sharesToClose = 0;
+          }
+        }
+        if (sharesToClose > 0) {
+          // Flipped to short
+          pos.lots.push({ shares: sharesToClose, price: priceNum });
         }
       } else {
         // Adding to short
-        const currentShortShares = Math.abs(pos.shares);
-        const newShortShares = currentShortShares + sharesNum;
-        if (newShortShares > 0) {
-          pos.avgCost = (currentShortShares * pos.avgCost + sharesNum * priceNum) / newShortShares;
-        }
-        pos.shares -= sharesNum;
+        pos.lots.push({ shares: sharesNum, price: priceNum });
       }
+      pos.shares -= sharesNum;
     }
   });
+
+  // Calculate final FIFO average cost for open positions based on remaining lots
+  for (const ticker in openPositions) {
+    const pos = openPositions[ticker];
+    if (pos.lots && pos.lots.length > 0) {
+      let totalCost = 0;
+      let totalShares = 0;
+      pos.lots.forEach(lot => {
+        totalCost += lot.shares * lot.price;
+        totalShares += lot.shares;
+      });
+      pos.avgCost = totalShares > 0 ? totalCost / totalShares : 0;
+    } else {
+      pos.avgCost = 0;
+    }
+  }
 
   // ── 3. COMPUTE TOTAL ASSET EQUITY (options ×100, stocks ×1) ──────────────
   let totalAssetEquity = 0;
@@ -1827,12 +1902,15 @@ async function updateLivePrices() {
         if (osi && /^[A-Z]{1,6}\d{6}[CP]\d{8}$/i.test(osi)) {
           tickerSet.add(osi);
           osiToOriginalMap[osi] = asset.ticker.toUpperCase();
-        } else {
-          const baseMatch = asset.ticker.match(/^([A-Za-z]+)/);
-          if (baseMatch) {
-            const base = baseMatch[1].toUpperCase();
-            tickerSet.add(base);
-            osiToOriginalMap[base] = asset.ticker.toUpperCase();
+        } 
+        
+        // Always add the underlying base ticker for options
+        const baseMatch = asset.ticker.match(/^([A-Za-z]+)/);
+        if (baseMatch) {
+          const base = baseMatch[1].toUpperCase();
+          tickerSet.add(base);
+          if (!osiToOriginalMap[base]) {
+            osiToOriginalMap[base] = base;
           }
         }
       } else {
@@ -1923,7 +2001,7 @@ async function updateLivePrices() {
     let change24h = asset.change24h || 0;
     let name = asset.name || ticker;
 
-    if (fetchEntry) {
+    if (fetchEntry && fetchEntry.price > 0) {
       price = fetchEntry.price;
       change24h = fetchEntry.change24h;
       if (fetchEntry.name && fetchEntry.name !== fetchEntry.baseTicker) {
@@ -1987,6 +2065,23 @@ async function updateLivePrices() {
     // Sync to server (throttled)
     if (shouldSyncServer && price > 0) {
       syncPriceToServer(ticker, price);
+    }
+  }
+
+  // Also ensure any implicitly fetched base underlying tickers are added to marketPrices
+  for (const t in fetchedResults) {
+    if (fetchedResults[t].price > 0) {
+      if (marketPrices[t]) {
+        marketPrices[t].currentPrice = fetchedResults[t].price;
+        if (fetchedResults[t].change24h) marketPrices[t].change24h = fetchedResults[t].change24h;
+      } else {
+        marketPrices[t] = {
+          name: fetchedResults[t].name || t,
+          currentPrice: fetchedResults[t].price,
+          change24h: fetchedResults[t].change24h || 0,
+          icon: t.slice(0, 2).toUpperCase()
+        };
+      }
     }
   }
 
@@ -2131,6 +2226,7 @@ function openQuickTradeModal(ticker, action) {
   const sharesInput = document.getElementById('qtSharesInput');
   const priceInput = document.getElementById('qtPriceInput');
   const commentInput = document.getElementById('qtCommentInput');
+  const dateInput = document.getElementById('qtDateInput');
   if (!modal) return;
 
   // Pre-fill price from live asset data
@@ -2142,9 +2238,20 @@ function openQuickTradeModal(ticker, action) {
   modal.setAttribute('data-current-action', action);
 
   // Clear and pre-fill fields
-  sharesInput.value = '';
+  if (action === 'SELL' && asset && asset.shares) {
+    sharesInput.value = asset.shares;
+  } else {
+    sharesInput.value = '';
+  }
   priceInput.value = livePrice > 0 ? livePrice.toFixed(2) : '';
   commentInput.value = '';
+
+  if (dateInput) {
+    // Fill with today's date formatted as YYYY-MM-DD in local time
+    const today = new Date();
+    const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    dateInput.value = localDate;
+  }
 
   modal.classList.add('active');
   sharesInput.focus();

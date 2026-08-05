@@ -700,25 +700,14 @@ body.disable-glass-blur {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     margin-left: auto;
     flex-shrink: 0;
   }
 
   .profile-section {
-    order: 1;
     flex: 1;
     min-width: 0;
-  }
-
-  .action-buttons {
-    order: 2;
-  }
-
-  .account-pill-container {
-    order: 3;
-    justify-content: center;
-    flex-shrink: 0;
   }
 }
 

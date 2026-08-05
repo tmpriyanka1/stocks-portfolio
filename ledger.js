@@ -254,9 +254,9 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
 
     // Rolling balance as of end date
     let netSharesAsOfEndDate = 0;
-    let runningAvgBuy = 0;
     let avgBuyAsOfEndDate = 0;
     let avgShortAsOfEndDate = 0;
+    let lots = []; // FIFO queue
 
     g.transactions.forEach(tx => {
       const sharesNum = parseFloat(tx.shares) || 0;
@@ -270,22 +270,30 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
         let realizedPnL = 0;
         if (runningShares < 0) {
           // Covering a short
-          const coverShares = Math.min(sharesNum, Math.abs(runningShares));
-          realizedPnL = coverShares * (runningAvgBuy - priceNum); // Inverted logic for shorts
-
-          runningShares += sharesNum;
-          if (runningShares > 0) {
-            runningAvgBuy = priceNum; // Flipped to long
-          } else if (runningShares === 0) {
-            runningAvgBuy = 0;
+          let sharesToCover = sharesNum;
+          while (sharesToCover > 0 && lots.length > 0) {
+            let lot = lots[0];
+            let coveredNow = Math.min(sharesToCover, lot.shares);
+            realizedPnL += coveredNow * (lot.price - priceNum); // Inverted logic for shorts
+            
+            if (lot.shares <= sharesToCover) {
+              sharesToCover -= lot.shares;
+              lots.shift();
+            } else {
+              lot.shares -= sharesToCover;
+              sharesToCover = 0;
+            }
+          }
+          
+          if (sharesToCover > 0) {
+            // Flipped to long
+            lots.push({ shares: sharesToCover, price: priceNum });
           }
         } else {
           // Adding to long
-          if (runningShares + sharesNum > 0) {
-            runningAvgBuy = ((runningShares * runningAvgBuy) + (sharesNum * priceNum)) / (runningShares + sharesNum);
-          }
-          runningShares += sharesNum;
+          lots.push({ shares: sharesNum, price: priceNum });
         }
+        runningShares += sharesNum;
 
         if (realizedPnL !== 0) {
           realizedPLAllTime += realizedPnL;
@@ -303,22 +311,30 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
         let realizedPnL = 0;
         if (runningShares > 0) {
           // Closing a long
-          const sellShares = Math.min(sharesNum, runningShares);
-          realizedPnL = sellShares * (priceNum - runningAvgBuy); // Standard logic for longs
-
-          runningShares -= sharesNum;
-          if (runningShares < 0) {
-            runningAvgBuy = priceNum; // Flipped to short
-          } else if (runningShares === 0) {
-            runningAvgBuy = 0;
+          let sharesToClose = sharesNum;
+          while (sharesToClose > 0 && lots.length > 0) {
+            let lot = lots[0];
+            let closedNow = Math.min(sharesToClose, lot.shares);
+            realizedPnL += closedNow * (priceNum - lot.price); // Standard logic for longs
+            
+            if (lot.shares <= sharesToClose) {
+              sharesToClose -= lot.shares;
+              lots.shift();
+            } else {
+              lot.shares -= sharesToClose;
+              sharesToClose = 0;
+            }
+          }
+          
+          if (sharesToClose > 0) {
+            // Flipped to short
+            lots.push({ shares: sharesToClose, price: priceNum });
           }
         } else {
           // Adding to short
-          if (Math.abs(runningShares) + sharesNum > 0) {
-            runningAvgBuy = ((Math.abs(runningShares) * runningAvgBuy) + (sharesNum * priceNum)) / (Math.abs(runningShares) + sharesNum);
-          }
-          runningShares -= sharesNum;
+          lots.push({ shares: sharesNum, price: priceNum });
         }
+        runningShares -= sharesNum;
 
         if (realizedPnL !== 0) {
           realizedPLAllTime += realizedPnL;
@@ -337,11 +353,19 @@ function groupTransactionsByTicker(transactions, startDate, endDate) {
 
       if (isBeforeOrOnEnd) {
         netSharesAsOfEndDate = runningShares;
+        let totalCost = 0;
+        let totalShares = 0;
+        lots.forEach(lot => {
+          totalCost += lot.shares * lot.price;
+          totalShares += lot.shares;
+        });
+        const currentAvg = totalShares > 0 ? totalCost / totalShares : 0;
+        
         if (runningShares > 0) {
-          avgBuyAsOfEndDate = runningAvgBuy;
+          avgBuyAsOfEndDate = currentAvg;
           avgShortAsOfEndDate = 0;
         } else if (runningShares < 0) {
-          avgShortAsOfEndDate = runningAvgBuy;
+          avgShortAsOfEndDate = currentAvg;
           avgBuyAsOfEndDate = 0;
         } else {
           avgBuyAsOfEndDate = 0;
@@ -643,11 +667,22 @@ function createMasterCardHTML(cardData, listType) {
           displayComment = '';
         }
 
+        const sessionRole = typeof window.getSessionRole === 'function' ? window.getSessionRole() : '';
+        const localUser = localStorage.getItem('logged_in_username') || '';
+        const isAdmin = sessionRole === 'admin' || localUser.toLowerCase() === 'admin';
+        const adminControls = isAdmin ? `
+          <div class="timeline-controls" style="margin-left: auto; display: flex; gap: 8px;">
+            <button class="glass-btn" style="padding: 4px 8px; font-size: 10px; border-radius: 4px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600;" onclick="editSingleTrade('${cardData.ticker}', '${tx.date}', ${sharesVal}, ${priceVal})" title="Edit Trade">Edit</button>
+            <button class="glass-btn" style="padding: 4px 8px; font-size: 10px; border-radius: 4px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600;" onclick="deleteSingleTrade('${cardData.ticker}', '${tx.date}')" title="Delete Trade">Delete</button>
+          </div>
+        ` : '';
+
         return `
-              <div class="timeline-item ${actionClass}">
+              <div class="timeline-item ${actionClass}" style="display: flex; flex-direction: column;">
                 <div class="timeline-dot"></div>
-                <div class="timeline-header">
+                <div class="timeline-header" style="display: flex; align-items: center; width: 100%;">
                   <span class="timeline-action-text">${actionLabel} ${sharesVal} @ $${priceVal.toFixed(2)} - ${dateTimeStr}</span>
+                  ${adminControls}
                 </div>
                 ${displayComment ? `<div class="timeline-comment">${displayComment}</div>` : ''}
               </div>
@@ -2044,3 +2079,51 @@ function initAINotesCollapsible() {
     });
   }
 }
+
+// Single Trade Actions
+window.deleteSingleTrade = async function(ticker, date) {
+  if (!confirm('Are you sure you want to delete this specific trade?')) return;
+  const portfolioId = localStorage.getItem('active_portfolio_id') || 'long_term';
+  const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
+  try {
+    const res = await fetch(`/api/trades/single?ticker=${encodeURIComponent(ticker)}&date=${encodeURIComponent(date)}`, {
+      method: 'DELETE',
+      headers: { 'x-user-role': role, 'x-portfolio-id': portfolioId }
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert('Error deleting trade');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error deleting trade');
+  }
+};
+
+window.editSingleTrade = async function(ticker, date, shares, price) {
+  const newShares = prompt('Enter new shares:', shares);
+  if (newShares === null) return;
+  const newPrice = prompt('Enter new price:', price);
+  if (newPrice === null) return;
+  
+  const portfolioId = localStorage.getItem('active_portfolio_id') || 'long_term';
+  const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
+  try {
+    const res = await fetch(`/api/trades/single?ticker=${encodeURIComponent(ticker)}&date=${encodeURIComponent(date)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-user-role': role, 'x-portfolio-id': portfolioId },
+      body: JSON.stringify({ shares: parseFloat(newShares), price: parseFloat(newPrice) })
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert('Error updating trade');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error updating trade');
+  }
+};

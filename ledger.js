@@ -2155,9 +2155,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = { shares: parseFloat(shares), price: parseFloat(price) };
         if (comment) payload.comment = comment;
         if (newDate) {
-           // We keep the time part from oldDate if it exists
-           const oldTime = oldDate.includes('T') ? oldDate.split('T')[1] : '00:00:00.000Z';
-           payload.newDate = newDate + 'T' + oldTime;
+          const parts = newDate.split('-');
+          if (parts.length === 3) {
+            const oldDateObj = new Date(oldDate);
+            if (!isNaN(oldDateObj.getTime()) && oldDateObj.getFullYear() == parts[0] && oldDateObj.getMonth() == (parts[1]-1) && oldDateObj.getDate() == parts[2]) {
+              payload.newDate = oldDate;
+            } else {
+              const userDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+              payload.newDate = userDate.toISOString();
+            }
+          } else {
+            const oldTime = oldDate.includes('T') ? oldDate.split('T')[1] : '00:00:00.000Z';
+            payload.newDate = newDate + 'T' + oldTime;
+          }
         }
         
         const res = await fetch(`/api/trades/single?ticker=${encodeURIComponent(ticker)}&date=${encodeURIComponent(oldDate)}`, {

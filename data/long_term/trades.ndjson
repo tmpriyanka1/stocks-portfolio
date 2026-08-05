@@ -32,4 +32,4 @@
 {"ticker":"ONDS","shares":350,"price":8.86,"action":"SELL","assetType":"stocks","date":"2026-08-04T18:46:40.119Z","comment":"Taking 10% profit","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T00:00:00.000Z","comment":"Added more on the dip to bring down the average","stopLoss":0,"Expiry Date":""}
 {"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-05T12:44:54","comment":"","stopLoss":118}
-{"ticker":"DRAM","shares":140,"price":55.2,"action":"SELL","assetType":"stocks","date":"2026-08-05T20:42:09.307Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"DRAM","shares":140,"price":55.2,"action":"SELL","assetType":"stocks","date":"2026-08-05T00:00:00.000Z","comment":"Sold DRAM to lock in profits ahead of SNDK earning today on aug 5th","stopLoss":0}

@@ -81,20 +81,70 @@ function aggregatePositions(txs) {
   const groups = {};
   txs.forEach(tx => {
     if (!groups[tx.ticker]) {
-      groups[tx.ticker] = { ticker: tx.ticker, type: tx.assetType, shares: 0, avgCost: 0, lastPrice: tx.price };
+      groups[tx.ticker] = { ticker: tx.ticker, type: tx.assetType, shares: 0, avgCost: 0, lastPrice: tx.price, lots: [] };
     }
     const g = groups[tx.ticker];
     g.lastPrice = tx.price;
+    const sharesNum = tx.shares;
+    const priceNum = tx.price;
+
     if (tx.action === 'BUY') {
-      const newShares = g.shares + tx.shares;
-      if (newShares > 0) {
-        g.avgCost = (g.shares * g.avgCost + tx.shares * tx.price) / newShares;
+      if (g.shares < 0) {
+        let sharesToCover = sharesNum;
+        while (sharesToCover > 0 && g.lots.length > 0) {
+          let lot = g.lots[0];
+          if (lot.shares <= sharesToCover) {
+             sharesToCover -= lot.shares;
+             g.lots.shift();
+          } else {
+             lot.shares -= sharesToCover;
+             sharesToCover = 0;
+          }
+        }
+        if (sharesToCover > 0) {
+          g.lots.push({ shares: sharesToCover, price: priceNum });
+        }
+      } else {
+        g.lots.push({ shares: sharesNum, price: priceNum });
       }
-      g.shares = newShares;
+      g.shares += sharesNum;
     } else if (tx.action === 'SELL') {
-      g.shares = Math.max(0, g.shares - tx.shares);
+      if (g.shares > 0) {
+        let sharesToClose = sharesNum;
+        while (sharesToClose > 0 && g.lots.length > 0) {
+          let lot = g.lots[0];
+          if (lot.shares <= sharesToClose) {
+             sharesToClose -= lot.shares;
+             g.lots.shift();
+          } else {
+             lot.shares -= sharesToClose;
+             sharesToClose = 0;
+          }
+        }
+        if (sharesToClose > 0) {
+          g.lots.push({ shares: sharesToClose, price: priceNum });
+        }
+      } else {
+        g.lots.push({ shares: sharesNum, price: priceNum });
+      }
+      g.shares -= sharesNum;
     }
   });
+
+  for (const ticker in groups) {
+    const g = groups[ticker];
+    if (g.lots && g.lots.length > 0) {
+      let totalCost = 0;
+      let totalShares = 0;
+      g.lots.forEach(lot => {
+        totalCost += lot.shares * lot.price;
+        totalShares += lot.shares;
+      });
+      g.avgCost = totalShares > 0 ? totalCost / totalShares : 0;
+    } else {
+      g.avgCost = 0;
+    }
+  }
   return groups;
 }
 
@@ -409,13 +459,27 @@ describe('aggregatePositions — position roll-up logic', () => {
     expect(groups['AAPL'].shares).toBe(0);
   });
 
-  test('SELL cannot bring shares below zero', () => {
+  test('FIFO correctly updates avgCost after partial sell', () => {
+    const txs = [
+      { ticker: 'ORCL', assetType: 'stocks', action: 'BUY', shares: 49, price: 178.78 },
+      { ticker: 'ORCL', assetType: 'stocks', action: 'BUY', shares: 77, price: 114.92 },
+      { ticker: 'ORCL', assetType: 'stocks', action: 'SELL', shares: 77, price: 144.23 },
+    ];
+    const groups = aggregatePositions(txs);
+    // Sold 77 shares. Consumes 49 shares from lot 1 (178.78) and 28 shares from lot 2 (114.92).
+    // Remaining shares = 49 @ 114.92
+    // Average cost should be 114.92
+    expect(groups['ORCL'].shares).toBe(49);
+    expect(groups['ORCL'].avgCost).toBeCloseTo(114.92, 2);
+  });
+
+  test('SELL can bring shares below zero (short selling)', () => {
     const txs = [
       { ticker: 'TSLA', assetType: 'stocks', action: 'BUY', shares: 15, price: 185 },
       { ticker: 'TSLA', assetType: 'stocks', action: 'SELL', shares: 30, price: 200 },
     ];
     const groups = aggregatePositions(txs);
-    expect(groups['TSLA'].shares).toBe(0);
+    expect(groups['TSLA'].shares).toBe(-15);
   });
 
   test('options BUY aggregates with correct type', () => {

@@ -418,6 +418,19 @@ describe('groupTransactionsByTicker — position aggregation', () => {
     expect(result[0].netShares).toBe(0);
   });
 
+  test('FIFO logic: correct average cost and realized P&L after partial sell', () => {
+    const txs = [
+      { ticker: 'ORCL', assetType: 'stocks', action: 'BUY', shares: 49, price: 178.78, date: '2026-01-01T10:00:00' },
+      { ticker: 'ORCL', assetType: 'stocks', action: 'BUY', shares: 77, price: 114.92, date: '2026-02-01T10:00:00' },
+      { ticker: 'ORCL', assetType: 'stocks', action: 'SELL', shares: 77, price: 144.23, date: '2026-03-01T10:00:00' },
+    ];
+    const result = groupTransactionsByTicker(txs);
+    
+    expect(result[0].netShares).toBe(49);
+    expect(result[0].avgBuyAsOfEndDate).toBeCloseTo(114.92, 2);
+    expect(result[0].realizedPL).toBeCloseTo(-872.27, 2);
+  });
+
   test('realized P&L: profit on completed position', () => {
     const txs = [
       { ticker: 'NVDA', assetType: 'stocks', action: 'BUY', shares: 10, price: 480, date: '2026-06-03T10:00:00' },

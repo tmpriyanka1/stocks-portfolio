@@ -7,5 +7,6 @@
   "ANET $190 CALL": 19.8,
   "SPY $747 PUT": 0.3,
   "SPY $767 PUT": 0.01,
-  "SPY $777 PUT": 6.44
+  "SPY $777 PUT": 6.44,
+  "SPY $768 CALL": 4.08
 }

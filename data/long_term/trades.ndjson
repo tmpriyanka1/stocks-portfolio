@@ -31,3 +31,4 @@
 {"ticker":"ORCL","shares":49,"price":114.92,"action":"BUY","assetType":"stocks","date":"2026-08-06T05:30:57.653Z","comment":"Position adjusted via Edit Asset form","stopLoss":115}
 {"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T19:00:00.000Z","comment":"Added 10 more on dip","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSFT PUT","shares":3,"price":21.35,"action":"BUY","assetType":"options","date":"2026-08-06T07:06:56","comment":"The stock went up too fast after earnings on July 29th  , so we are expecting a small pull-back and get some 20 to 30%profits with in short term.","stopLoss":0,"Expiry Date":"2026-09-18"}
+{"ticker":"AEHR","shares":105,"price":98,"action":"BUY","assetType":"stocks","date":"2026-08-06T07:13:43","comment":"Bought based on the daily chart timeframe and showed a bullish breakout suggusted by prof.","stopLoss":0}

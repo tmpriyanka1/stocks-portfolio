@@ -18,3 +18,4 @@
 {"ticker":"AVGO $400 CALL","shares":1,"price":29,"action":"SELL","assetType":"options","date":"2026-08-05T04:37:50.860Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $777 PUT","shares":27,"price":3.84,"action":"BUY","assetType":"options","date":"2026-08-05T06:45:20","comment":"","stopLoss":0,"Expiry Date":"2026-08-06"}
 {"ticker":"SPY $777 PUT","shares":27,"price":5.8,"action":"SELL","assetType":"options","date":"2026-08-05T00:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $768 CALL","shares":16,"price":4.6,"action":"BUY","assetType":"options","date":"2026-08-05T08:38:21","comment":"Brought a SPY Call position expiring August 6th to recover recent loss from previous SPY Puts. Expected price to rise little","stopLoss":0,"Expiry Date":"2026-08-06"}

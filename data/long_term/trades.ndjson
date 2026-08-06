@@ -18,12 +18,9 @@
 {"ticker":"MRNA","shares":210,"price":69.645,"action":"BUY","assetType":"stocks","date":"2026-07-24T22:57:41.590Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
 {"ticker":"SPCX","shares":63,"price":112.1,"action":"BUY","assetType":"stocks","date":"2026-07-30T13:33:57.721Z","comment":"Position adjusted via Edit Asset form","stopLoss":115}
 {"ticker":"SPCX","shares":63,"price":115.12,"action":"SELL","assetType":"stocks","date":"2026-07-30T13:46:17.715Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
-{"ticker":"INTC","shares":77,"price":93.44,"action":"BUY","assetType":"stocks","date":"2026-07-30T09:39:36","comment":"","stopLoss":0}
-{"ticker":"INTC","shares":77,"price":93.51,"action":"BUY","assetType":"stocks","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"ONDS","shares":350,"price":7.97,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:52:41","comment":"","stopLoss":0}
 {"ticker":"DRAM","shares":140,"price":48.77,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:53:25","comment":"","stopLoss":0}
 {"ticker":"AMAT","shares":14,"price":542.31,"action":"BUY","assetType":"stocks","date":"2026-08-04T06:54:37","comment":"","stopLoss":0}
-{"ticker":"INTC","shares":84,"price":99.46,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}
 {"ticker":"ORCL","shares":77,"price":144.23,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":10,"price":8.934999999999999,"action":"BUY","assetType":"options","date":"2026-08-04T17:12:24.791Z","comment":"Position adjusted via Edit Asset form","stopLoss":0,"Expiry Date":"2026-08-31"}
 {"ticker":"DELL","shares":21,"price":429.24000000000007,"action":"BUY","assetType":"stocks","date":"2026-08-04T17:12:34.390Z","comment":"Position adjusted via Edit Asset form","stopLoss":430}
@@ -33,3 +30,4 @@
 {"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-05T12:44:54","comment":"","stopLoss":118}
 {"ticker":"DRAM","shares":140,"price":55.2,"action":"SELL","assetType":"stocks","date":"2026-08-05T19:00:00.000Z","comment":"Sold DRAM to lock in profits ahead of SNDK earning today on aug 5th","stopLoss":0}
 {"ticker":"CRDO","shares":28,"price":269.7,"action":"BUY","assetType":"stocks","date":"2026-08-06T05:29:00.342Z","comment":"Position adjusted via Edit Asset form","stopLoss":219}
+{"ticker":"INTC","shares":70,"price":93.51,"action":"BUY","assetType":"stocks","date":"2026-08-06T05:30:21.242Z","comment":"Position adjusted via Edit Asset form","stopLoss":95}

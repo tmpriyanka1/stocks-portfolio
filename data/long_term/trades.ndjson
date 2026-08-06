@@ -20,8 +20,6 @@
 {"ticker":"DRAM","shares":140,"price":48.77,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:53:25","comment":"","stopLoss":0}
 {"ticker":"AMAT","shares":14,"price":542.31,"action":"BUY","assetType":"stocks","date":"2026-08-04T06:54:37","comment":"","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":5,"price":7.25,"action":"BUY","assetType":"options","date":"2026-08-03T19:00:00.000Z","comment":"Added another 5 at dip to maintain average","stopLoss":0,"Expiry Date":"2026-08-31"}
-{"ticker":"DELL","shares":21,"price":429.24000000000007,"action":"BUY","assetType":"stocks","date":"2026-08-04T17:12:34.390Z","comment":"Position adjusted via Edit Asset form","stopLoss":430}
-{"ticker":"DELL","shares":21,"price":476.29,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"taking 10 % profit","stopLoss":0}
 {"ticker":"ONDS","shares":350,"price":8.86,"action":"SELL","assetType":"stocks","date":"2026-08-04T18:46:40.119Z","comment":"Taking 10% profit","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":5,"price":10.62,"action":"BUY","assetType":"options","date":"2026-07-31T19:00:00.000Z","comment":"Added this trade by follows prof suggestion.","stopLoss":0,"Expiry Date":""}
 {"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-05T12:44:54","comment":"","stopLoss":118}
@@ -32,4 +30,4 @@
 {"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T19:00:00.000Z","comment":"Added 10 more on dip","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSFT PUT","shares":3,"price":21.35,"action":"BUY","assetType":"options","date":"2026-08-06T07:06:56","comment":"The stock went up too fast after earnings on July 29th  , so we are expecting a small pull-back and get some 20 to 30%profits with in short term.","stopLoss":0,"Expiry Date":"2026-09-18"}
 {"ticker":"AEHR","shares":105,"price":98,"action":"BUY","assetType":"stocks","date":"2026-08-06T07:13:43","comment":"Bought based on the daily chart timeframe and showed a bullish breakout suggusted by prof.","stopLoss":0}
-{"ticker":"DELL","shares":14,"price":443.12,"action":"BUY","assetType":"stocks","date":"2026-08-06T07:15:12","comment":"Planned to enter at the higher-low around 428 during the sell-the-news correction, but entered at 434 to grab some profit with a tight stop loss near the average price","stopLoss":0}
+{"ticker":"DELL","shares":14,"price":443.12,"action":"BUY","assetType":"stocks","date":"2026-08-06T14:48:12.479Z","comment":"Position adjusted via Edit Asset form","stopLoss":444}

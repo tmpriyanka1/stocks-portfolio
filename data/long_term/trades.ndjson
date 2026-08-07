@@ -32,3 +32,4 @@
 {"ticker":"AEHR","shares":105,"price":98,"action":"BUY","assetType":"stocks","date":"2026-08-06T07:13:43","comment":"Bought based on the daily chart timeframe and showed a bullish breakout suggusted by prof.","stopLoss":0}
 {"ticker":"AEHR","shares":105,"price":104.36,"action":"SELL","assetType":"stocks","date":"2026-08-06T14:49:57.568Z","comment":"Took profits at 7% to lock in gains quickly and avoid holding through volatility","stopLoss":0}
 {"ticker":"DELL","shares":14,"price":443.12,"action":"BUY","assetType":"stocks","date":"2026-08-06T16:23:00.233Z","comment":"Position adjusted via Edit Asset form","stopLoss":400}
+{"ticker":"LITE","shares":10,"price":898.33,"action":"BUY","assetType":"stocks","date":"2026-08-07T08:04:10","comment":"Entering this position based on bullish chart momentum and suggested by prof","stopLoss":860}

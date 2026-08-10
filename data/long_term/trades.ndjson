@@ -34,3 +34,4 @@
 {"ticker":"DELL","shares":14,"price":443.12,"action":"BUY","assetType":"stocks","date":"2026-08-06T16:23:00.233Z","comment":"Position adjusted via Edit Asset form","stopLoss":400}
 {"ticker":"LITE","shares":10,"price":898.33,"action":"BUY","assetType":"stocks","date":"2026-08-07T08:04:10","comment":"Entering this position based on bullish chart momentum and suggested by prof","stopLoss":860}
 {"ticker":"LITE","shares":10,"price":930,"action":"SELL","assetType":"stocks","date":"2026-08-10T17:12:51.585Z","comment":"Locked in 3% profit during pre-market on Aug 10th.  On aug 11th, there is  a quarterly earning report","stopLoss":0}
+{"ticker":"LITE","shares":7,"price":845.83,"action":"BUY","assetType":"stocks","date":"2026-08-10T06:30:05","comment":"Immediately after selling LITE @930 average, again we bought 7 shares in pull-back dip @ 845 average.","stopLoss":0}

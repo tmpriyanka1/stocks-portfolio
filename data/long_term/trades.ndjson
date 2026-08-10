@@ -36,3 +36,4 @@
 {"ticker":"LITE","shares":10,"price":930,"action":"SELL","assetType":"stocks","date":"2026-08-10T17:12:51.585Z","comment":"Locked in 3% profit during pre-market on Aug 10th.  On aug 11th, there is  a quarterly earning report","stopLoss":0}
 {"ticker":"LITE","shares":7,"price":845.83,"action":"BUY","assetType":"stocks","date":"2026-08-10T06:30:05","comment":"Immediately after selling LITE @930 average, again we bought 7 shares in pull-back dip @ 845 average.","stopLoss":0}
 {"ticker":"ORCL","shares":49,"price":145.96,"action":"SELL","assetType":"stocks","date":"2026-08-07T19:00:00.000Z","comment":"Locked-In 27% gains.","stopLoss":0}
+{"ticker":"SLV","shares":140,"price":57.55,"action":"BUY","assetType":"stocks","date":"2026-08-07T10:17:49","comment":"Took a position in SLV by analyzing strong bullish candle in chart.","stopLoss":0}

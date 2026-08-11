@@ -2113,6 +2113,18 @@ window.editSingleTrade = function(ticker, date, shares, price, comment) {
   document.getElementById('editTradeDateInput').value = date ? date.split('T')[0] : '';
   document.getElementById('editTradeCommentInput').value = comment || '';
   
+  const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
+  const tickerContainer = document.getElementById('editTradeTickerContainer');
+  if (tickerContainer) {
+    if (role === 'admin') {
+      tickerContainer.style.display = 'flex';
+      document.getElementById('editTradeTickerInput').value = ticker || '';
+    } else {
+      tickerContainer.style.display = 'none';
+      document.getElementById('editTradeTickerInput').value = '';
+    }
+  }
+
   modal.setAttribute('data-ticker', ticker);
   modal.setAttribute('data-old-date', date);
   
@@ -2139,6 +2151,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const price = document.getElementById('editTradePriceInput').value;
       const newDate = document.getElementById('editTradeDateInput').value;
       const comment = document.getElementById('editTradeCommentInput').value;
+      const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
+      let newTickerVal = null;
+      if (role === 'admin') {
+        const tickerInput = document.getElementById('editTradeTickerInput').value;
+        if (tickerInput && tickerInput.trim().toUpperCase() !== ticker) {
+          newTickerVal = tickerInput.trim().toUpperCase();
+        }
+      }
       
       if (!shares || !price) {
         alert('Shares and price are required.');
@@ -2149,11 +2169,11 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.textContent = 'Saving...';
       
       const portfolioId = localStorage.getItem('active_portfolio_id') || 'long_term';
-      const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
       
       try {
         const payload = { shares: parseFloat(shares), price: parseFloat(price) };
         if (comment) payload.comment = comment;
+        if (newTickerVal) payload.newTicker = newTickerVal;
         if (newDate) {
           const parts = newDate.split('-');
           if (parts.length === 3) {

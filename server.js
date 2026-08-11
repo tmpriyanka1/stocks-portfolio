@@ -511,7 +511,9 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
       return res.status(400).json({ error: "Ticker is required" });
     }
 
-    const { shares, price, stopLoss, assetType, expiryDate } = req.body;
+    const { shares, price, stopLoss, assetType, expiryDate, newTicker } = req.body;
+    
+    const finalTicker = newTicker ? newTicker.trim().toUpperCase() : targetTicker;
 
     if (!isNumeric(shares) || parseFloat(shares) <= 0) {
       return res.status(400).json({ error: "Shares must be a positive number." });
@@ -545,7 +547,7 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
 
     // 2. Construct the new BUY trade record representing the updated holdings
     const newTradeRecord = {
-      ticker: targetTicker,
+      ticker: finalTicker,
       shares: parsedShares,
       price: parsedPrice,
       action: 'BUY',
@@ -615,7 +617,7 @@ app.put('/api/trades/single', (req, res) => {
     const { ticker, date } = req.query;
     if (!ticker || !date) return res.status(400).json({ error: "Ticker and date are required" });
 
-    const { shares, price, action, comment, stopLoss, newDate, 'Expiry Date': expiryDate } = req.body;
+    const { shares, price, action, comment, stopLoss, newDate, newTicker, 'Expiry Date': expiryDate } = req.body;
 
     const tradesPath = getDatabasePath(req, 'trades.ndjson');
     const fileContent = fs.readFileSync(tradesPath, 'utf8');
@@ -634,6 +636,7 @@ app.put('/api/trades/single', (req, res) => {
           trade.action = action || trade.action;
           trade.comment = comment !== undefined ? comment : trade.comment;
           if (newDate !== undefined) trade.date = newDate;
+          if (newTicker !== undefined) trade.ticker = newTicker;
           if (stopLoss !== undefined) trade.stopLoss = parseFloat(stopLoss);
           if (expiryDate !== undefined) trade['Expiry Date'] = expiryDate;
           updatedLines.push(JSON.stringify(trade));

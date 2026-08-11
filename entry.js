@@ -326,6 +326,14 @@ function initFormSubmit() {
       return;
     }
 
+    if (mode === 'option') {
+      const strikeMatch = ticker.match(/(?:[\$@])?(\d+(?:\.\d+)?)/);
+      if (!strikeMatch) {
+        showToast('⚠️ Options require a strike price in the ticker (e.g. MSFT $450 PUT).', true);
+        return;
+      }
+    }
+
     // Field verification loop
     if (!ticker || !type || !action || !shares || !price || !date || !time) {
       showToast('⚠️ Please fill out all required execution fields.', true);

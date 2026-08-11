@@ -344,6 +344,14 @@
           <span class="import-modal-title" id="editAssetModalTitle">Edit Asset — TICKER</span>
         </div>
 
+        <!-- Ticker Symbol (Admin Only) -->
+        <div id="editAssetTickerContainer" style="display: none; flex-direction: column; gap: 4px;">
+          <label for="editAssetTickerInput"
+            style="font-size: 11px; color: var(--text-secondary); letter-spacing: 0.04em;">TICKER SYMBOL (Admin)</label>
+          <input type="text" id="editAssetTickerInput" placeholder="e.g. AAPL"
+            style="width: 100%; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; box-sizing: border-box; text-transform: uppercase;">
+        </div>
+
         <!-- Shares / Contracts -->
         <div style="display: flex; flex-direction: column; gap: 4px;">
           <label for="editSharesInput" id="editSharesLabel"
@@ -389,7 +397,7 @@
   </div>
 
   <script src="auth-guard.js?v=8"></script>
-  <script src="portfolio.js?v=1785961631636" defer></script>
+  <script src="portfolio.js?v=1786458851106" defer></script>
 </body>
 
 </html>

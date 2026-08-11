@@ -2416,6 +2416,19 @@ function openEditAssetModal(ticker) {
   if (priceInput) priceInput.value = asset.avgCost;
   if (stopLossInput) stopLossInput.value = asset.stopLoss || '';
 
+  const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
+  const tickerContainer = document.getElementById('editAssetTickerContainer');
+  const tickerInput = document.getElementById('editAssetTickerInput');
+  if (tickerContainer) {
+    if (role === 'admin') {
+      tickerContainer.style.display = 'flex';
+      if (tickerInput) tickerInput.value = ticker || '';
+    } else {
+      tickerContainer.style.display = 'none';
+      if (tickerInput) tickerInput.value = '';
+    }
+  }
+
   const isOption = asset.type === 'options' || ticker.includes('@') || ticker.includes('$') || ticker.includes('Call') || ticker.includes('Put');
 
   if (isOption) {
@@ -2462,6 +2475,15 @@ function initEditAssetModal() {
       const price = parseFloat(priceInput.value);
       const stopLoss = parseFloat(stopLossInput.value) || 0;
       const expiryDate = expiryInput.value || '';
+      
+      const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
+      let newTickerVal = null;
+      if (role === 'admin') {
+        const tickerInput = document.getElementById('editAssetTickerInput');
+        if (tickerInput && tickerInput.value.trim().toUpperCase() && tickerInput.value.trim().toUpperCase() !== ticker) {
+          newTickerVal = tickerInput.value.trim().toUpperCase();
+        }
+      }
 
       if (isNaN(shares) || shares <= 0) {
         showToast('⚠️ Please enter a valid number of shares.', true);
@@ -2479,16 +2501,19 @@ function initEditAssetModal() {
       submitBtn.textContent = 'Saving...';
 
       try {
+        const payload = {
+          shares,
+          price,
+          stopLoss,
+          assetType,
+          expiryDate
+        };
+        if (newTickerVal) payload.newTicker = newTickerVal;
+
         const response = await fetch(CLOUD_ENDPOINT.endpointUrl + `trades/ticker/${encodeURIComponent(ticker)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shares,
-            price,
-            stopLoss,
-            assetType,
-            expiryDate
-          })
+          body: JSON.stringify(payload)
         });
 
         if (!response.ok) throw new Error('Server error updating asset.');
@@ -2543,7 +2568,24 @@ function getOSIOptionSymbol(ticker, expiryStr, comment, assetType) {
   // Underlying ticker
   const rootMatch = ticker.match(/^([A-Za-z]+)/);
   if (!rootMatch) return null;
-  const root = rootMatch[1].toUpperCase();
+  let root = rootMatch[1].toUpperCase();
+
+  const nameToTickerMap = {
+    'MICROSOFT': 'MSFT',
+    'APPLE': 'AAPL',
+    'TESLA': 'TSLA',
+    'AMAZON': 'AMZN',
+    'NVIDIA': 'NVDA',
+    'GOOGLE': 'GOOGL',
+    'ALPHABET': 'GOOGL',
+    'META': 'META',
+    'FACEBOOK': 'META',
+    'NETFLIX': 'NFLX'
+  };
+
+  if (nameToTickerMap[root]) {
+    root = nameToTickerMap[root];
+  }
 
   // Extract strike price
   // Handles "$490", "@735", "735" etc.

@@ -558,7 +558,7 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
       action: 'BUY',
       assetType: finalAssetType,
       date: new Date().toISOString(),
-      comment: 'Position adjusted via Edit Asset form',
+      comment: req.body.comment !== undefined ? req.body.comment : '',
       stopLoss: parsedSL
     };
 

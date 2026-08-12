@@ -2474,6 +2474,9 @@ function openEditAssetModal(ticker) {
   if (editErDateInput) editErDateInput.value = asset.erDate || '';
   if (editErTimeInput) editErTimeInput.value = asset.erTime || 'AH';
 
+  const editCommentInput = document.getElementById('editCommentInput');
+  if (editCommentInput) editCommentInput.value = asset.comment || '';
+
   modal.classList.add('active');
 }
 
@@ -2541,6 +2544,9 @@ function initEditAssetModal() {
 
       const asset = portfolioAssets.find(a => a.ticker === ticker);
       const assetType = asset ? (asset.type || 'stocks') : 'stocks';
+      
+      const editCommentInput = document.getElementById('editCommentInput');
+      const comment = editCommentInput ? editCommentInput.value.trim() : '';
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving...';
@@ -2551,7 +2557,8 @@ function initEditAssetModal() {
           price,
           stopLoss,
           assetType,
-          expiryDate
+          expiryDate,
+          comment
         };
         if (erDate) {
           payload.erDate = erDate;

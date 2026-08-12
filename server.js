@@ -447,6 +447,11 @@ app.post('/api/trades', (req, res) => {
       stopLoss: req.body.stopLoss !== undefined ? parseFloat(req.body.stopLoss) : (req.body.stopLimit !== undefined ? parseFloat(req.body.stopLimit) : 0)
     };
 
+    if (req.body.erDate) {
+      tradeRecord.erDate = req.body.erDate;
+      tradeRecord.erTime = req.body.erTime || 'AH';
+    }
+
     if (tradeRecord.assetType === 'options') {
       tradeRecord['Expiry Date'] = req.body['Expiry Date'] || req.body.expiryDate || req.body.expiry || '';
     }
@@ -553,9 +558,14 @@ app.put('/api/trades/ticker/:ticker', (req, res) => {
       action: 'BUY',
       assetType: finalAssetType,
       date: new Date().toISOString(),
-      comment: 'Position adjusted via Edit Asset form',
+      comment: req.body.comment !== undefined ? req.body.comment : '',
       stopLoss: parsedSL
     };
+
+    if (req.body.erDate) {
+      newTradeRecord.erDate = req.body.erDate;
+      newTradeRecord.erTime = req.body.erTime || 'AH';
+    }
 
     if (finalAssetType === 'options') {
       newTradeRecord['Expiry Date'] = expiryDate || '';

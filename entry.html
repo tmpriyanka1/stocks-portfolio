@@ -153,6 +153,21 @@
             <label for="inputComment">Trade Journal Note</label>
             <textarea id="inputComment" placeholder="Add adviser evaluation notes..." rows="3"></textarea>
           </div>
+          
+          <!-- Earnings Report (ER) Fields (Hidden for Cash) -->
+          <div class="form-row" id="group-er" style="display: flex; gap: 12px; margin-bottom: 15px;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label for="inputErDate">ER Date (optional)</label>
+              <input type="date" id="inputErDate">
+            </div>
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label for="inputErTime">ER Time</label>
+              <select id="inputErTime">
+                <option value="AH">After Hours (AH)</option>
+                <option value="PM">Pre Market (PM)</option>
+              </select>
+            </div>
+          </div>
 
           <button type="submit" class="submit-button" id="submitBtn">
             🟢 Submit
@@ -204,7 +219,7 @@
 
   </div>
 
-  <script src="auth-guard.js?v=4"></script>
+  <script src="auth-guard.js?v=1786567798064"></script>
   <script src="entry.js?v=4" defer></script>
 </body>
 

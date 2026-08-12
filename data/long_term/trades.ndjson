@@ -41,3 +41,4 @@
 {"ticker":"LITE","shares":7,"price":819.12,"action":"SELL","assetType":"stocks","date":"2026-08-11T19:00:00.000Z","comment":"Exited before quarterly results,  instead of taking risk.","stopLoss":0}
 {"ticker":"AMAT","shares":14,"price":522.94,"action":"SELL","assetType":"stocks","date":"2026-08-11T19:00:00.000Z","comment":"Sold before earnings—didn't want to hold through the release.","stopLoss":0}
 {"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:46:48.335Z","comment":"Position adjusted via Edit Asset form","stopLoss":121}
+{"ticker":"LITE","shares":7,"price":783.65,"action":"BUY","assetType":"stocks","date":"2026-08-12T06:57:04","comment":"","stopLoss":0}

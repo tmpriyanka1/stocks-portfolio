@@ -4,10 +4,8 @@
 {"ticker":"MVLL","shares":134,"price":22.73,"action":"BUY","assetType":"stocks","date":"2026-07-17T19:03:19","comment":"","stopLoss":0}
 {"ticker":"AVGX","shares":105,"price":52.29,"action":"BUY","assetType":"stocks","date":"2026-07-10T19:04:14","comment":"","stopLoss":0}
 {"ticker":"NBIS","shares":35,"price":233.57,"action":"BUY","assetType":"stocks","date":"2026-07-02T19:07:27","comment":"","stopLoss":0}
-{"ticker":"CRDO","shares":28,"price":269.7,"action":"BUY","assetType":"stocks","date":"2026-07-06T19:08:34","comment":"","stopLoss":0}
 {"ticker":"TWLO","shares":28,"price":215.36,"action":"BUY","assetType":"stocks","date":"2026-07-07T19:11:05","comment":"","stopLoss":0}
 {"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-06-22T19:12:00","comment":"","stopLoss":0}
-{"ticker":"ORCL","shares":49,"price":178.78,"action":"BUY","assetType":"stocks","date":"2026-06-11T19:12:46","comment":"","stopLoss":0}
 {"ticker":"SOXS","shares":42,"price":191.59,"action":"BUY","assetType":"stocks","date":"2026-04-19T19:14:01","comment":"","stopLoss":0}
 {"ticker":"RH","shares":120,"price":180.23,"action":"BUY","assetType":"stocks","date":"2026-07-19T19:16:31","comment":"","stopLoss":0}
 {"ticker":"MVLL","shares":344,"price":25.61,"action":"SELL","assetType":"stocks","date":"2026-07-21T14:28:55.134Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
@@ -15,20 +13,13 @@
 {"ticker":"TWLO","shares":28,"price":197.4,"action":"SELL","assetType":"stocks","date":"2026-07-21T20:02:25.611Z","comment":"Reached SL","stopLoss":0}
 {"ticker":"AVGX","shares":105,"price":52.13,"action":"SELL","assetType":"stocks","date":"2026-07-24T07:27:10.939Z","comment":"Breakeven after recovered from unrealized loss","stopLoss":0}
 {"ticker":"NBIS","shares":35,"price":225.69,"action":"SELL","assetType":"stocks","date":"2026-07-24T07:29:15.546Z","comment":"Exited at loss because market crash risk","stopLoss":0}
-{"ticker":"ORCL","shares":77,"price":114.92,"action":"BUY","assetType":"stocks","date":"2026-07-24T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"MRNA","shares":210,"price":69.645,"action":"BUY","assetType":"stocks","date":"2026-07-24T22:57:41.590Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
 {"ticker":"SPCX","shares":63,"price":112.1,"action":"BUY","assetType":"stocks","date":"2026-07-30T13:33:57.721Z","comment":"Position adjusted via Edit Asset form","stopLoss":115}
 {"ticker":"SPCX","shares":63,"price":115.12,"action":"SELL","assetType":"stocks","date":"2026-07-30T13:46:17.715Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
-{"ticker":"INTC","shares":77,"price":93.44,"action":"BUY","assetType":"stocks","date":"2026-07-30T09:39:36","comment":"","stopLoss":0}
-{"ticker":"INTC","shares":77,"price":93.51,"action":"BUY","assetType":"stocks","date":"2026-07-31T00:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"ONDS","shares":350,"price":7.97,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:52:41","comment":"","stopLoss":0}
 {"ticker":"DRAM","shares":140,"price":48.77,"action":"BUY","assetType":"stocks","date":"2026-08-03T06:53:25","comment":"","stopLoss":0}
 {"ticker":"AMAT","shares":14,"price":542.31,"action":"BUY","assetType":"stocks","date":"2026-08-04T06:54:37","comment":"","stopLoss":0}
-{"ticker":"INTC","shares":84,"price":99.46,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}
-{"ticker":"ORCL","shares":77,"price":144.23,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"cut of no of shares","stopLoss":0}
-{"ticker":"QQQ $670 PUT","shares":10,"price":8.934999999999999,"action":"BUY","assetType":"options","date":"2026-08-04T17:12:24.791Z","comment":"Position adjusted via Edit Asset form","stopLoss":0,"Expiry Date":"2026-08-31"}
-{"ticker":"DELL","shares":21,"price":429.24000000000007,"action":"BUY","assetType":"stocks","date":"2026-08-04T17:12:34.390Z","comment":"Position adjusted via Edit Asset form","stopLoss":430}
-{"ticker":"DELL","shares":21,"price":476.29,"action":"SELL","assetType":"stocks","date":"2026-08-04T00:00:00.000Z","comment":"taking 10 % profit","stopLoss":0}
+{"ticker":"QQQ $670 PUT","shares":5,"price":7.25,"action":"BUY","assetType":"options","date":"2026-08-03T19:00:00.000Z","comment":"Added another 5 at dip to maintain average","stopLoss":0,"Expiry Date":"2026-08-31"}
 {"ticker":"ONDS","shares":350,"price":8.86,"action":"SELL","assetType":"stocks","date":"2026-08-04T18:46:40.119Z","comment":"Taking 10% profit","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T00:00:00.000Z","comment":"Added more on the dip to bring down the average","stopLoss":0,"Expiry Date":""}
 {"ticker":"DRAM","shares":140,"price":55.2,"action":"SELL","assetType":"stocks","date":"2026-08-05T00:00:00.000Z","comment":"Sold DRAM to lock in profits ahead of SNDK earning today on aug 5th","stopLoss":0}

@@ -265,7 +265,9 @@ async function pullCloudData() {
         }
 
         const expiryDate = tx['Expiry Date'] || tx.expiryDate || tx.expiry || '';
-        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss, expiryDate };
+        const erDate = tx.erDate || '';
+        const erTime = tx.erTime || 'AH';
+        return { ticker, assetType, action, shares, price: costBasis, date, comment, stopLoss, expiryDate, erDate, erTime };
       }).filter(tx => tx.ticker !== '');
 
       // Fetch and merge server cached prices (/api/prices)
@@ -541,7 +543,9 @@ function refreshPortfolioAssets() {
         lots: [],
         lastPrice: tx.price,
         expiryDate: tx.expiryDate || tx['Expiry Date'] || '',
-        comment: tx.comment || ''
+        comment: tx.comment || '',
+        erDate: tx.erDate || '',
+        erTime: tx.erTime || ''
       };
     }
     const g = groups[tx.ticker];
@@ -551,6 +555,10 @@ function refreshPortfolioAssets() {
     }
     if (tx.comment) {
       g.comment = tx.comment;
+    }
+    if (tx.erDate) {
+      g.erDate = tx.erDate;
+      g.erTime = tx.erTime || 'AH';
     }
     const sharesNum = tx.shares;
     const priceNum = tx.price;
@@ -664,7 +672,9 @@ function refreshPortfolioAssets() {
         change24h: Number(assetDetails.change24h) || 0,
         icon: assetDetails.icon || g.ticker.slice(0, 2).toUpperCase(),
         expiryDate: g.expiryDate || '',
-        comment: g.comment || ''
+        comment: g.comment || '',
+        erDate: g.erDate || '',
+        erTime: g.erTime || ''
       });
     }
   }
@@ -1323,6 +1333,17 @@ function renderAssetsTable(filterMode) {
     const slDisplay = (asset.stopLoss && asset.stopLoss > 0) ? `$${asset.stopLoss.toFixed(2)}` : '—';
     const changeText = asset.change24h >= 0 ? `up ${asset.change24h.toFixed(2)}%` : `down ${Math.abs(asset.change24h).toFixed(2)}%`;
 
+    let erHTML = '';
+    if (asset.erDate) {
+      try {
+        const d = new Date(asset.erDate + 'T12:00:00Z');
+        const formattedEr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+        erHTML = `<span class="asset-sub-ticker" style="color: #60a5fa; font-size: 10px; margin-top: 2px;">ER : ${formattedEr} ${asset.erTime || 'AH'}</span>`;
+      } catch (e) {
+        erHTML = `<span class="asset-sub-ticker" style="color: #60a5fa; font-size: 10px; margin-top: 2px;">ER : ${asset.erDate} ${asset.erTime || 'AH'}</span>`;
+      }
+    }
+
     const rowHTML = `
       <div class="asset-row" data-ticker="${asset.ticker}" role="button" tabindex="0">
         <!-- Column 1: Ticker & Name (No Icon Box) -->
@@ -1334,6 +1355,7 @@ function renderAssetsTable(filterMode) {
               ${subTicker ? `<span class="asset-sub-ticker">${subTicker}</span>` : ''}
             </div>
             ${optionExpiry ? `<span class="asset-sub-ticker" style="color: var(--text-muted); font-size: 10px;">${optionExpiry}</span>` : ''}
+            ${erHTML}
             ${optionBadgeHTML ? `<div class="option-badges-row">${optionBadgeHTML}</div>` : ''}
           </div>
         </div>
@@ -2447,6 +2469,11 @@ function openEditAssetModal(ticker) {
     if (expiryGroup) expiryGroup.style.display = 'none';
   }
 
+  const editErDateInput = document.getElementById('editErDateInput');
+  const editErTimeInput = document.getElementById('editErTimeInput');
+  if (editErDateInput) editErDateInput.value = asset.erDate || '';
+  if (editErTimeInput) editErTimeInput.value = asset.erTime || 'AH';
+
   modal.classList.add('active');
 }
 
@@ -2481,6 +2508,19 @@ function initEditAssetModal() {
       const stopLoss = parseFloat(stopLossInput.value) || 0;
       const expiryDate = expiryInput.value || '';
       
+      const editErDateInput = document.getElementById('editErDateInput');
+      const editErTimeInput = document.getElementById('editErTimeInput');
+      const erDate = editErDateInput ? editErDateInput.value : '';
+      const erTime = editErTimeInput ? editErTimeInput.value : 'AH';
+
+      if (erDate) {
+        const today = new Date().toISOString().split('T')[0];
+        if (erDate < today) {
+          showToast('⚠️ ER Date cannot be in the past.', true);
+          return;
+        }
+      }
+      
       const role = typeof window.getSessionRole === 'function' ? window.getSessionRole() : 'production';
       let newTickerVal = null;
       if (role === 'admin') {
@@ -2513,6 +2553,10 @@ function initEditAssetModal() {
           assetType,
           expiryDate
         };
+        if (erDate) {
+          payload.erDate = erDate;
+          payload.erTime = erTime;
+        }
         if (newTickerVal) payload.newTicker = newTickerVal;
 
         const response = await fetch(CLOUD_ENDPOINT.endpointUrl + `trades/ticker/${encodeURIComponent(ticker)}`, {

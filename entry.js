@@ -320,10 +320,28 @@ function initFormSubmit() {
     const slInput = document.getElementById('inputSL').value;
     const comment = document.getElementById('inputComment').value.trim();
     const expiryDate = document.getElementById('inputExpiry').value;
+    
+    let erDate = '';
+    let erTime = 'AH';
+    const groupEr = document.getElementById('group-er');
+    if (groupEr && groupEr.style.display !== 'none') {
+      const erDateInput = document.getElementById('inputErDate');
+      if (erDateInput) erDate = erDateInput.value;
+      const erTimeInput = document.getElementById('inputErTime');
+      if (erTimeInput) erTime = erTimeInput.value;
+    }
 
     if (mode === 'option' && !expiryDate) {
       showToast('⚠️ Please select an Expiry Date for the option.', true);
       return;
+    }
+
+    if (erDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (erDate < today) {
+        showToast('⚠️ ER Date cannot be in the past.', true);
+        return;
+      }
     }
 
     if (mode === 'option') {
@@ -365,6 +383,11 @@ function initFormSubmit() {
       comment: comment,
       stopLoss: slValue
     };
+    
+    if (erDate) {
+      tx.erDate = erDate;
+      tx.erTime = erTime;
+    }
     if (mode === 'option') {
       tx.expiryDate = expiryDate;
     }
@@ -733,6 +756,7 @@ function initFormModeToggle() {
   const groupOptionType = document.getElementById('group-option-type');
   const groupSl = document.getElementById('group-sl');
   const groupComment = document.getElementById('group-comment');
+  const groupEr = document.getElementById('group-er');
 
   const inputTicker = document.getElementById('inputTicker');
   const inputShares = document.getElementById('inputShares');
@@ -757,6 +781,7 @@ function initFormModeToggle() {
         if (groupOptionType) groupOptionType.classList.add('hidden');
         groupSl.classList.remove('hidden');
         groupComment.classList.remove('hidden');
+        if (groupEr) groupEr.style.display = 'flex';
 
         // Toggle required attributes
         inputTicker.required = true;
@@ -774,6 +799,7 @@ function initFormModeToggle() {
         if (groupOptionType) groupOptionType.classList.remove('hidden');
         groupSl.classList.remove('hidden');
         groupComment.classList.remove('hidden');
+        if (groupEr) groupEr.style.display = 'flex';
 
         // Toggle required attributes
         inputTicker.required = true;
@@ -791,6 +817,7 @@ function initFormModeToggle() {
         if (groupOptionType) groupOptionType.classList.add('hidden');
         groupSl.classList.add('hidden');
         groupComment.classList.add('hidden');
+        if (groupEr) groupEr.style.display = 'none';
 
         // Toggle required attributes
         inputTicker.required = false;

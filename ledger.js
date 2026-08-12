@@ -670,9 +670,12 @@ function createMasterCardHTML(cardData, listType) {
         const sessionRole = typeof window.getSessionRole === 'function' ? window.getSessionRole() : '';
         const localUser = localStorage.getItem('logged_in_username') || '';
         const isAdmin = sessionRole === 'admin' || localUser.toLowerCase() === 'admin';
+        
+        const safeComment = (comment || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        
         const adminControls = isAdmin ? `
           <div class="timeline-controls" style="margin-left: auto; display: flex; gap: 8px;">
-            <button class="glass-btn" style="padding: 4px 8px; font-size: 10px; border-radius: 4px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600;" onclick="editSingleTrade('${cardData.ticker}', '${tx.date}', ${sharesVal}, ${priceVal})" title="Edit Trade">Edit</button>
+            <button class="glass-btn" style="padding: 4px 8px; font-size: 10px; border-radius: 4px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600;" onclick="editSingleTrade('${cardData.ticker}', '${tx.date}', ${sharesVal}, ${priceVal}, this.getAttribute('data-comment'))" data-comment="${safeComment}" title="Edit Trade">Edit</button>
             <button class="glass-btn" style="padding: 4px 8px; font-size: 10px; border-radius: 4px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600;" onclick="deleteSingleTrade('${cardData.ticker}', '${tx.date}')" title="Delete Trade">Delete</button>
           </div>
         ` : '';

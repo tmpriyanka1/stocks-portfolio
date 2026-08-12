@@ -49,3 +49,4 @@
 {"ticker":"SPXW $7770 PUT","shares":2,"price":20.8,"action":"BUY","assetType":"options","date":"2026-08-12T08:02:43","comment":"","stopLoss":0,"Expiry Date":"2026-08-12"}
 {"ticker":"SPXW $7770 PUT","shares":2,"price":26,"action":"SELL","assetType":"options","date":"2026-08-12T17:25:23.884Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"CIFR","shares":350,"price":17.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T18:16:36.244Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"SPXW $7700 PUT","shares":2,"price":0.05,"action":"SELL","assetType":"options","date":"2026-08-12T18:35:20.457Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}

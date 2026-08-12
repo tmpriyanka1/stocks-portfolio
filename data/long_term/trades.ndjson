@@ -43,3 +43,4 @@
 {"ticker":"ALAB","shares":21,"price":334.69,"action":"BUY","assetType":"stocks","date":"2026-08-12T09:47:30","comment":"","stopLoss":320}
 {"ticker":"LITE","shares":7,"price":922.57,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:51:13.550Z","comment":"Locked in 5% profit and exited from LITE","stopLoss":0}
 {"ticker":"CRDO","shares":28,"price":269.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:53:29.208Z","comment":"Closed CRDO at breakeven after holding through heavy losses.","stopLoss":0}
+{"ticker":"QQQ $670 PUT","shares":20,"price":1.39,"action":"SELL","assetType":"options","date":"2026-08-12T17:04:53.159Z","comment":"Took a loss on the Aug 31st QQQ $670 puts because the premium value was dropping and we didn't have enough time to hold. We are moving this cash into another position with a September expiry option.","stopLoss":0,"Expiry Date":""}

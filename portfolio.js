@@ -1220,6 +1220,10 @@ function renderAssetsTable(filterMode) {
     marketPrices = {};
   }
 
+  const sessionRole = typeof window.getSessionRole === 'function' ? window.getSessionRole() : '';
+  const localUser = localStorage.getItem('logged_in_username') || '';
+  const isAdmin = sessionRole === 'admin' || localUser.toLowerCase() === 'admin';
+
   // Filter portfolio assets down to specific asset class
   const filtered = portfolioAssets.filter(asset => {
     if (filterMode === 'all') return true;
@@ -1368,6 +1372,7 @@ function renderAssetsTable(filterMode) {
               <button class="quick-buy-btn glass-btn" data-action="BUY" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; cursor: pointer; font-weight: 600; transition: all 0.2s;">Buy</button>
               <button class="quick-sell-btn glass-btn" data-action="SELL" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #f87171; cursor: pointer; font-weight: 600; transition: all 0.2s;">Sell</button>
               <button class="edit-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; cursor: pointer; font-weight: 600; transition: all 0.2s;">Edit</button>
+              ${typeof isAdmin !== 'undefined' && isAdmin ? `<button class="delete-asset-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #ef4444; cursor: pointer; font-weight: 600; transition: all 0.2s;">Delete</button>` : ''}
               <button class="add-comment-trigger-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">+ Add Comment</button>
               <button class="latest-news-btn glass-btn" style="padding: 5px 12px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); cursor: pointer; transition: all 0.2s;">Latest News</button>
             </div>

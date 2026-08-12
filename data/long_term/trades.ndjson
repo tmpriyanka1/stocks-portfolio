@@ -39,4 +39,4 @@
 {"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:46:48.335Z","comment":"Position adjusted via Edit Asset form","stopLoss":121}
 {"ticker":"LITE","shares":7,"price":873.65,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:58:16.065Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
 {"ticker":"MU","shares":7,"price":903.7,"action":"BUY","assetType":"stocks","date":"2026-08-12T06:58:30","comment":"Exited LITE before earnings to avoid risk; bought back today after earnings momentum is in  uptrend suggested by prof","stopLoss":0}
-{"ticker":"DELL","shares":14,"price":462.8,"action":"SELL","assetType":"stocks","date":"2026-08-12T14:16:19.161Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"DELL","shares":14,"price":462.8,"action":"SELL","assetType":"stocks","date":"2026-08-12T14:16:19.161Z","comment":"Locked in a little profit and exited DELL because the price looks overextended and our cash is below our 50% target.","stopLoss":0}

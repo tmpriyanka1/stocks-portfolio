@@ -1,5 +1,4 @@
 {"ticker":"AAOX","shares":140,"price":57.09,"action":"BUY","assetType":"stocks","date":"2026-06-16T23:26:41","comment":"","stopLoss":0}
-{"ticker":"ORCL","shares":28,"price":183.7,"action":"BUY","assetType":"stocks","date":"2026-06-11T23:27:54","comment":"","stopLoss":0}
 {"ticker":"ORCL $150 CALL","shares":2,"price":15.85,"action":"BUY","assetType":"options","date":"2026-07-09T23:39:20","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
 {"ticker":"ORCL $150 CALL","shares":5,"price":10.2,"action":"BUY","assetType":"options","date":"2026-07-13T23:43:25","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
 {"ticker":"AVGO $400 CALL","shares":1,"price":31,"action":"BUY","assetType":"options","date":"2026-07-10T23:45:15","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
@@ -21,3 +20,4 @@
 {"ticker":"SPY $768 CALL","shares":16,"price":4.6,"action":"BUY","assetType":"options","date":"2026-08-05T08:38:21","comment":"Brought a SPY Call position expiring August 6th to recover recent loss from previous SPY Puts. Expected price to rise little","stopLoss":0,"Expiry Date":"2026-08-06"}
 {"ticker":"SPY $768 CALL","shares":16,"price":4.6,"action":"SELL","assetType":"options","date":"2026-08-06T05:45:43.522Z","comment":"Exited the SPY Call position at breakeven without taking a loss. Price didn't pick up as expected.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $747 PUT","shares":52,"price":0.07,"action":"SELL","assetType":"options","date":"2026-08-07T19:00:00.000Z","comment":"Our mistake is adding more into a losing position during pullback dips to averaging down. Expected a short market pull back. But due to geopolitical catalysts that pushed SPY to new all-time highs.","stopLoss":0,"Expiry Date":""}
+{"ticker":"ORCL","shares":28,"price":183.7,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:14:24.128Z","comment":"","stopLoss":0,"erDate":"2026-09-08","erTime":"AH"}

@@ -21,6 +21,33 @@
 {"ticker":"AMAT","shares":14,"price":542.31,"action":"BUY","assetType":"stocks","date":"2026-08-04T06:54:37","comment":"","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":5,"price":7.25,"action":"BUY","assetType":"options","date":"2026-08-03T19:00:00.000Z","comment":"Added another 5 at dip to maintain average","stopLoss":0,"Expiry Date":"2026-08-31"}
 {"ticker":"ONDS","shares":350,"price":8.86,"action":"SELL","assetType":"stocks","date":"2026-08-04T18:46:40.119Z","comment":"Taking 10% profit","stopLoss":0}
-{"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T00:00:00.000Z","comment":"Added more on the dip to bring down the average","stopLoss":0,"Expiry Date":""}
-{"ticker":"DRAM","shares":140,"price":55.2,"action":"SELL","assetType":"stocks","date":"2026-08-05T00:00:00.000Z","comment":"Sold DRAM to lock in profits ahead of SNDK earning today on aug 5th","stopLoss":0}
-
+{"ticker":"QQQ $670 PUT","shares":5,"price":10.62,"action":"BUY","assetType":"options","date":"2026-07-31T19:00:00.000Z","comment":"Added this trade by follows prof suggestion.","stopLoss":0,"Expiry Date":""}
+{"ticker":"DRAM","shares":140,"price":55.2,"action":"SELL","assetType":"stocks","date":"2026-08-05T19:00:00.000Z","comment":"Sold DRAM to lock in profits ahead of SNDK earning today on aug 5th","stopLoss":0}
+{"ticker":"CRDO","shares":28,"price":269.7,"action":"BUY","assetType":"stocks","date":"2026-08-06T05:29:00.342Z","comment":"Position adjusted via Edit Asset form","stopLoss":219}
+{"ticker":"INTC","shares":70,"price":93.51,"action":"BUY","assetType":"stocks","date":"2026-08-06T05:30:21.242Z","comment":"Position adjusted via Edit Asset form","stopLoss":95}
+{"ticker":"ORCL","shares":49,"price":114.92,"action":"BUY","assetType":"stocks","date":"2026-08-06T05:30:57.653Z","comment":"Position adjusted via Edit Asset form","stopLoss":115}
+{"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T19:00:00.000Z","comment":"Added 10 more on dip","stopLoss":0,"Expiry Date":""}
+{"ticker":"AEHR","shares":105,"price":98,"action":"BUY","assetType":"stocks","date":"2026-08-06T07:13:43","comment":"Bought based on the daily chart timeframe and showed a bullish breakout suggusted by prof.","stopLoss":0}
+{"ticker":"AEHR","shares":105,"price":104.36,"action":"SELL","assetType":"stocks","date":"2026-08-06T14:49:57.568Z","comment":"Took profits at 7% to lock in gains quickly and avoid holding through volatility","stopLoss":0}
+{"ticker":"DELL","shares":14,"price":443.12,"action":"BUY","assetType":"stocks","date":"2026-08-06T16:23:00.233Z","comment":"Position adjusted via Edit Asset form","stopLoss":400}
+{"ticker":"ORCL","shares":49,"price":145.96,"action":"SELL","assetType":"stocks","date":"2026-08-07T19:00:00.000Z","comment":"Locked-In 27% gains.","stopLoss":0}
+{"ticker":"SLV","shares":140,"price":57.55,"action":"BUY","assetType":"stocks","date":"2026-08-07T10:17:49","comment":"Took a position in SLV by analyzing strong bullish candle in chart.","stopLoss":0}
+{"ticker":"INTC","shares":70,"price":96.66,"action":"SELL","assetType":"stocks","date":"2026-08-11T13:54:26.335Z","comment":"Increases total supply of shares by adding billions worth of new shares. Expected  drop in share price so we locked in little profits.","stopLoss":0}
+{"ticker":"MSFT $500 PUT","shares":3,"price":21.350000000000005,"action":"BUY","assetType":"options","date":"2026-08-11T14:46:35.690Z","comment":"Position adjusted via Edit Asset form","stopLoss":0,"Expiry Date":"2026-09-18"}
+{"ticker":"CIFR","shares":350,"price":17.44,"action":"BUY","assetType":"stocks","date":"2026-08-11T07:49:35","comment":"","stopLoss":16}
+{"ticker":"AMAT","shares":14,"price":522.94,"action":"SELL","assetType":"stocks","date":"2026-08-11T19:00:00.000Z","comment":"Sold before earnings—didn't want to hold through the release.","stopLoss":0}
+{"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:46:48.335Z","comment":"Position adjusted via Edit Asset form","stopLoss":121}
+{"ticker":"LITE","shares":7,"price":873.65,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:58:16.065Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
+{"ticker":"MU","shares":7,"price":903.7,"action":"BUY","assetType":"stocks","date":"2026-08-12T06:58:30","comment":"Exited LITE before earnings to avoid risk; bought back today after earnings momentum is in  uptrend suggested by prof","stopLoss":0}
+{"ticker":"DELL","shares":14,"price":462.8,"action":"SELL","assetType":"stocks","date":"2026-08-12T14:16:19.161Z","comment":"Locked in a little profit and exited DELL because the price looks overextended and our cash is below our 50% target.","stopLoss":0}
+{"ticker":"ALAB","shares":21,"price":334.69,"action":"BUY","assetType":"stocks","date":"2026-08-12T09:47:30","comment":"","stopLoss":320}
+{"ticker":"LITE","shares":7,"price":922.57,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:51:13.550Z","comment":"Locked in 5% profit and exited from LITE","stopLoss":0}
+{"ticker":"CRDO","shares":28,"price":269.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:53:29.208Z","comment":"Closed CRDO at breakeven after holding through heavy losses.","stopLoss":0}
+{"ticker":"QQQ $670 PUT","shares":20,"price":1.39,"action":"SELL","assetType":"options","date":"2026-08-12T17:04:53.159Z","comment":"Took a loss on the Aug 31st QQQ $670 puts because the premium value was dropping and we didn't have enough time to hold. We are moving this cash into another position with a September expiry option.","stopLoss":0,"Expiry Date":""}
+{"ticker":"QQQ $710 PUT","shares":14,"price":11.42,"action":"BUY","assetType":"options","date":"2026-08-12T10:04:57","comment":"Rolled out to Sep 18 and moved the strike up to $710. This gives the trade more time to work and makes it way easier to recover our losses from previous QQQ put option if QQQ pulls back.","stopLoss":0,"Expiry Date":"2026-09-18"}
+{"ticker":"SPXW $7700 PUT","shares":2,"price":1.2,"action":"BUY","assetType":"options","date":"2026-08-12T10:07:49","comment":"","stopLoss":0,"Expiry Date":"2026-08-12"}
+{"ticker":"SPXW $7770 PUT","shares":2,"price":20.8,"action":"BUY","assetType":"options","date":"2026-08-12T08:02:43","comment":"","stopLoss":0,"Expiry Date":"2026-08-12"}
+{"ticker":"SPXW $7770 PUT","shares":2,"price":26,"action":"SELL","assetType":"options","date":"2026-08-12T17:25:23.884Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"CIFR","shares":350,"price":17.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T18:16:36.244Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"SPXW $7700 PUT","shares":2,"price":0.05,"action":"SELL","assetType":"options","date":"2026-08-12T18:35:20.457Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"LULU","shares":49,"price":120.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T19:24:59.377Z","comment":"No movement  in price and bad price action","stopLoss":0}

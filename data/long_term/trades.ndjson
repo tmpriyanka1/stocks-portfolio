@@ -57,3 +57,4 @@
 {"ticker":"MRVL","shares":28,"price":228.14,"action":"BUY","assetType":"stocks","date":"2026-08-13T08:41:04","comment":"","stopLoss":0}
 {"ticker":"GLW $170 CALL","shares":2,"price":5.2,"action":"BUY","assetType":"options","date":"2026-08-13T08:42:08","comment":"","stopLoss":0,"Expiry Date":"2026-08-21"}
 {"ticker":"INTC $115 CALL","shares":5,"price":1.42,"action":"BUY","assetType":"options","date":"2026-08-13T08:43:43","comment":"","stopLoss":0,"Expiry Date":"2026-08-21"}
+{"ticker":"MSFT $505 CALL","shares":1,"price":4.6,"action":"BUY","assetType":"options","date":"2026-08-13T08:44:37","comment":"","stopLoss":0,"Expiry Date":"2026-08-21"}

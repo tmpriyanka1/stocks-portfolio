@@ -58,3 +58,4 @@
 {"ticker":"MRVL","shares":28,"price":228.14000000000001,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:11:10.837Z","comment":"","stopLoss":0,"erDate":"2026-08-27","erTime":"AH"}
 {"ticker":"MDB","shares":14,"price":457.02,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:11:37.590Z","comment":"Its in Uptrend suggested by prof","stopLoss":0,"erDate":"2026-09-01","erTime":"AH"}
 {"ticker":"RH","shares":120,"price":180.23,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:12:46.369Z","comment":"","stopLoss":0,"erDate":"2026-09-10","erTime":"AH"}
+{"ticker":"GLW $170 CALL","shares":2,"price":3.6,"action":"SELL","assetType":"options","date":"2026-08-13T18:44:56.930Z","comment":"GLW hit our stop-loss, so we exited the position for a loss.","stopLoss":0,"Expiry Date":""}

@@ -7,7 +7,6 @@
 {"ticker":"TWLO","shares":28,"price":215.36,"action":"BUY","assetType":"stocks","date":"2026-07-07T19:11:05","comment":"","stopLoss":0}
 {"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-06-22T19:12:00","comment":"","stopLoss":0}
 {"ticker":"SOXS","shares":42,"price":191.59,"action":"BUY","assetType":"stocks","date":"2026-04-19T19:14:01","comment":"","stopLoss":0}
-{"ticker":"RH","shares":120,"price":180.23,"action":"BUY","assetType":"stocks","date":"2026-07-19T19:16:31","comment":"","stopLoss":0}
 {"ticker":"MVLL","shares":344,"price":25.61,"action":"SELL","assetType":"stocks","date":"2026-07-21T14:28:55.134Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"DRAM","shares":154,"price":56.94,"action":"SELL","assetType":"stocks","date":"2026-07-21T14:30:14.623Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"TWLO","shares":28,"price":197.4,"action":"SELL","assetType":"stocks","date":"2026-07-21T20:02:25.611Z","comment":"Reached SL","stopLoss":0}
@@ -58,3 +57,4 @@
 {"ticker":"MSFT $505 CALL","shares":1,"price":4.6,"action":"BUY","assetType":"options","date":"2026-08-13T08:44:37","comment":"","stopLoss":0,"Expiry Date":"2026-08-21"}
 {"ticker":"MRVL","shares":28,"price":228.14000000000001,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:11:10.837Z","comment":"","stopLoss":0,"erDate":"2026-08-27","erTime":"AH"}
 {"ticker":"MDB","shares":14,"price":457.02,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:11:37.590Z","comment":"Its in Uptrend suggested by prof","stopLoss":0,"erDate":"2026-09-01","erTime":"AH"}
+{"ticker":"RH","shares":120,"price":180.23,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:12:46.369Z","comment":"","stopLoss":0,"erDate":"2026-09-10","erTime":"AH"}

@@ -51,3 +51,4 @@
 {"ticker":"CIFR","shares":350,"price":17.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T18:16:36.244Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"SPXW $7700 PUT","shares":2,"price":0.05,"action":"SELL","assetType":"options","date":"2026-08-12T18:35:20.457Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"LULU","shares":49,"price":120.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T19:24:59.377Z","comment":"No movement  in price and bad price action","stopLoss":0}
+{"ticker":"QQQ $710 PUT","shares":14,"price":10.9,"action":"SELL","assetType":"options","date":"2026-08-13T15:37:23.856Z","comment":"We sold our QQQ puts today for a  loss because the market is trending higher.","stopLoss":0,"Expiry Date":""}

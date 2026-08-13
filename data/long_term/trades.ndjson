@@ -54,3 +54,4 @@
 {"ticker":"QQQ $710 PUT","shares":14,"price":10.9,"action":"SELL","assetType":"options","date":"2026-08-13T15:37:23.856Z","comment":"We sold our QQQ puts today for a  loss because the market is trending higher.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSFT $500 PUT","shares":3,"price":17.5,"action":"SELL","assetType":"options","date":"2026-08-13T15:39:15.150Z","comment":"Exited our Microsoft position today for a loss to cut our downside risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MDB","shares":14,"price":457.02,"action":"BUY","assetType":"stocks","date":"2026-08-13T08:39:31","comment":"Its in Uptrend suggested by prof","stopLoss":0}
+{"ticker":"MRVL","shares":28,"price":228.14,"action":"BUY","assetType":"stocks","date":"2026-08-13T08:41:04","comment":"","stopLoss":0}

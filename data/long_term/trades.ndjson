@@ -53,8 +53,8 @@
 {"ticker":"LULU","shares":49,"price":120.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T19:24:59.377Z","comment":"No movement  in price and bad price action","stopLoss":0}
 {"ticker":"QQQ $710 PUT","shares":14,"price":10.9,"action":"SELL","assetType":"options","date":"2026-08-13T15:37:23.856Z","comment":"We sold our QQQ puts today for a  loss because the market is trending higher.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSFT $500 PUT","shares":3,"price":17.5,"action":"SELL","assetType":"options","date":"2026-08-13T15:39:15.150Z","comment":"Exited our Microsoft position today for a loss to cut our downside risk.","stopLoss":0,"Expiry Date":""}
-{"ticker":"MDB","shares":14,"price":457.02,"action":"BUY","assetType":"stocks","date":"2026-08-13T08:39:31","comment":"Its in Uptrend suggested by prof","stopLoss":0}
 {"ticker":"GLW $170 CALL","shares":2,"price":5.2,"action":"BUY","assetType":"options","date":"2026-08-13T08:42:08","comment":"","stopLoss":0,"Expiry Date":"2026-08-21"}
 {"ticker":"INTC $115 CALL","shares":5,"price":1.42,"action":"BUY","assetType":"options","date":"2026-08-13T08:43:43","comment":"","stopLoss":0,"Expiry Date":"2026-08-21"}
 {"ticker":"MSFT $505 CALL","shares":1,"price":4.6,"action":"BUY","assetType":"options","date":"2026-08-13T08:44:37","comment":"","stopLoss":0,"Expiry Date":"2026-08-21"}
 {"ticker":"MRVL","shares":28,"price":228.14000000000001,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:11:10.837Z","comment":"","stopLoss":0,"erDate":"2026-08-27","erTime":"AH"}
+{"ticker":"MDB","shares":14,"price":457.02,"action":"BUY","assetType":"stocks","date":"2026-08-13T17:11:37.590Z","comment":"Its in Uptrend suggested by prof","stopLoss":0,"erDate":"2026-09-01","erTime":"AH"}

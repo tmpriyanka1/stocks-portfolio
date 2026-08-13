@@ -52,3 +52,4 @@
 {"ticker":"SPXW $7700 PUT","shares":2,"price":0.05,"action":"SELL","assetType":"options","date":"2026-08-12T18:35:20.457Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"LULU","shares":49,"price":120.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T19:24:59.377Z","comment":"No movement  in price and bad price action","stopLoss":0}
 {"ticker":"QQQ $710 PUT","shares":14,"price":10.9,"action":"SELL","assetType":"options","date":"2026-08-13T15:37:23.856Z","comment":"We sold our QQQ puts today for a  loss because the market is trending higher.","stopLoss":0,"Expiry Date":""}
+{"ticker":"MSFT $500 PUT","shares":3,"price":17.5,"action":"SELL","assetType":"options","date":"2026-08-13T15:39:15.150Z","comment":"Exited our Microsoft position today for a loss to cut our downside risk.","stopLoss":0,"Expiry Date":""}

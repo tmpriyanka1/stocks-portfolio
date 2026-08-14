@@ -63,3 +63,4 @@
 {"ticker":"AVGO $420 CALL","shares":2,"price":6.14,"action":"BUY","assetType":"options","date":"2026-08-14T08:19:45","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"AVGO $420 CALL","shares":2,"price":4.15,"action":"SELL","assetType":"options","date":"2026-08-14T16:08:13.790Z","comment":"AVGO did not go as expected and exited with loss to avoid premium decay.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MDB","shares":14,"price":467.51,"action":"SELL","assetType":"stocks","date":"2026-08-14T16:18:06.184Z","comment":"Sold MDB  today to lock in profits and increase our cash balance.","stopLoss":0}
+{"ticker":"MU","shares":7,"price":956.68,"action":"SELL","assetType":"stocks","date":"2026-08-14T16:18:49.656Z","comment":"Sold MU  today to lock in profits and increase our cash balance","stopLoss":0}

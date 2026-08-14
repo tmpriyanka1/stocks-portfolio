@@ -61,3 +61,4 @@
 {"ticker":"GLW $170 CALL","shares":2,"price":3.6,"action":"SELL","assetType":"options","date":"2026-08-13T18:44:56.930Z","comment":"GLW hit our stop-loss, so we exited the position for a loss.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSFT $505 CALL","shares":1,"price":3.2,"action":"SELL","assetType":"options","date":"2026-08-14T15:19:05.196Z","comment":"Sold MSFT calls for a loss today—the upward move failed, so we sold the trade to prevent full premium loss.","stopLoss":0,"Expiry Date":""}
 {"ticker":"AVGO $420 CALL","shares":2,"price":6.14,"action":"BUY","assetType":"options","date":"2026-08-14T08:19:45","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
+{"ticker":"AVGO $420 CALL","shares":2,"price":4.15,"action":"SELL","assetType":"options","date":"2026-08-14T16:08:13.790Z","comment":"AVGO did not go as expected and exited with loss to avoid premium decay.","stopLoss":0,"Expiry Date":""}

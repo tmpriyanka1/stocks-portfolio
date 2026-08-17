@@ -67,3 +67,4 @@
 {"ticker":"GOOGL $370 CALL","shares":7,"price":3.55,"action":"BUY","assetType":"options","date":"2026-08-13T11:20:03","comment":"","stopLoss":0,"Expiry Date":"2026-09-11"}
 {"ticker":"LLY $1230 CALL","shares":1,"price":2.63,"action":"BUY","assetType":"options","date":"2026-08-13T12:24:28","comment":"","stopLoss":0,"Expiry Date":"2026-08-14"}
 {"ticker":"AMD","shares":14,"price":500.34,"action":"BUY","assetType":"stocks","date":"2026-08-14T16:49:54.016Z","comment":"","stopLoss":485,"erDate":"2026-11-03","erTime":"AH"}
+{"ticker":"LLY $1230 CALL","shares":1,"price":0.01,"action":"SELL","assetType":"options","date":"2026-08-14T19:00:00.000Z","comment":"LLY Expected to rise but unfortunately it didn't and premium got expired.","stopLoss":0,"Expiry Date":""}

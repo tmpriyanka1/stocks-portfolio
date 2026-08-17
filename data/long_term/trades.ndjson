@@ -72,7 +72,7 @@
 {"ticker":"TLT $82 CALL","shares":20,"price":1.31,"action":"BUY","assetType":"options","date":"2026-08-14T21:16:29","comment":"","stopLoss":0,"Expiry Date":"2026-09-30"}
 {"ticker":"CRWV $110 CALL","shares":10,"price":4.65,"action":"BUY","assetType":"options","date":"2026-08-17T16:21:56.322Z","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"MSTR $115 CALL","shares":10,"price":0.83,"action":"BUY","assetType":"options","date":"2026-08-17T09:16:15","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
-{"ticker":"DLLL","shares":210,"price":27.56,"action":"BUY","assetType":"stocks","date":"2026-08-17T08:31:37","comment":"","stopLoss":0}
 {"ticker":"AAOI","shares":56,"price":155.85,"action":"BUY","assetType":"stocks","date":"2026-08-17T08:33:29","comment":"Bought AAOI to capture upward momentum.","stopLoss":0}
 {"ticker":"CRWV $110 CALL","shares":8,"price":5.9,"action":"SELL","assetType":"options","date":"2026-08-17T18:38:02.756Z","comment":"Closed CRWV call only 8/10 contracts, locked in 25% profit and reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"GDX","shares":70,"price":91.71,"action":"BUY","assetType":"stocks","date":"2026-08-17T11:46:03","comment":"By looking D/W charts price is in upward trend, So we invested on Gold.","stopLoss":0}
+{"ticker":"DLLL","shares":210,"price":27.56,"action":"BUY","assetType":"stocks","date":"2026-08-17T19:04:14.099Z","comment":"","stopLoss":26,"erDate":"2026-09-03","erTime":"AH"}

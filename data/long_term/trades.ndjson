@@ -70,3 +70,4 @@
 {"ticker":"LLY $1230 CALL","shares":1,"price":0.01,"action":"SELL","assetType":"options","date":"2026-08-14T19:00:00.000Z","comment":"LLY Expected to rise but unfortunately it didn't and premium got expired.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MRNA","shares":210,"price":63.12,"action":"SELL","assetType":"stocks","date":"2026-08-14T19:00:00.000Z","comment":"Expecting market to pull back next week, So we exited Moderna by taking minimum loss.","stopLoss":0}
 {"ticker":"CRWV $110 CALL","shares":10,"price":4.35,"action":"BUY","assetType":"options","date":"2026-08-14T21:15:44","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
+{"ticker":"TLT $82 CALL","shares":20,"price":1.31,"action":"BUY","assetType":"options","date":"2026-08-14T21:16:29","comment":"","stopLoss":0,"Expiry Date":"2026-09-30"}

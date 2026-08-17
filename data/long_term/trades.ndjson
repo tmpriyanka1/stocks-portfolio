@@ -76,3 +76,4 @@
 {"ticker":"CRWV $110 CALL","shares":8,"price":5.9,"action":"SELL","assetType":"options","date":"2026-08-17T18:38:02.756Z","comment":"Closed CRWV call only 8/10 contracts, locked in 25% profit and reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"GDX","shares":70,"price":91.71,"action":"BUY","assetType":"stocks","date":"2026-08-17T11:46:03","comment":"By looking D/W charts price is in upward trend, So we invested on Gold.","stopLoss":0}
 {"ticker":"DLLL","shares":210,"price":27.56,"action":"BUY","assetType":"stocks","date":"2026-08-17T19:04:14.099Z","comment":"","stopLoss":26,"erDate":"2026-09-03","erTime":"AH"}
+{"ticker":"DLLL","shares":210,"price":28.12,"action":"SELL","assetType":"stocks","date":"2026-08-17T21:17:13.368Z","comment":"Exited from DLLL by locked in little profits to reduce risk.","stopLoss":0}

@@ -5,3 +5,4 @@
 {"ticker":"ASTS","shares":105,"price":72.45,"action":"SELL","assetType":"stocks","date":"2026-08-10T05:42:26.288Z","comment":"Instead of taking risks, sold ASTS before earnings report on Aug 10 to protect some +20% gains.","stopLoss":0}
 {"ticker":"ASTS","shares":105,"price":72.15,"action":"BUY","assetType":"stocks","date":"2026-08-11T13:01:09","comment":"Space stocks are acting better, so bought ASTS again.","stopLoss":0}
 {"ticker":"ASTS","shares":105,"price":71.32,"action":"SELL","assetType":"stocks","date":"2026-08-14T15:09:39.234Z","comment":"By looking charts ASTS is in downtrend and reduce risk due to expectations of market downside next week, Suggested by prof.","stopLoss":0}
+{"ticker":"SLV","shares":70,"price":58.46,"action":"BUY","assetType":"stocks","date":"2026-08-14T16:09:57","comment":"","stopLoss":0}

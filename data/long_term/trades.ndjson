@@ -78,3 +78,4 @@
 {"ticker":"DLLL","shares":210,"price":27.56,"action":"BUY","assetType":"stocks","date":"2026-08-17T19:04:14.099Z","comment":"","stopLoss":26,"erDate":"2026-09-03","erTime":"AH"}
 {"ticker":"DLLL","shares":210,"price":28.12,"action":"SELL","assetType":"stocks","date":"2026-08-17T21:17:13.368Z","comment":"Exited from DLLL by locked in little profits to reduce risk.","stopLoss":0}
 {"ticker":"INTC $115 CALL","shares":5,"price":0.38,"action":"SELL","assetType":"options","date":"2026-08-17T21:25:33.356Z","comment":"Sold INTC calls for a -70% loss. The stock failed to push higher as expected, so we closed them to prevent premium decay from taking the contract to zero. Note: Never buy any option with less than 2 weeks of expiry date.","stopLoss":0,"Expiry Date":""}
+{"ticker":"AMZN","shares":28,"price":261.75,"action":"BUY","assetType":"stocks","date":"2026-08-18T07:47:29","comment":"","stopLoss":0}

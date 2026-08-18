@@ -5,7 +5,6 @@
 {"ticker":"AVGX","shares":105,"price":52.29,"action":"BUY","assetType":"stocks","date":"2026-07-10T19:04:14","comment":"","stopLoss":0}
 {"ticker":"NBIS","shares":35,"price":233.57,"action":"BUY","assetType":"stocks","date":"2026-07-02T19:07:27","comment":"","stopLoss":0}
 {"ticker":"TWLO","shares":28,"price":215.36,"action":"BUY","assetType":"stocks","date":"2026-07-07T19:11:05","comment":"","stopLoss":0}
-{"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-06-22T19:12:00","comment":"","stopLoss":0}
 {"ticker":"SOXS","shares":42,"price":191.59,"action":"BUY","assetType":"stocks","date":"2026-04-19T19:14:01","comment":"","stopLoss":0}
 {"ticker":"MVLL","shares":344,"price":25.61,"action":"SELL","assetType":"stocks","date":"2026-07-21T14:28:55.134Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"DRAM","shares":154,"price":56.94,"action":"SELL","assetType":"stocks","date":"2026-07-21T14:30:14.623Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
@@ -79,3 +78,4 @@
 {"ticker":"GOOGL $370 CALL","shares":7,"price":3.55,"action":"BUY","assetType":"options","date":"2026-08-18T18:47:24.912Z","comment":"","stopLoss":0,"erDate":"2026-10-28","erTime":"AH","Expiry Date":"2026-09-11"}
 {"ticker":"AMZN","shares":28,"price":261.75,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:48:42.204Z","comment":"","stopLoss":0,"erDate":"2026-10-29","erTime":"AH"}
 {"ticker":"AAOI","shares":56,"price":155.85,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:50:04.785Z","comment":"Bought AAOI to capture upward momentum.","stopLoss":0,"erDate":"2026-11-05","erTime":"AH"}
+{"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:52:56.768Z","comment":"","stopLoss":0,"erDate":"2026-11-13","erTime":"PM"}

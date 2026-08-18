@@ -64,7 +64,6 @@
 {"ticker":"AVGO $420 CALL","shares":2,"price":4.15,"action":"SELL","assetType":"options","date":"2026-08-14T16:08:13.790Z","comment":"AVGO did not go as expected and exited with loss to avoid premium decay.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MDB","shares":14,"price":467.51,"action":"SELL","assetType":"stocks","date":"2026-08-14T16:18:06.184Z","comment":"Sold MDB  today to lock in profits and increase our cash balance.","stopLoss":0}
 {"ticker":"MU","shares":7,"price":956.68,"action":"SELL","assetType":"stocks","date":"2026-08-14T16:18:49.656Z","comment":"Sold MU  today to lock in profits and increase our cash balance","stopLoss":0}
-{"ticker":"GOOGL $370 CALL","shares":7,"price":3.55,"action":"BUY","assetType":"options","date":"2026-08-13T11:20:03","comment":"","stopLoss":0,"Expiry Date":"2026-09-11"}
 {"ticker":"LLY $1230 CALL","shares":1,"price":2.63,"action":"BUY","assetType":"options","date":"2026-08-13T12:24:28","comment":"","stopLoss":0,"Expiry Date":"2026-08-14"}
 {"ticker":"AMD","shares":14,"price":500.34,"action":"BUY","assetType":"stocks","date":"2026-08-14T16:49:54.016Z","comment":"","stopLoss":485,"erDate":"2026-11-03","erTime":"AH"}
 {"ticker":"LLY $1230 CALL","shares":1,"price":0.01,"action":"SELL","assetType":"options","date":"2026-08-14T19:00:00.000Z","comment":"LLY Expected to rise but unfortunately it didn't and premium got expired.","stopLoss":0,"Expiry Date":""}
@@ -79,3 +78,4 @@
 {"ticker":"DLLL","shares":210,"price":28.12,"action":"SELL","assetType":"stocks","date":"2026-08-17T21:17:13.368Z","comment":"Exited from DLLL by locked in little profits to reduce risk.","stopLoss":0}
 {"ticker":"INTC $115 CALL","shares":5,"price":0.38,"action":"SELL","assetType":"options","date":"2026-08-17T21:25:33.356Z","comment":"Sold INTC calls for a -70% loss. The stock failed to push higher as expected, so we closed them to prevent premium decay from taking the contract to zero. Note: Never buy any option with less than 2 weeks of expiry date.","stopLoss":0,"Expiry Date":""}
 {"ticker":"AMZN","shares":28,"price":261.75,"action":"BUY","assetType":"stocks","date":"2026-08-18T07:47:29","comment":"","stopLoss":0}
+{"ticker":"GOOGL $370 CALL","shares":7,"price":3.55,"action":"BUY","assetType":"options","date":"2026-08-18T18:47:24.912Z","comment":"","stopLoss":0,"erDate":"2026-10-28","erTime":"AH","Expiry Date":"2026-09-11"}

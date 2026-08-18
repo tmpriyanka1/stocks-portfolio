@@ -79,3 +79,4 @@
 {"ticker":"AAOI","shares":56,"price":155.85,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:50:04.785Z","comment":"Bought AAOI to capture upward momentum.","stopLoss":0,"erDate":"2026-11-05","erTime":"AH"}
 {"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:52:56.768Z","comment":"","stopLoss":0,"erDate":"2026-11-13","erTime":"PM"}
 {"ticker":"ALAB","shares":21,"price":334.69,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:57:59.055Z","comment":"","stopLoss":320,"erDate":"2026-11-03","erTime":"AH"}
+{"ticker":"SPCX","shares":70,"price":143.7,"action":"BUY","assetType":"stocks","date":"2026-08-18T11:58:13","comment":"","stopLoss":131.7}

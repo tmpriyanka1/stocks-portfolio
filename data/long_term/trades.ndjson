@@ -82,3 +82,4 @@
 {"ticker":"MU $1000 CALL","shares":2,"price":16.6,"action":"BUY","assetType":"options","date":"2026-08-19T08:20:25","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"MSTR $115 CALL","shares":10,"price":0.96,"action":"SELL","assetType":"options","date":"2026-08-19T17:22:49.286Z","comment":"Closed MSTR call with 15% profit.","stopLoss":0,"Expiry Date":""}
 {"ticker":"TLT $82 CALL","shares":10,"price":1.79,"action":"SELL","assetType":"options","date":"2026-08-19T17:24:39.598Z","comment":"Closed remaining 10 contracts of TLT at profit 37%.","stopLoss":0,"Expiry Date":""}
+{"ticker":"HIMS","shares":210,"price":29.37,"action":"BUY","assetType":"stocks","date":"2026-08-19T09:26:25","comment":"","stopLoss":0}

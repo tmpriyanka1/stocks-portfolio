@@ -84,3 +84,4 @@
 {"ticker":"HIMS","shares":210,"price":29.37,"action":"BUY","assetType":"stocks","date":"2026-08-19T09:26:25","comment":"","stopLoss":0}
 {"ticker":"CRDU","shares":210,"price":15.02,"action":"BUY","assetType":"stocks","date":"2026-08-19T09:59:32","comment":"","stopLoss":0}
 {"ticker":"GOOGL $370 CALL","shares":14,"price":2.78,"action":"BUY","assetType":"options","date":"2026-08-19T17:54:39.685Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"erDate":"2026-10-28","erTime":"AH","Expiry Date":"2026-09-11"}
+{"ticker":"AAPL $330 CALL","shares":21,"price":1.07,"action":"BUY","assetType":"options","date":"2026-08-19T11:52:28","comment":"","stopLoss":0,"Expiry Date":"2026-08-31"}

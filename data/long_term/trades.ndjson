@@ -72,7 +72,6 @@
 {"ticker":"DLLL","shares":210,"price":27.56,"action":"BUY","assetType":"stocks","date":"2026-08-17T19:04:14.099Z","comment":"","stopLoss":26,"erDate":"2026-09-03","erTime":"AH"}
 {"ticker":"DLLL","shares":210,"price":28.12,"action":"SELL","assetType":"stocks","date":"2026-08-17T21:17:13.368Z","comment":"Exited from DLLL by locked in little profits to reduce risk.","stopLoss":0}
 {"ticker":"INTC $115 CALL","shares":5,"price":0.38,"action":"SELL","assetType":"options","date":"2026-08-17T21:25:33.356Z","comment":"Sold INTC calls for a -70% loss. The stock failed to push higher as expected, so we closed them to prevent premium decay from taking the contract to zero. Note: Never buy any option with less than 2 weeks of expiry date.","stopLoss":0,"Expiry Date":""}
-{"ticker":"GOOGL $370 CALL","shares":7,"price":3.55,"action":"BUY","assetType":"options","date":"2026-08-18T18:47:24.912Z","comment":"","stopLoss":0,"erDate":"2026-10-28","erTime":"AH","Expiry Date":"2026-09-11"}
 {"ticker":"AMZN","shares":28,"price":261.75,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:48:42.204Z","comment":"","stopLoss":0,"erDate":"2026-10-29","erTime":"AH"}
 {"ticker":"AAOI","shares":56,"price":155.85,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:50:04.785Z","comment":"Bought AAOI to capture upward momentum.","stopLoss":0,"erDate":"2026-11-05","erTime":"AH"}
 {"ticker":"TE","shares":700,"price":10.18,"action":"BUY","assetType":"stocks","date":"2026-08-18T18:52:56.768Z","comment":"","stopLoss":0,"erDate":"2026-11-13","erTime":"PM"}
@@ -84,4 +83,4 @@
 {"ticker":"TLT $82 CALL","shares":10,"price":1.79,"action":"SELL","assetType":"options","date":"2026-08-19T17:24:39.598Z","comment":"Closed remaining 10 contracts of TLT at profit 37%.","stopLoss":0,"Expiry Date":""}
 {"ticker":"HIMS","shares":210,"price":29.37,"action":"BUY","assetType":"stocks","date":"2026-08-19T09:26:25","comment":"","stopLoss":0}
 {"ticker":"CRDU","shares":210,"price":15.02,"action":"BUY","assetType":"stocks","date":"2026-08-19T09:59:32","comment":"","stopLoss":0}
-{"ticker":"GOOGL $370 CALL","shares":7,"price":2,"action":"BUY","assetType":"options","date":"2026-08-19T17:53:03.055Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"GOOGL $370 CALL","shares":14,"price":2.78,"action":"BUY","assetType":"options","date":"2026-08-19T17:54:39.685Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"erDate":"2026-10-28","erTime":"AH","Expiry Date":"2026-09-11"}

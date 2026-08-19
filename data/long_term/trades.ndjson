@@ -80,3 +80,4 @@
 {"ticker":"SPCX","shares":70,"price":143.7,"action":"BUY","assetType":"stocks","date":"2026-08-18T19:00:03.593Z","comment":"Quick sell from portfolio drawer","stopLoss":131.7,"erDate":"2026-11-03","erTime":"AH"}
 {"ticker":"TLT $82 CALL","shares":10,"price":1.63,"action":"SELL","assetType":"options","date":"2026-08-19T13:59:26.047Z","comment":"Trimmed TLT calls at 25% profits.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MU $1000 CALL","shares":2,"price":16.6,"action":"BUY","assetType":"options","date":"2026-08-19T08:20:25","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
+{"ticker":"MSTR $115 CALL","shares":10,"price":0.96,"action":"SELL","assetType":"options","date":"2026-08-19T17:22:49.286Z","comment":"Closed MSTR call with 15% profit.","stopLoss":0,"Expiry Date":""}

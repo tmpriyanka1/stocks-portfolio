@@ -90,3 +90,4 @@
 {"ticker":"MU $1000 CALL","shares":2,"price":20.89,"action":"SELL","assetType":"options","date":"2026-08-20T14:14:52.090Z","comment":"Closed MU calls at 25% profit at market open.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MRVL","shares":28,"price":244.02,"action":"SELL","assetType":"stocks","date":"2026-08-20T14:16:48.071Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"AMZN","shares":28,"price":262.86,"action":"SELL","assetType":"stocks","date":"2026-08-20T14:27:46.868Z","comment":"Closed AMZN to reduce risk.","stopLoss":0}
+{"ticker":"ALAB","shares":21,"price":287.97,"action":"SELL","assetType":"stocks","date":"2026-08-20T14:31:32.984Z","comment":"Charts are not looking good, So we closed ALAB with loss.","stopLoss":0}

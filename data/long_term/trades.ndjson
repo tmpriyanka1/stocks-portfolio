@@ -91,3 +91,4 @@
 {"ticker":"MRVL","shares":28,"price":244.02,"action":"SELL","assetType":"stocks","date":"2026-08-20T14:16:48.071Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"AMZN","shares":28,"price":262.86,"action":"SELL","assetType":"stocks","date":"2026-08-20T14:27:46.868Z","comment":"Closed AMZN to reduce risk.","stopLoss":0}
 {"ticker":"ALAB","shares":21,"price":287.97,"action":"SELL","assetType":"stocks","date":"2026-08-20T14:31:32.984Z","comment":"Charts are not looking good, So we closed ALAB with loss.","stopLoss":0}
+{"ticker":"HIMS","shares":210,"price":32,"action":"SELL","assetType":"stocks","date":"2026-08-20T18:14:56.478Z","comment":"Closed HIMS at 8% profit to raise cash.","stopLoss":0}

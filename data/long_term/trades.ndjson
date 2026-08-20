@@ -86,3 +86,4 @@
 {"ticker":"GOOGL $370 CALL","shares":14,"price":2.78,"action":"BUY","assetType":"options","date":"2026-08-19T17:54:39.685Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"erDate":"2026-10-28","erTime":"AH","Expiry Date":"2026-09-11"}
 {"ticker":"AAPL $330 CALL","shares":21,"price":1.07,"action":"BUY","assetType":"options","date":"2026-08-19T11:52:28","comment":"","stopLoss":0,"Expiry Date":"2026-08-31"}
 {"ticker":"INTC $95 CALL","shares":3,"price":3.3,"action":"BUY","assetType":"options","date":"2026-08-19T12:43:03","comment":"","stopLoss":0,"Expiry Date":"2026-08-31"}
+{"ticker":"AAPL $330 CALL","shares":21,"price":2,"action":"SELL","assetType":"options","date":"2026-08-20T14:13:55.013Z","comment":"Closed AAPL calls at 86% profits.","stopLoss":0,"Expiry Date":""}

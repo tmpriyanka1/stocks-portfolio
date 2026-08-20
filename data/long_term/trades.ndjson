@@ -93,3 +93,4 @@
 {"ticker":"ALAB","shares":21,"price":287.97,"action":"SELL","assetType":"stocks","date":"2026-08-20T14:31:32.984Z","comment":"Charts are not looking good, So we closed ALAB with loss.","stopLoss":0}
 {"ticker":"HIMS","shares":210,"price":32,"action":"SELL","assetType":"stocks","date":"2026-08-20T18:14:56.478Z","comment":"Closed HIMS at 8% profit to raise cash.","stopLoss":0}
 {"ticker":"MU $1050 CALL","shares":2,"price":11,"action":"BUY","assetType":"options","date":"2026-08-20T12:30:40","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
+{"ticker":"TE","shares":1400,"price":4.4,"action":"BUY","assetType":"stocks","date":"2026-08-20T22:37:45.519Z","comment":"Added more TE to minimize the average","stopLoss":0}

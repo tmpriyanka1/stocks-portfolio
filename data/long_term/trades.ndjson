@@ -99,3 +99,4 @@
 {"ticker":"MELI","shares":4,"price":1947.62,"action":"BUY","assetType":"stocks","date":"2026-08-21T09:00:47","comment":"MELI charts looking good and suggested by prof.","stopLoss":1880}
 {"ticker":"TSLL","shares":840,"price":9.43,"action":"BUY","assetType":"stocks","date":"2026-08-21T09:04:02","comment":"","stopLoss":0}
 {"ticker":"HOOD","shares":77,"price":107.81000000000002,"action":"BUY","assetType":"stocks","date":"2026-08-21T16:08:32.590Z","comment":"","stopLoss":98}
+{"ticker":"CRDU","shares":210,"price":14.52,"action":"SELL","assetType":"stocks","date":"2026-08-21T16:10:27.290Z","comment":"Sold CRDU to release cash.","stopLoss":0}

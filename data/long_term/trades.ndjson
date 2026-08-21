@@ -98,3 +98,4 @@
 {"ticker":"MSTR $130 CALL","shares":3,"price":6.5,"action":"BUY","assetType":"options","date":"2026-08-21T06:59:05","comment":"","stopLoss":0,"Expiry Date":"2026-09-11"}
 {"ticker":"MELI","shares":4,"price":1947.62,"action":"BUY","assetType":"stocks","date":"2026-08-21T09:00:47","comment":"MELI charts looking good and suggested by prof.","stopLoss":1880}
 {"ticker":"HOOD","shares":77,"price":107.81,"action":"BUY","assetType":"stocks","date":"2026-08-21T09:02:09","comment":"","stopLoss":0}
+{"ticker":"TSLL","shares":840,"price":9.43,"action":"BUY","assetType":"stocks","date":"2026-08-21T09:04:02","comment":"","stopLoss":0}

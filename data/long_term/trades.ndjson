@@ -102,3 +102,4 @@
 {"ticker":"CRDU","shares":210,"price":14.52,"action":"SELL","assetType":"stocks","date":"2026-08-21T16:10:27.290Z","comment":"Sold CRDU to release cash.","stopLoss":0}
 {"ticker":"AMD","shares":14,"price":470.63,"action":"SELL","assetType":"stocks","date":"2026-08-21T16:11:18.698Z","comment":"Closed AMD with 5% loss to release more cash.","stopLoss":0}
 {"ticker":"GOOGL $370 CALL","shares":14,"price":1.5,"action":"BUY","assetType":"options","date":"2026-08-21T16:14:27.353Z","comment":"Added more Google Call options to reduce the average,","stopLoss":0,"Expiry Date":""}
+{"ticker":"GOOGL $370 CALL","shares":14,"price":1.94,"action":"SELL","assetType":"options","date":"2026-08-21T17:01:22.245Z","comment":"Trimmed half contracts of google.","stopLoss":0,"Expiry Date":""}

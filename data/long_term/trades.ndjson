@@ -96,3 +96,4 @@
 {"ticker":"TE","shares":1400,"price":4.4,"action":"BUY","assetType":"stocks","date":"2026-08-20T22:37:45.519Z","comment":"Added more TE to minimize the average","stopLoss":0}
 {"ticker":"MU $1050 CALL","shares":2,"price":15,"action":"SELL","assetType":"options","date":"2026-08-21T13:54:49.404Z","comment":"Closed MU call with 36% profit at marker open.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTR $130 CALL","shares":3,"price":6.5,"action":"BUY","assetType":"options","date":"2026-08-21T06:59:05","comment":"","stopLoss":0,"Expiry Date":"2026-09-11"}
+{"ticker":"MELI","shares":4,"price":1947.62,"action":"BUY","assetType":"stocks","date":"2026-08-21T09:00:47","comment":"MELI charts looking good and suggested by prof.","stopLoss":1880}

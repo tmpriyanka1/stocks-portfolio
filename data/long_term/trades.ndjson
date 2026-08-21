@@ -100,3 +100,4 @@
 {"ticker":"TSLL","shares":840,"price":9.43,"action":"BUY","assetType":"stocks","date":"2026-08-21T09:04:02","comment":"","stopLoss":0}
 {"ticker":"HOOD","shares":77,"price":107.81000000000002,"action":"BUY","assetType":"stocks","date":"2026-08-21T16:08:32.590Z","comment":"","stopLoss":98}
 {"ticker":"CRDU","shares":210,"price":14.52,"action":"SELL","assetType":"stocks","date":"2026-08-21T16:10:27.290Z","comment":"Sold CRDU to release cash.","stopLoss":0}
+{"ticker":"AMD","shares":14,"price":470.63,"action":"SELL","assetType":"stocks","date":"2026-08-21T16:11:18.698Z","comment":"Closed AMD with 5% loss to release more cash.","stopLoss":0}

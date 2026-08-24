@@ -105,3 +105,4 @@
 {"ticker":"GOOGL $370 CALL","shares":14,"price":1.94,"action":"SELL","assetType":"options","date":"2026-08-21T17:01:22.245Z","comment":"Trimmed half contracts of google.","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":2,"price":5.2,"action":"BUY","assetType":"options","date":"2026-08-21T13:00:11","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"TSLL","shares":840,"price":9.71,"action":"SELL","assetType":"stocks","date":"2026-08-24T13:41:46.713Z","comment":"Expecting tesla will be a dip and closed TSLL with little profits.","stopLoss":0}
+{"ticker":"INTC $95 CALL","shares":3,"price":1.65,"action":"SELL","assetType":"options","date":"2026-08-21T19:00:00.000Z","comment":"Closed intel call with loss because expecting to drop.","stopLoss":0,"Expiry Date":""}

@@ -109,3 +109,4 @@
 {"ticker":"GS $1080 CALL","shares":2,"price":4,"action":"BUY","assetType":"options","date":"2026-08-24T13:54:26.890Z","comment":"Added 2 more GS call at dip.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTR $130 CALL","shares":3,"price":7.25,"action":"SELL","assetType":"options","date":"2026-08-24T15:04:22.035Z","comment":"Closed MSTR call at 11% profit.","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":4,"price":2.4,"action":"BUY","assetType":"options","date":"2026-08-25T05:00:46.412Z","comment":"Added 4 more GS contracts to decrease the average.","stopLoss":0,"Expiry Date":""}
+{"ticker":"NDXP $30000 CALL","shares":2,"price":15,"action":"BUY","assetType":"options","date":"2026-08-25T09:07:22","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}

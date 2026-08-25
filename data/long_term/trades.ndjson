@@ -114,3 +114,4 @@
 {"ticker":"SLV","shares":140,"price":62.09,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:49:17.885Z","comment":"Closed silver to grab the profits and planning to buy again at pullback dip.","stopLoss":0}
 {"ticker":"GDX","shares":70,"price":104.79,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:50:33.967Z","comment":"Closed Gold to locked the profits and planning to buy again at pullback dip.","stopLoss":0}
 {"ticker":"MELI","shares":4,"price":2000.99,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:51:07.224Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"HOOD","shares":77,"price":110.06,"action":"SELL","assetType":"stocks","date":"2026-08-25T17:42:00.275Z","comment":"Quick sell from portfolio drawer","stopLoss":0}

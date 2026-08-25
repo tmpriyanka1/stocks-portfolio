@@ -111,3 +111,4 @@
 {"ticker":"GS $1080 CALL","shares":4,"price":2.4,"action":"BUY","assetType":"options","date":"2026-08-25T05:00:46.412Z","comment":"Added 4 more GS contracts to decrease the average.","stopLoss":0,"Expiry Date":""}
 {"ticker":"NDXP $30000 CALL","shares":2,"price":15,"action":"BUY","assetType":"options","date":"2026-08-25T09:07:22","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"GS $1080 CALL","shares":6,"price":4.9,"action":"SELL","assetType":"options","date":"2026-08-25T16:46:38.163Z","comment":"Trimmed GS call to locked in profits.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SLV","shares":140,"price":62.09,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:49:17.885Z","comment":"Closed silver to grab the profits and planning to buy again at pullback dip.","stopLoss":0}

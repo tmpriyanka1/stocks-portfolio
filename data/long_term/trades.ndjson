@@ -114,4 +114,4 @@
 {"ticker":"TWLO","shares":28,"price":228.37,"action":"BUY","assetType":"stocks","date":"2026-08-26T07:06:43","comment":"","stopLoss":0}
 {"ticker":"CRWV $110 CALL","shares":2,"price":0.02,"action":"SELL","assetType":"options","date":"2026-08-26T14:08:50.419Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":2,"price":9,"action":"BUY","assetType":"options","date":"2026-08-26T14:30:21.047Z","comment":"Closed GS $1080 with profit and rolled to next week.","stopLoss":0,"Expiry Date":"2026-09-04"}
-{"ticker":"META $600 CALL","shares":13,"price":1.1,"action":"BUY","assetType":"options","date":"2026-08-26T07:33:14","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
+{"ticker":"META $600 CALL","shares":3,"price":1.1,"action":"BUY","assetType":"options","date":"2026-08-26T14:34:09.078Z","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}

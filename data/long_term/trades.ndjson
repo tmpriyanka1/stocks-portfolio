@@ -113,8 +113,4 @@
 {"ticker":"HOOD","shares":77,"price":110.06,"action":"SELL","assetType":"stocks","date":"2026-08-25T17:42:00.275Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"TWLO","shares":28,"price":228.37,"action":"BUY","assetType":"stocks","date":"2026-08-26T07:06:43","comment":"","stopLoss":0}
 {"ticker":"CRWV $110 CALL","shares":2,"price":0.02,"action":"SELL","assetType":"options","date":"2026-08-26T14:08:50.419Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
-{"ticker":"GS $1080 CALL","shares":2,"price":5.2,"action":"BUY","assetType":"options","date":"2026-08-21T07:24:40","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
-{"ticker":"GS $1080 CALL","shares":2,"price":4,"action":"BUY","assetType":"options","date":"2026-08-24T19:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
-{"ticker":"GS $1080 CALL","shares":6,"price":4.9,"action":"SELL","assetType":"options","date":"2026-08-25T19:00:00.000Z","comment":"Trimmed GS $1080 with profit.","stopLoss":0,"Expiry Date":""}
-{"ticker":"GS $1080 CALL","shares":2,"price":3.3,"action":"SELL","assetType":"options","date":"2026-08-26T14:28:31.997Z","comment":"Closed GS $1080 with profit and rolled to next week.","stopLoss":0,"Expiry Date":""}
-{"ticker":"GS $1080 CALL","shares":5,"price":9,"action":"BUY","assetType":"options","date":"2026-08-26T07:29:32","comment":"","stopLoss":0,"Expiry Date":"2026-09-04"}
+{"ticker":"GS $1080 CALL","shares":2,"price":9,"action":"BUY","assetType":"options","date":"2026-08-26T14:30:21.047Z","comment":"Closed GS $1080 with profit and rolled to next week.","stopLoss":0,"Expiry Date":"2026-09-04"}

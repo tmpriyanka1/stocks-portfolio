@@ -115,3 +115,4 @@
 {"ticker":"GDX","shares":70,"price":104.79,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:50:33.967Z","comment":"Closed Gold to locked the profits and planning to buy again at pullback dip.","stopLoss":0}
 {"ticker":"MELI","shares":4,"price":2000.99,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:51:07.224Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"HOOD","shares":77,"price":110.06,"action":"SELL","assetType":"stocks","date":"2026-08-25T17:42:00.275Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"TWLO","shares":28,"price":228.37,"action":"BUY","assetType":"stocks","date":"2026-08-26T07:06:43","comment":"","stopLoss":0}

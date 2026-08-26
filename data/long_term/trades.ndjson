@@ -4,11 +4,9 @@
 {"ticker":"MVLL","shares":134,"price":22.73,"action":"BUY","assetType":"stocks","date":"2026-07-17T19:03:19","comment":"","stopLoss":0}
 {"ticker":"AVGX","shares":105,"price":52.29,"action":"BUY","assetType":"stocks","date":"2026-07-10T19:04:14","comment":"","stopLoss":0}
 {"ticker":"NBIS","shares":35,"price":233.57,"action":"BUY","assetType":"stocks","date":"2026-07-02T19:07:27","comment":"","stopLoss":0}
-{"ticker":"TWLO","shares":28,"price":215.36,"action":"BUY","assetType":"stocks","date":"2026-07-07T19:11:05","comment":"","stopLoss":0}
 {"ticker":"SOXS","shares":42,"price":191.59,"action":"BUY","assetType":"stocks","date":"2026-04-19T19:14:01","comment":"","stopLoss":0}
 {"ticker":"MVLL","shares":344,"price":25.61,"action":"SELL","assetType":"stocks","date":"2026-07-21T14:28:55.134Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"DRAM","shares":154,"price":56.94,"action":"SELL","assetType":"stocks","date":"2026-07-21T14:30:14.623Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
-{"ticker":"TWLO","shares":28,"price":197.4,"action":"SELL","assetType":"stocks","date":"2026-07-21T20:02:25.611Z","comment":"Reached SL","stopLoss":0}
 {"ticker":"AVGX","shares":105,"price":52.13,"action":"SELL","assetType":"stocks","date":"2026-07-24T07:27:10.939Z","comment":"Breakeven after recovered from unrealized loss","stopLoss":0}
 {"ticker":"NBIS","shares":35,"price":225.69,"action":"SELL","assetType":"stocks","date":"2026-07-24T07:29:15.546Z","comment":"Exited at loss because market crash risk","stopLoss":0}
 {"ticker":"MRNA","shares":210,"price":69.645,"action":"BUY","assetType":"stocks","date":"2026-07-24T22:57:41.590Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
@@ -111,8 +109,8 @@
 {"ticker":"GDX","shares":70,"price":104.79,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:50:33.967Z","comment":"Closed Gold to locked the profits and planning to buy again at pullback dip.","stopLoss":0}
 {"ticker":"MELI","shares":4,"price":2000.99,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:51:07.224Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"HOOD","shares":77,"price":110.06,"action":"SELL","assetType":"stocks","date":"2026-08-25T17:42:00.275Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
-{"ticker":"TWLO","shares":28,"price":228.37,"action":"BUY","assetType":"stocks","date":"2026-08-26T07:06:43","comment":"","stopLoss":0}
 {"ticker":"CRWV $110 CALL","shares":2,"price":0.02,"action":"SELL","assetType":"options","date":"2026-08-26T14:08:50.419Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":2,"price":9,"action":"BUY","assetType":"options","date":"2026-08-26T14:30:21.047Z","comment":"Closed GS $1080 with profit and rolled to next week.","stopLoss":0,"Expiry Date":"2026-09-04"}
 {"ticker":"META $600 CALL","shares":3,"price":1.1,"action":"BUY","assetType":"options","date":"2026-08-26T14:34:09.078Z","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"META $600 CALL","shares":3,"price":1.74,"action":"SELL","assetType":"options","date":"2026-08-26T14:35:09.250Z","comment":"Closed Meta call with profit.","stopLoss":0,"Expiry Date":""}
+{"ticker":"TWLO","shares":28,"price":228.37000000000003,"action":"BUY","assetType":"stocks","date":"2026-08-26T14:38:09.163Z","comment":"Reached SL","stopLoss":220}

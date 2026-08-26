@@ -115,3 +115,4 @@
 {"ticker":"TWLO","shares":28,"price":228.37000000000003,"action":"BUY","assetType":"stocks","date":"2026-08-26T14:38:09.163Z","comment":"Reached SL","stopLoss":220}
 {"ticker":"GS $1080 CALL","shares":2,"price":5.2,"action":"BUY","assetType":"options","date":"2026-08-21T11:07:46","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"GS $1080 CALL","shares":2,"price":4,"action":"BUY","assetType":"options","date":"2026-08-24T19:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"GS $1080 CALL","shares":4,"price":2.4,"action":"BUY","assetType":"options","date":"2026-08-24T19:00:00.000Z","comment":"Added 4 more GS calls to maintain the average.","stopLoss":0,"Expiry Date":""}

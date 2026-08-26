@@ -110,7 +110,6 @@
 {"ticker":"MELI","shares":4,"price":2000.99,"action":"SELL","assetType":"stocks","date":"2026-08-25T16:51:07.224Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"HOOD","shares":77,"price":110.06,"action":"SELL","assetType":"stocks","date":"2026-08-25T17:42:00.275Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"CRWV $110 CALL","shares":2,"price":0.02,"action":"SELL","assetType":"options","date":"2026-08-26T14:08:50.419Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
-{"ticker":"GS $1080 CALL","shares":2,"price":9,"action":"BUY","assetType":"options","date":"2026-08-26T14:30:21.047Z","comment":"Closed GS $1080 with profit and rolled to next week.","stopLoss":0,"Expiry Date":"2026-09-04"}
 {"ticker":"META $600 CALL","shares":3,"price":1.1,"action":"BUY","assetType":"options","date":"2026-08-26T14:34:09.078Z","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"META $600 CALL","shares":3,"price":1.74,"action":"SELL","assetType":"options","date":"2026-08-26T14:35:09.250Z","comment":"Closed Meta call with profit.","stopLoss":0,"Expiry Date":""}
 {"ticker":"TWLO","shares":28,"price":228.37000000000003,"action":"BUY","assetType":"stocks","date":"2026-08-26T14:38:09.163Z","comment":"Reached SL","stopLoss":220}

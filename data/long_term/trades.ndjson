@@ -116,3 +116,4 @@
 {"ticker":"GS $1080 CALL","shares":2,"price":5.2,"action":"BUY","assetType":"options","date":"2026-08-21T07:24:40","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"GS $1080 CALL","shares":2,"price":4,"action":"BUY","assetType":"options","date":"2026-08-24T19:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":6,"price":4.9,"action":"SELL","assetType":"options","date":"2026-08-25T19:00:00.000Z","comment":"Trimmed GS $1080 with profit.","stopLoss":0,"Expiry Date":""}
+{"ticker":"GS $1080 CALL","shares":2,"price":3.3,"action":"SELL","assetType":"options","date":"2026-08-26T14:28:31.997Z","comment":"Closed GS $1080 with profit and rolled to next week.","stopLoss":0,"Expiry Date":""}

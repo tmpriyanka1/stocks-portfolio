@@ -115,3 +115,4 @@
 {"ticker":"CRWV $110 CALL","shares":2,"price":0.02,"action":"SELL","assetType":"options","date":"2026-08-26T14:08:50.419Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":2,"price":2.4,"action":"BUY","assetType":"options","date":"2026-08-24T19:00:00.000Z","comment":"Trimmed GS call to locked in profits.","stopLoss":0,"Expiry Date":"2026-09-04"}
 {"ticker":"GS $1080 CALL","shares":2,"price":3.3,"action":"SELL","assetType":"options","date":"2026-08-26T14:10:57.768Z","comment":"Closed GS $1080 call contracts and roll over to next week.","stopLoss":0,"Expiry Date":""}
+{"ticker":"GS $1080 CALL","shares":32,"price":9.02,"action":"BUY","assetType":"options","date":"2026-08-26T07:14:33","comment":"","stopLoss":0,"Expiry Date":"2026-09-04"}

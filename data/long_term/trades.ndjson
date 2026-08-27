@@ -120,3 +120,4 @@
 {"ticker":"GS $1080 CALL","shares":2,"price":3.3,"action":"SELL","assetType":"options","date":"2026-08-26T18:13:24.173Z","comment":"Closed GS with little profit and rollover to next week calls .","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":2,"price":9,"action":"BUY","assetType":"options","date":"2026-08-26T11:14:04","comment":"","stopLoss":0,"Expiry Date":"2026-09-04"}
 {"ticker":"MU","shares":7,"price":936.69,"action":"BUY","assetType":"stocks","date":"2026-08-27T07:42:49","comment":"","stopLoss":0}
+{"ticker":"MU","shares":7,"price":916.27,"action":"SELL","assetType":"stocks","date":"2026-08-27T17:47:03.660Z","comment":"Expected MU will rise after NVDA positive results but unfortunately  it lost its support so we closed the position.","stopLoss":0}

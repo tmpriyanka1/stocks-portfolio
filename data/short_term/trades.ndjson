@@ -26,3 +26,4 @@
 {"ticker":"SPY $772 PUT","shares":7,"price":10.32,"action":"BUY","assetType":"options","date":"2026-08-28T09:02:09","comment":"Expected market is in bearish, so bought 772 put option","stopLoss":0,"Expiry Date":"2026-09-30"}
 {"ticker":"SPY $772 PUT","shares":7,"price":9.9,"action":"BUY","assetType":"options","date":"2026-08-28T16:05:23.032Z","comment":"Added 7 more at dip.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $772 PUT","shares":14,"price":9.35,"action":"BUY","assetType":"options","date":"2026-08-28T16:05:57.121Z","comment":"Added another 14 at dip.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $772 PUT","shares":14,"price":11.12,"action":"SELL","assetType":"options","date":"2026-08-28T16:06:48.050Z","comment":"Trimmed spy call position at 10% profit.","stopLoss":0,"Expiry Date":""}

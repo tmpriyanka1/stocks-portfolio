@@ -122,3 +122,4 @@
 {"ticker":"MU","shares":7,"price":936.69,"action":"BUY","assetType":"stocks","date":"2026-08-27T07:42:49","comment":"","stopLoss":0}
 {"ticker":"MU","shares":7,"price":916.27,"action":"SELL","assetType":"stocks","date":"2026-08-27T17:47:03.660Z","comment":"Expected MU will rise after NVDA positive results but unfortunately  it lost its support so we closed the position.","stopLoss":0}
 {"ticker":"NDXP $30000 CALL","shares":2,"price":4.6,"action":"SELL","assetType":"options","date":"2026-08-27T19:00:00.000Z","comment":"Closed our NDX calls at a loss today. We’re expecting downside risk and wanted to de-risk ahead of the Jackson Hole meeting, exiting now to protect our remaining premium.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPCX","shares":70,"price":141.51,"action":"SELL","assetType":"stocks","date":"2026-08-28T16:16:36.472Z","comment":"Expected market to downward so exited from SPCX with min loss.","stopLoss":0}

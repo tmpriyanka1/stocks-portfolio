@@ -125,3 +125,4 @@
 {"ticker":"SPCX","shares":70,"price":141.51,"action":"SELL","assetType":"stocks","date":"2026-08-28T16:16:36.472Z","comment":"Expected market to downward so exited from SPCX with min loss.","stopLoss":0}
 {"ticker":"GOOGL $370 CALL","shares":14,"price":1.2,"action":"SELL","assetType":"options","date":"2026-08-28T16:22:39.857Z","comment":"Closed our GOOGL calls with loss. We expect the market to pullback and since the Jackson Hole reports were neutral without hawkish or dovish, we exited the trade.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MU","shares":7,"price":917.3,"action":"BUY","assetType":"stocks","date":"2026-08-27T09:25:59","comment":"","stopLoss":0}
+{"ticker":"SPXW $7770 CALL","shares":1,"price":1.05,"action":"BUY","assetType":"options","date":"2026-08-28T09:28:25","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}

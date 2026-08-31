@@ -131,3 +131,4 @@
 {"ticker":"GS $1080 CALL","shares":2,"price":1.95,"action":"SELL","assetType":"options","date":"2026-08-28T18:43:50.523Z","comment":"Closed GS call, when it hits SL.","stopLoss":0,"Expiry Date":""}
 {"ticker":"AVGO $440 CALL","shares":5,"price":5.95,"action":"BUY","assetType":"options","date":"2026-08-31T07:19:12","comment":"Bought AVGO Call because earnings ahead.","stopLoss":0,"Expiry Date":"2026-10-16"}
 {"ticker":"SNDK","shares":5,"price":1515.28,"action":"BUY","assetType":"stocks","date":"2026-08-31T07:43:57","comment":"","stopLoss":0}
+{"ticker":"MSTX","shares":350,"price":14.18,"action":"BUY","assetType":"stocks","date":"2026-08-31T07:47:49","comment":"","stopLoss":0}

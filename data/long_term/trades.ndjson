@@ -133,3 +133,4 @@
 {"ticker":"SNDK","shares":5,"price":1515.28,"action":"BUY","assetType":"stocks","date":"2026-08-31T07:43:57","comment":"","stopLoss":0}
 {"ticker":"MSTX","shares":350,"price":14.18,"action":"BUY","assetType":"stocks","date":"2026-08-31T07:47:49","comment":"","stopLoss":0}
 {"ticker":"GOOGL $335 CALL","shares":3,"price":11.3,"action":"BUY","assetType":"options","date":"2026-09-01T06:43:21","comment":"","stopLoss":0,"Expiry Date":"2026-10-02"}
+{"ticker":"SPY $760 CALL","shares":2,"price":12.24,"action":"BUY","assetType":"options","date":"2026-09-01T06:46:08","comment":"","stopLoss":0,"Expiry Date":"2026-09-30"}

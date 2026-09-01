@@ -32,7 +32,6 @@
 {"ticker":"AMAT","shares":14,"price":522.94,"action":"SELL","assetType":"stocks","date":"2026-08-11T19:00:00.000Z","comment":"Sold before earnings—didn't want to hold through the release.","stopLoss":0}
 {"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:46:48.335Z","comment":"Position adjusted via Edit Asset form","stopLoss":121}
 {"ticker":"LITE","shares":7,"price":873.65,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:58:16.065Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
-{"ticker":"MU","shares":7,"price":903.7,"action":"BUY","assetType":"stocks","date":"2026-08-12T06:58:30","comment":"Exited LITE before earnings to avoid risk; bought back today after earnings momentum is in  uptrend suggested by prof","stopLoss":0}
 {"ticker":"DELL","shares":14,"price":462.8,"action":"SELL","assetType":"stocks","date":"2026-08-12T14:16:19.161Z","comment":"Locked in a little profit and exited DELL because the price looks overextended and our cash is below our 50% target.","stopLoss":0}
 {"ticker":"LITE","shares":7,"price":922.57,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:51:13.550Z","comment":"Locked in 5% profit and exited from LITE","stopLoss":0}
 {"ticker":"CRDO","shares":28,"price":269.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:53:29.208Z","comment":"Closed CRDO at breakeven after holding through heavy losses.","stopLoss":0}
@@ -57,7 +56,6 @@
 {"ticker":"AVGO $420 CALL","shares":2,"price":6.14,"action":"BUY","assetType":"options","date":"2026-08-14T08:19:45","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"AVGO $420 CALL","shares":2,"price":4.15,"action":"SELL","assetType":"options","date":"2026-08-14T16:08:13.790Z","comment":"AVGO did not go as expected and exited with loss to avoid premium decay.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MDB","shares":14,"price":467.51,"action":"SELL","assetType":"stocks","date":"2026-08-14T16:18:06.184Z","comment":"Sold MDB  today to lock in profits and increase our cash balance.","stopLoss":0}
-{"ticker":"MU","shares":7,"price":956.68,"action":"SELL","assetType":"stocks","date":"2026-08-14T16:18:49.656Z","comment":"Sold MU  today to lock in profits and increase our cash balance","stopLoss":0}
 {"ticker":"LLY $1230 CALL","shares":1,"price":2.63,"action":"BUY","assetType":"options","date":"2026-08-13T12:24:28","comment":"","stopLoss":0,"Expiry Date":"2026-08-14"}
 {"ticker":"AMD","shares":14,"price":500.34,"action":"BUY","assetType":"stocks","date":"2026-08-14T16:49:54.016Z","comment":"","stopLoss":485,"erDate":"2026-11-03","erTime":"AH"}
 {"ticker":"LLY $1230 CALL","shares":1,"price":0.01,"action":"SELL","assetType":"options","date":"2026-08-14T19:00:00.000Z","comment":"LLY Expected to rise but unfortunately it didn't and premium got expired.","stopLoss":0,"Expiry Date":""}
@@ -119,12 +117,9 @@
 {"ticker":"GS $1080 CALL","shares":6,"price":4.9,"action":"SELL","assetType":"options","date":"2026-08-25T19:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":2,"price":3.3,"action":"SELL","assetType":"options","date":"2026-08-26T18:13:24.173Z","comment":"Closed GS with little profit and rollover to next week calls .","stopLoss":0,"Expiry Date":""}
 {"ticker":"GS $1080 CALL","shares":2,"price":9,"action":"BUY","assetType":"options","date":"2026-08-26T11:14:04","comment":"","stopLoss":0,"Expiry Date":"2026-09-04"}
-{"ticker":"MU","shares":7,"price":936.69,"action":"BUY","assetType":"stocks","date":"2026-08-27T07:42:49","comment":"","stopLoss":0}
-{"ticker":"MU","shares":7,"price":916.27,"action":"SELL","assetType":"stocks","date":"2026-08-27T17:47:03.660Z","comment":"Expected MU will rise after NVDA positive results but unfortunately  it lost its support so we closed the position.","stopLoss":0}
 {"ticker":"NDXP $30000 CALL","shares":2,"price":4.6,"action":"SELL","assetType":"options","date":"2026-08-27T19:00:00.000Z","comment":"Closed our NDX calls at a loss today. We’re expecting downside risk and wanted to de-risk ahead of the Jackson Hole meeting, exiting now to protect our remaining premium.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPCX","shares":70,"price":141.51,"action":"SELL","assetType":"stocks","date":"2026-08-28T16:16:36.472Z","comment":"Expected market to downward so exited from SPCX with min loss.","stopLoss":0}
 {"ticker":"GOOGL $370 CALL","shares":14,"price":1.2,"action":"SELL","assetType":"options","date":"2026-08-28T16:22:39.857Z","comment":"Closed our GOOGL calls with loss. We expect the market to pullback and since the Jackson Hole reports were neutral without hawkish or dovish, we exited the trade.","stopLoss":0,"Expiry Date":""}
-{"ticker":"MU","shares":7,"price":917.3,"action":"BUY","assetType":"stocks","date":"2026-08-27T09:25:59","comment":"","stopLoss":0}
 {"ticker":"SPXW $7770 CALL","shares":1,"price":1.05,"action":"BUY","assetType":"options","date":"2026-08-28T09:28:25","comment":"","stopLoss":0,"Expiry Date":"2026-08-28"}
 {"ticker":"SPXW $7770 CALL","shares":1,"price":4,"action":"SELL","assetType":"options","date":"2026-08-28T16:31:26.525Z","comment":"Closed SPX call with profit.","stopLoss":0,"Expiry Date":""}
 {"ticker":"COIN","shares":28,"price":177.24,"action":"BUY","assetType":"stocks","date":"2026-08-28T10:18:44","comment":"Bought COIN because expecting market to drop down and cryptocurrency will boom.","stopLoss":0}
@@ -134,3 +129,4 @@
 {"ticker":"MSTX","shares":350,"price":14.18,"action":"BUY","assetType":"stocks","date":"2026-08-31T07:47:49","comment":"","stopLoss":0}
 {"ticker":"GOOGL $335 CALL","shares":3,"price":11.3,"action":"BUY","assetType":"options","date":"2026-09-01T06:43:21","comment":"","stopLoss":0,"Expiry Date":"2026-10-02"}
 {"ticker":"SPY $760 CALL","shares":2,"price":12.24,"action":"BUY","assetType":"options","date":"2026-09-01T06:46:08","comment":"","stopLoss":0,"Expiry Date":"2026-09-30"}
+{"ticker":"MU","shares":7,"price":917.3,"action":"BUY","assetType":"stocks","date":"2026-09-01T17:01:38.733Z","comment":"Expected MU will rise after NVDA positive results but unfortunately  it lost its support so we closed the position.","stopLoss":900}

@@ -133,3 +133,4 @@
 {"ticker":"SNDK","shares":5,"price":1598.52,"action":"SELL","assetType":"stocks","date":"2026-09-01T17:29:54.340Z","comment":"Closed SNDK with 5% profits.","stopLoss":0}
 {"ticker":"COIN","shares":28,"price":176.33,"action":"SELL","assetType":"stocks","date":"2026-09-01T18:26:57.283Z","comment":"Closed COIN to reduce risk while the market is pulling back and to raise cash.","stopLoss":0}
 {"ticker":"TWLO","shares":28,"price":227.8,"action":"SELL","assetType":"stocks","date":"2026-09-01T18:27:32.579Z","comment":"Closed TWLO to reduce risk while the market is pulling back and to raise cash.","stopLoss":0}
+{"ticker":"GOOGL $335 CALL","shares":1,"price":13.6,"action":"SELL","assetType":"options","date":"2026-09-02T17:14:25.877Z","comment":"Trimmed GOOGL calls after the target was hit.","stopLoss":0,"Expiry Date":""}

@@ -136,3 +136,4 @@
 {"ticker":"GOOGL $335 CALL","shares":1,"price":13.6,"action":"SELL","assetType":"options","date":"2026-09-02T17:14:25.877Z","comment":"Trimmed GOOGL calls after the target was hit.","stopLoss":0,"Expiry Date":""}
 {"ticker":"GOOGL $335 CALL","shares":2,"price":13.05,"action":"SELL","assetType":"options","date":"2026-09-02T17:14:58.264Z","comment":"Closed remaining GOOGL calls after the target was hit.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $760 CALL","shares":2,"price":13.9,"action":"SELL","assetType":"options","date":"2026-09-02T17:15:41.957Z","comment":"Closed SPY calls after the target was hit.","stopLoss":0,"Expiry Date":""}
+{"ticker":"MU","shares":7,"price":945.49,"action":"SELL","assetType":"stocks","date":"2026-09-02T17:39:24.482Z","comment":"Closed MU at little profit because avoid unnecessary risk.","stopLoss":0}

@@ -139,3 +139,4 @@
 {"ticker":"MU","shares":7,"price":945.49,"action":"SELL","assetType":"stocks","date":"2026-09-02T17:39:24.482Z","comment":"Closed MU at little profit because avoid unnecessary risk.","stopLoss":0}
 {"ticker":"SPY $770 PUT","shares":2,"price":17,"action":"BUY","assetType":"options","date":"2026-09-02T12:04:48","comment":"Expected the market to go down, so we took these position as hedges.","stopLoss":0,"Expiry Date":"2026-10-30"}
 {"ticker":"AVGO $440 CALL","shares":2,"price":5.1,"action":"SELL","assetType":"options","date":"2026-09-02T19:09:34.369Z","comment":"Trimmed AVGO call position to reduce risk ahead of ER.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $770 PUT","shares":2,"price":16.77,"action":"SELL","assetType":"options","date":"2026-09-03T17:40:32.351Z","comment":"Immediately closed this spy puts because expected market to go high next day.","stopLoss":0,"Expiry Date":""}

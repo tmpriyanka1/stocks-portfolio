@@ -142,3 +142,4 @@
 {"ticker":"SPY $770 PUT","shares":2,"price":16.77,"action":"SELL","assetType":"options","date":"2026-09-03T17:40:32.351Z","comment":"Immediately closed this spy puts because expected market to go high next day.","stopLoss":0,"Expiry Date":""}
 {"ticker":"AU","shares":140,"price":110.65,"action":"BUY","assetType":"stocks","date":"2026-09-03T10:40:44","comment":"","stopLoss":0}
 {"ticker":"SPY $770 PUT","shares":5,"price":13.5,"action":"BUY","assetType":"options","date":"2026-09-03T08:30:32","comment":"","stopLoss":0,"Expiry Date":"2026-10-30"}
+{"ticker":"SPY $770 PUT","shares":3,"price":13.36,"action":"SELL","assetType":"options","date":"2026-09-03T20:25:13.797Z","comment":"Trimmed 3 contracts of SPY puts because ahead of Labor and Employment Report.","stopLoss":0,"Expiry Date":""}

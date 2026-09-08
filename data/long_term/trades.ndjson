@@ -150,3 +150,4 @@
 {"ticker":"AU","shares":140,"price":108.97,"action":"SELL","assetType":"stocks","date":"2026-09-08T17:53:44.071Z","comment":"Prof trimmed his positions to reduce risk so we closed AU with loss,","stopLoss":0}
 {"ticker":"MSTX","shares":350,"price":16.99,"action":"BUY","assetType":"stocks","date":"2026-09-04T19:00:00.000Z","comment":"Expects bitcoin to rise more so we added more shares  of MSTX.","stopLoss":0}
 {"ticker":"SNXX","shares":210,"price":15.69,"action":"BUY","assetType":"stocks","date":"2026-09-04T10:59:25","comment":"","stopLoss":0}
+{"ticker":"INTC","shares":78,"price":103.13,"action":"BUY","assetType":"stocks","date":"2026-09-08T08:02:47","comment":"","stopLoss":0}

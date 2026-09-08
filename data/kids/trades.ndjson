@@ -8,3 +8,4 @@
 {"ticker":"SLV","shares":70,"price":58.46,"action":"BUY","assetType":"stocks","date":"2026-08-14T16:09:57","comment":"","stopLoss":0}
 {"ticker":"SLV","shares":70,"price":60.42,"action":"SELL","assetType":"stocks","date":"2026-08-28T17:02:49.914Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"AU","shares":63,"price":110.6,"action":"BUY","assetType":"stocks","date":"2026-09-03T11:05:34","comment":"","stopLoss":0}
+{"ticker":"AU","shares":63,"price":109.09,"action":"SELL","assetType":"stocks","date":"2026-09-08T18:06:39.047Z","comment":"Prof trimmed his positions to reduce risk so we closed AU with loss.","stopLoss":0}

@@ -7,3 +7,4 @@
 {"ticker":"ASTS","shares":105,"price":71.32,"action":"SELL","assetType":"stocks","date":"2026-08-14T15:09:39.234Z","comment":"By looking charts ASTS is in downtrend and reduce risk due to expectations of market downside next week, Suggested by prof.","stopLoss":0}
 {"ticker":"SLV","shares":70,"price":58.46,"action":"BUY","assetType":"stocks","date":"2026-08-14T16:09:57","comment":"","stopLoss":0}
 {"ticker":"SLV","shares":70,"price":60.42,"action":"SELL","assetType":"stocks","date":"2026-08-28T17:02:49.914Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"AU","shares":63,"price":110.6,"action":"BUY","assetType":"stocks","date":"2026-09-03T11:05:34","comment":"","stopLoss":0}

@@ -149,3 +149,4 @@
 {"ticker":"MSTX","shares":350,"price":16.99,"action":"BUY","assetType":"stocks","date":"2026-09-04T19:00:00.000Z","comment":"Expects bitcoin to rise more so we added more shares  of MSTX.","stopLoss":0}
 {"ticker":"SNXX","shares":210,"price":15.69,"action":"BUY","assetType":"stocks","date":"2026-09-04T10:59:25","comment":"","stopLoss":0}
 {"ticker":"INTC","shares":77,"price":103.13,"action":"BUY","assetType":"stocks","date":"2026-09-08T19:08:34.342Z","comment":"Multi-billion-dollar custom AI chip and foundry agreement between Intel Foundry and AWS.","stopLoss":0}
+{"ticker":"SNXX","shares":105,"price":18.14,"action":"SELL","assetType":"stocks","date":"2026-09-09T17:25:37.864Z","comment":"Trimmed SNXX to locked in profits.","stopLoss":0}

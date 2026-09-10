@@ -152,3 +152,4 @@
 {"ticker":"SNXX","shares":105,"price":18.14,"action":"SELL","assetType":"stocks","date":"2026-09-09T17:25:37.864Z","comment":"Trimmed SNXX to locked in profits.","stopLoss":0}
 {"ticker":"MRVL","shares":14,"price":241.24,"action":"BUY","assetType":"stocks","date":"2026-09-09T08:31:53","comment":"","stopLoss":0}
 {"ticker":"SNXX","shares":105,"price":16.35,"action":"SELL","assetType":"stocks","date":"2026-09-10T17:51:29.805Z","comment":"Closed remaining SNXX to reduce risk and rise cash.","stopLoss":0}
+{"ticker":"MRVL","shares":14,"price":230.06,"action":"SELL","assetType":"stocks","date":"2026-09-10T17:52:51.627Z","comment":"Hits SL so we closed MRVL.","stopLoss":0}

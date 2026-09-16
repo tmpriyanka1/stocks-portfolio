@@ -160,3 +160,4 @@
 {"ticker":"SNDK @1800 CALL","shares":2,"price":14.4,"action":"BUY","assetType":"options","date":"2026-09-11T11:11:24","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
 {"ticker":"SNDK @1800 CALL","shares":2,"price":3.4,"action":"BUY","assetType":"options","date":"2026-09-14T19:00:00.000Z","comment":"Added more to reduce average.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTX","shares":700,"price":13.77,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:15:28.652Z","comment":"Holding MSTX too long but unfortunately it didn't worked out and ahead of FOMC we closed this position with taking loss.","stopLoss":0}
+{"ticker":"INTC","shares":77,"price":97.69,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:16:53.852Z","comment":"Ahead of FOMC we closed intel to reduce risk suggested from prof.","stopLoss":0}

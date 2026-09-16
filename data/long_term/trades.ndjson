@@ -158,3 +158,4 @@
 {"ticker":"MRNA $155 CALL","shares":2,"price":1.1,"action":"SELL","assetType":"options","date":"2026-09-15T19:00:00.000Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"MRNA $155 CALL","shares":5,"price":1.44,"action":"BUY","assetType":"options","date":"2026-09-16T11:07:22","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
 {"ticker":"SNDK @1800 CALL","shares":2,"price":14.4,"action":"BUY","assetType":"options","date":"2026-09-11T11:11:24","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
+{"ticker":"SNDK @1800 CALL","shares":2,"price":3.4,"action":"BUY","assetType":"options","date":"2026-09-14T19:00:00.000Z","comment":"Added more to reduce average.","stopLoss":0,"Expiry Date":""}

@@ -163,3 +163,4 @@
 {"ticker":"INTC","shares":77,"price":97.69,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:16:53.852Z","comment":"Ahead of FOMC we closed intel to reduce risk suggested from prof.","stopLoss":0}
 {"ticker":"BE","shares":27,"price":253.4,"action":"BUY","assetType":"stocks","date":"2026-09-16T18:18:39.099Z","comment":"Suggested by prof .","stopLoss":0}
 {"ticker":"BE","shares":14,"price":269.17,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:19:52.073Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
+{"ticker":"BE","shares":14,"price":269.74,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:20:00.813Z","comment":"Quick sell from portfolio drawer","stopLoss":0}

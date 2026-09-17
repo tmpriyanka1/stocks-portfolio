@@ -167,3 +167,4 @@
 {"ticker":"BFLY","shares":700,"price":7.78,"action":"BUY","assetType":"stocks","date":"2026-09-15T11:36:01","comment":"","stopLoss":0}
 {"ticker":"GLD","shares":18,"price":398.3,"action":"BUY","assetType":"stocks","date":"2026-09-16T18:44:24.997Z","comment":"","stopLoss":0}
 {"ticker":"SNDK @1800 CALL","shares":4,"price":0.7,"action":"SELL","assetType":"options","date":"2026-09-17T17:45:57.835Z","comment":"Closed SNDK for a loss. The stock failed to move higher post-FOMC, and sideways chop caused rapid premium decay. Cut the trade to preserve capital.","stopLoss":0,"Expiry Date":""}
+{"ticker":"MRNA $155 CALL","shares":5,"price":3.3,"action":"SELL","assetType":"options","date":"2026-09-17T17:49:39.825Z","comment":"Closed moderna calls with profit of 129%.","stopLoss":0,"Expiry Date":""}

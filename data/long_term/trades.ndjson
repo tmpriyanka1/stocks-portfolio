@@ -178,3 +178,4 @@
 {"ticker":"MSTR $150 CALL","shares":3,"price":4.8,"action":"SELL","assetType":"options","date":"2026-09-18T20:17:54.878Z","comment":"Trimmed MSTR calls to locked in profits.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTR $150 CALL","shares":4,"price":5.3,"action":"SELL","assetType":"options","date":"2026-09-18T20:18:53.739Z","comment":"Closed remaining MSTR calls with profit.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTR $160 CALL","shares":5,"price":2.35,"action":"BUY","assetType":"options","date":"2026-09-18T08:30:36","comment":"Closed previous MSTR 150 call and roll up to 160 calls.","stopLoss":0,"Expiry Date":"2026-09-25"}
+{"ticker":"MSTR $160 CALL","shares":3,"price":3.05,"action":"SELL","assetType":"options","date":"2026-09-18T20:23:24.569Z","comment":"Trimmed MSTR calls to lock in profits.","stopLoss":0,"Expiry Date":""}

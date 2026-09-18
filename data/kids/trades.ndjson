@@ -10,3 +10,4 @@
 {"ticker":"AU","shares":63,"price":110.6,"action":"BUY","assetType":"stocks","date":"2026-09-03T11:05:34","comment":"","stopLoss":0}
 {"ticker":"AU","shares":63,"price":109.09,"action":"SELL","assetType":"stocks","date":"2026-09-08T18:06:39.047Z","comment":"Prof trimmed his positions to reduce risk so we closed AU with loss.","stopLoss":0}
 {"ticker":"GLD","shares":14,"price":398.45,"action":"BUY","assetType":"stocks","date":"2026-09-16T11:37:49","comment":"","stopLoss":0}
+{"ticker":"BMNR","shares":77,"price":25.6,"action":"BUY","assetType":"stocks","date":"2026-09-18T10:30:31","comment":"","stopLoss":0}

@@ -171,3 +171,4 @@
 {"ticker":"BMNR","shares":210,"price":25.74,"action":"BUY","assetType":"stocks","date":"2026-09-18T21:01:36","comment":"","stopLoss":0}
 {"ticker":"BMNR","shares":140,"price":25.61,"action":"BUY","assetType":"stocks","date":"2026-09-18T20:03:52.356Z","comment":"Quick buy from portfolio drawer","stopLoss":0}
 {"ticker":"META $700 CALL","shares":10,"price":0.27,"action":"BUY","assetType":"options","date":"2026-09-18T06:38:53","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
+{"ticker":"META $700 CALL","shares":10,"price":0.01,"action":"SELL","assetType":"options","date":"2026-09-18T20:10:24.385Z","comment":"Expected META to go higher but trade failed, position auto-closed at expiration.","stopLoss":0,"Expiry Date":""}

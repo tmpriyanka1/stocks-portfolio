@@ -175,3 +175,4 @@
 {"ticker":"MU $1100 CALL","shares":1,"price":18,"action":"BUY","assetType":"options","date":"2026-09-18T10:11:56","comment":"","stopLoss":0,"Expiry Date":"2026-10-02"}
 {"ticker":"MU $1100 CALL","shares":1,"price":23.08,"action":"SELL","assetType":"options","date":"2026-09-18T20:14:55.220Z","comment":"Locked in +28% on MU calls; sold early to skip weekend decay.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTR $150 CALL","shares":7,"price":3.5,"action":"BUY","assetType":"options","date":"2026-09-18T06:55:46","comment":"","stopLoss":0,"Expiry Date":"2026-09-25"}
+{"ticker":"MSTR $150 CALL","shares":3,"price":4.8,"action":"SELL","assetType":"options","date":"2026-09-18T20:17:54.878Z","comment":"Trimmed MSTR calls to locked in profits.","stopLoss":0,"Expiry Date":""}

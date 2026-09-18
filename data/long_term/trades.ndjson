@@ -174,3 +174,4 @@
 {"ticker":"META $700 CALL","shares":10,"price":0.01,"action":"SELL","assetType":"options","date":"2026-09-18T20:10:24.385Z","comment":"Expected META to go higher but trade failed, position auto-closed at expiration.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MU $1100 CALL","shares":1,"price":18,"action":"BUY","assetType":"options","date":"2026-09-18T10:11:56","comment":"","stopLoss":0,"Expiry Date":"2026-10-02"}
 {"ticker":"MU $1100 CALL","shares":1,"price":23.08,"action":"SELL","assetType":"options","date":"2026-09-18T20:14:55.220Z","comment":"Locked in +28% on MU calls; sold early to skip weekend decay.","stopLoss":0,"Expiry Date":""}
+{"ticker":"MSTR $150 CALL","shares":7,"price":3.5,"action":"BUY","assetType":"options","date":"2026-09-18T06:55:46","comment":"","stopLoss":0,"Expiry Date":"2026-09-25"}

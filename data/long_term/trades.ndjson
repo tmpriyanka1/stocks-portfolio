@@ -169,3 +169,4 @@
 {"ticker":"SNDK @1800 CALL","shares":4,"price":0.7,"action":"SELL","assetType":"options","date":"2026-09-17T17:45:57.835Z","comment":"Closed SNDK for a loss. The stock failed to move higher post-FOMC, and sideways chop caused rapid premium decay. Cut the trade to preserve capital.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MRNA $155 CALL","shares":5,"price":3.3,"action":"SELL","assetType":"options","date":"2026-09-17T17:49:39.825Z","comment":"Closed moderna calls with profit of 129%.","stopLoss":0,"Expiry Date":""}
 {"ticker":"BMNR","shares":210,"price":25.74,"action":"BUY","assetType":"stocks","date":"2026-09-18T21:01:36","comment":"","stopLoss":0}
+{"ticker":"BMNR","shares":140,"price":25.61,"action":"BUY","assetType":"stocks","date":"2026-09-18T20:03:52.356Z","comment":"Quick buy from portfolio drawer","stopLoss":0}

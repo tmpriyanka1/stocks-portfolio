@@ -185,3 +185,4 @@
 {"ticker":"META $800 CALL","shares":10,"price":4.2,"action":"SELL","assetType":"options","date":"2026-09-21T20:09:24.130Z","comment":"Closed at +100%, but missed a much bigger move. Note: scale out 50% at target instead of exiting completely.","stopLoss":0,"Expiry Date":""}
 {"ticker":"COHR","shares":14,"price":321.46,"action":"BUY","assetType":"stocks","date":"2026-09-21T11:09:45","comment":"","stopLoss":0}
 {"ticker":"SNDK $2000 CALL","shares":1,"price":59.18,"action":"BUY","assetType":"options","date":"2026-09-21T13:10:18","comment":"Ahead of MU ER. Expecting if MU will rise this should also go up.","stopLoss":0,"Expiry Date":"2026-10-16"}
+{"ticker":"PURR $15 CALL","shares":21,"price":0.34,"action":"BUY","assetType":"options","date":"2026-09-21T13:12:06","comment":"","stopLoss":0,"Expiry Date":"2026-09-25"}

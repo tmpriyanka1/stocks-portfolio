@@ -199,5 +199,5 @@
 {"ticker":"SPY $772 CALL","shares":3,"price":7.9,"action":"BUY","assetType":"options","date":"2026-09-23T06:54:13","comment":"","stopLoss":0,"Expiry Date":"2026-10-09"}
 {"ticker":"META $780 CALL","shares":2,"price":3.9,"action":"SELL","assetType":"options","date":"2026-09-23T16:33:23.549Z","comment":"trimmed meta to reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"META $780 CALL","shares":3,"price":7.55,"action":"BUY","assetType":"options","date":"2026-09-23T16:33:47.353Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
-{"ticker":"META $780 CALL","shares":1,"price":9.3,"action":"SELL","assetType":"options","date":"2026-09-23T16:36:54.434Z","comment":"Trimmed Meta to lockin profits.","stopLoss":0,"Expiry Date":""}
+{"ticker":"META $780 CALL","shares":2,"price":8.05,"action":"SELL","assetType":"options","date":"2026-09-23T16:36:54.434Z","comment":"Closed Meta to lockin profits.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $772 CALL","shares":3,"price":5.7,"action":"BUY","assetType":"options","date":"2026-09-23T16:55:11.637Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}

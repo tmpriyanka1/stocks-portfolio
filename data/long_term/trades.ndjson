@@ -197,3 +197,4 @@
 {"ticker":"COHR","shares":14,"price":301.3,"action":"SELL","assetType":"stocks","date":"2026-09-23T15:52:15.485Z","comment":"Cohr hits SL.","stopLoss":0}
 {"ticker":"SNDK $2000 CALL","shares":1,"price":83,"action":"BUY","assetType":"options","date":"2026-09-23T08:53:38","comment":"","stopLoss":0,"Expiry Date":"2026-10-16"}
 {"ticker":"SPY $772 CALL","shares":3,"price":7.9,"action":"BUY","assetType":"options","date":"2026-09-23T06:54:13","comment":"","stopLoss":0,"Expiry Date":"2026-10-09"}
+{"ticker":"META $780 CALL","shares":2,"price":3.9,"action":"SELL","assetType":"options","date":"2026-09-23T16:33:23.549Z","comment":"trimmed meta to reduce risk.","stopLoss":0,"Expiry Date":""}

@@ -195,3 +195,4 @@
 {"ticker":"BE","shares":28,"price":277.95,"action":"BUY","assetType":"stocks","date":"2026-09-22T09:39:15","comment":"Suggested by prof.","stopLoss":0}
 {"ticker":"SNXX","shares":350,"price":19.72,"action":"BUY","assetType":"stocks","date":"2026-09-22T14:40:05","comment":"","stopLoss":0}
 {"ticker":"COHR","shares":14,"price":301.3,"action":"SELL","assetType":"stocks","date":"2026-09-23T15:52:15.485Z","comment":"Cohr hits SL.","stopLoss":0}
+{"ticker":"SNDK $2000 CALL","shares":1,"price":83,"action":"BUY","assetType":"options","date":"2026-09-23T08:53:38","comment":"","stopLoss":0,"Expiry Date":"2026-10-16"}

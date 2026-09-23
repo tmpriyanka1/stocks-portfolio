@@ -193,3 +193,4 @@
 {"ticker":"META $780 CALL","shares":2,"price":9.8,"action":"BUY","assetType":"options","date":"2026-09-22T06:36:46","comment":"","stopLoss":0,"Expiry Date":"2026-09-25"}
 {"ticker":"META $780 CALL","shares":2,"price":6.35,"action":"BUY","assetType":"options","date":"2026-09-23T05:38:22.512Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"BE","shares":28,"price":277.95,"action":"BUY","assetType":"stocks","date":"2026-09-22T09:39:15","comment":"Suggested by prof.","stopLoss":0}
+{"ticker":"SNXX","shares":350,"price":19.72,"action":"BUY","assetType":"stocks","date":"2026-09-22T14:40:05","comment":"","stopLoss":0}

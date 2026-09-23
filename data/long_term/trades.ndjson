@@ -203,3 +203,4 @@
 {"ticker":"SPY $772 CALL","shares":3,"price":5.7,"action":"BUY","assetType":"options","date":"2026-09-23T16:55:11.637Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"META $780 CALL","shares":1,"price":9.3,"action":"SELL","assetType":"options","date":"2026-09-23T17:48:09.176Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"GLD","shares":18,"price":392.35,"action":"SELL","assetType":"stocks","date":"2026-09-23T17:53:50.815Z","comment":"Dollar pushes down, it will effects metals, so we closed GOLD.","stopLoss":0}
+{"ticker":"META $780 CALL","shares":2,"price":6.1,"action":"BUY","assetType":"options","date":"2026-09-23T19:38:42.289Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}

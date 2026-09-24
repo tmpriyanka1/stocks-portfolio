@@ -205,3 +205,4 @@
 {"ticker":"GLD","shares":18,"price":392.35,"action":"SELL","assetType":"stocks","date":"2026-09-23T17:53:50.815Z","comment":"Dollar pushes down, it will effects metals, so we closed GOLD.","stopLoss":0}
 {"ticker":"META $780 CALL","shares":2,"price":6.1,"action":"BUY","assetType":"options","date":"2026-09-23T19:38:42.289Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"META $780 CALL","shares":3,"price":6.85,"action":"SELL","assetType":"options","date":"2026-09-24T14:24:07.880Z","comment":"Trimmed meta to reduce risk.","stopLoss":0,"Expiry Date":""}
+{"ticker":"META $780 CALL","shares":1,"price":4.84,"action":"BUY","assetType":"options","date":"2026-09-24T14:25:06.243Z","comment":"Added one more because expects meta to reach 800 this week.","stopLoss":0,"Expiry Date":""}

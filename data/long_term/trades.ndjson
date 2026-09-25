@@ -212,3 +212,4 @@
 {"ticker":"ARM $370 CALL","shares":5,"price":1.55,"action":"BUY","assetType":"options","date":"2026-09-24T22:41:05","comment":"","stopLoss":0,"Expiry Date":"2026-10-02"}
 {"ticker":"SPY $772 CALL","shares":3,"price":6.35,"action":"SELL","assetType":"options","date":"2026-09-25T15:51:18.580Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $772 CALL","shares":3,"price":6.2,"action":"SELL","assetType":"options","date":"2026-09-25T15:51:41.740Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"BE","shares":27,"price":282.5,"action":"SELL","assetType":"stocks","date":"2026-09-25T15:52:49.300Z","comment":"Prof suggested to trim so i closed BE with little profit to locked in profits.","stopLoss":0}

@@ -210,3 +210,4 @@
 {"ticker":"META $780 CALL","shares":1,"price":8,"action":"SELL","assetType":"options","date":"2026-09-24T15:03:52.178Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"META $780 CALL","shares":1,"price":6.3,"action":"SELL","assetType":"options","date":"2026-09-24T17:52:59.312Z","comment":"Closed Meta calls with min profit to reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"ARM $370 CALL","shares":5,"price":1.55,"action":"BUY","assetType":"options","date":"2026-09-24T22:41:05","comment":"","stopLoss":0,"Expiry Date":"2026-10-02"}
+{"ticker":"SPY $772 CALL","shares":3,"price":6.35,"action":"SELL","assetType":"options","date":"2026-09-25T15:51:18.580Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}

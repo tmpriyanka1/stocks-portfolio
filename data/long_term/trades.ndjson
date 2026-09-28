@@ -217,3 +217,4 @@
 {"ticker":"SNDK $2000 CALL","shares":2,"price":45.9,"action":"BUY","assetType":"options","date":"2026-09-25T19:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SNDK $2000 CALL","shares":3,"price":47.5,"action":"SELL","assetType":"options","date":"2026-09-25T19:00:00.000Z","comment":"Trimmed SNDK calls to reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SNDK $2000 CALL","shares":1,"price":35,"action":"BUY","assetType":"options","date":"2026-09-28T19:36:32.558Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"DRAM $65 CALL","shares":14,"price":0.99,"action":"BUY","assetType":"options","date":"2026-09-25T12:36:58","comment":"","stopLoss":0,"Expiry Date":"2026-10-02"}

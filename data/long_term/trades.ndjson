@@ -222,3 +222,4 @@
 {"ticker":"SNDK $2000 CALL","shares":1,"price":30,"action":"SELL","assetType":"options","date":"2026-09-30T18:11:39.101Z","comment":"Trimmed 1 position od SNDK calls ahead of MU ER to reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $ 765 CALL","shares":5,"price":11.44,"action":"BUY","assetType":"options","date":"2026-09-29T11:13:27","comment":"","stopLoss":0,"Expiry Date":"2026-10-23"}
 {"ticker":"SPY $ 765 CALL","shares":5,"price":10.58,"action":"SELL","assetType":"options","date":"2026-09-30T18:14:59.008Z","comment":"It hits a tight  SL of 764.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPXW 7700 CALL","shares":4,"price":0.8,"action":"BUY","assetType":"options","date":"2026-09-29T11:15:01","comment":"","stopLoss":0,"Expiry Date":"2026-09-29"}

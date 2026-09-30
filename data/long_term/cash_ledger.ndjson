@@ -3,3 +3,4 @@
 {"ticker":"CASH","shares":0,"price":3000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-08-05T14:22:25","comment":"July Salary","author":"admin"}
 {"ticker":"CASH","shares":0,"price":1242.06,"action":"DEPOSIT","assetType":"CASH","date":"2026-08-13T10:36:13","comment":"Some how it got mismatched with original buying power,exactly i don't know the reason..Added this cash to match the robin hood app's  buying power.","author":"admin"}
 {"ticker":"CASH","shares":0,"price":3000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-09-01T06:42:05","comment":"Salary","author":"admin"}
+{"ticker":"CASH","shares":0,"price":3000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-09-30T14:17:26","comment":"September Salary","author":"admin"}

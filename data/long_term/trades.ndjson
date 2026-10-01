@@ -229,3 +229,4 @@
 {"ticker":"SPY $760 CALL","shares":4,"price":11.2,"action":"SELL","assetType":"options","date":"2026-10-01T20:23:55.353Z","comment":"Trimmed Spy calls at 13% profits.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $760 CALL","shares":1,"price":12.1,"action":"SELL","assetType":"options","date":"2026-10-01T20:24:45.194Z","comment":"Closed remaining SPY call when Spy reaches target.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MU $1300 CALL","shares":1,"price":4.9,"action":"SELL","assetType":"options","date":"2026-10-01T20:26:48.410Z","comment":"Closed MU call with loss because it rejected to hold at 1100.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SNDK $2000 CALL","shares":1,"price":30,"action":"SELL","assetType":"options","date":"2026-10-01T20:27:36.232Z","comment":"Closed SNDK call at loss because it rejected to hold above 1800.","stopLoss":0,"Expiry Date":""}

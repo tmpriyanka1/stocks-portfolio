@@ -225,3 +225,4 @@
 {"ticker":"SPXW 7700 CALL","shares":4,"price":0.8,"action":"BUY","assetType":"options","date":"2026-09-29T11:15:01","comment":"","stopLoss":0,"Expiry Date":"2026-09-29"}
 {"ticker":"SPXW 7700 CALL","shares":4,"price":0.1,"action":"SELL","assetType":"options","date":"2026-09-29T19:00:00.000Z","comment":"Unfortunately we closed with loss because it got expired and didn't hit our target.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MU $1300 CALL","shares":1,"price":8.1,"action":"BUY","assetType":"options","date":"2026-09-30T12:03:36","comment":"","stopLoss":0,"Expiry Date":"2026-10-16"}
+{"ticker":"SPY $760 CALL","shares":5,"price":9.91,"action":"BUY","assetType":"options","date":"2026-10-01T09:12:25","comment":"","stopLoss":0,"Expiry Date":"2026-10-16"}

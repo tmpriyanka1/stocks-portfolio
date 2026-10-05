@@ -233,3 +233,4 @@
 {"ticker":"MU $1150 CALL","shares":2,"price":16.8,"action":"BUY","assetType":"options","date":"2026-10-02T12:25:54","comment":"","stopLoss":0,"Expiry Date":"2026-10-16"}
 {"ticker":"META $800 CALL","shares":3,"price":0.01,"action":"SELL","assetType":"options","date":"2026-10-02T19:28:45.644Z","comment":"Closed META calls with max loss because unfortunately it didn't hit our target price before expiry.","stopLoss":0,"Expiry Date":""}
 {"ticker":"DRAM $65 CALL","shares":14,"price":0.01,"action":"SELL","assetType":"options","date":"2026-10-02T19:30:05.508Z","comment":"Closed DRAM calls with loss. Same as META it also didn't hit our target price.","stopLoss":0,"Expiry Date":""}
+{"ticker":"MU $1150 CALL","shares":1,"price":9.5,"action":"BUY","assetType":"options","date":"2026-10-05T17:20:17.661Z","comment":"Added 1 MU to reduce the average.","stopLoss":0,"Expiry Date":""}

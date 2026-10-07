@@ -148,7 +148,6 @@
 {"ticker":"AU","shares":140,"price":108.97,"action":"SELL","assetType":"stocks","date":"2026-09-08T17:53:44.071Z","comment":"Prof trimmed his positions to reduce risk so we closed AU with loss,","stopLoss":0}
 {"ticker":"MSTX","shares":350,"price":16.99,"action":"BUY","assetType":"stocks","date":"2026-09-04T19:00:00.000Z","comment":"Expects bitcoin to rise more so we added more shares  of MSTX.","stopLoss":0}
 {"ticker":"SNXX","shares":210,"price":15.69,"action":"BUY","assetType":"stocks","date":"2026-09-04T10:59:25","comment":"","stopLoss":0}
-{"ticker":"INTC","shares":77,"price":103.13,"action":"BUY","assetType":"stocks","date":"2026-09-08T19:08:34.342Z","comment":"Multi-billion-dollar custom AI chip and foundry agreement between Intel Foundry and AWS.","stopLoss":0}
 {"ticker":"SNXX","shares":105,"price":18.14,"action":"SELL","assetType":"stocks","date":"2026-09-09T17:25:37.864Z","comment":"Trimmed SNXX to locked in profits.","stopLoss":0}
 {"ticker":"MRVL","shares":14,"price":241.24,"action":"BUY","assetType":"stocks","date":"2026-09-09T08:31:53","comment":"","stopLoss":0}
 {"ticker":"SNXX","shares":105,"price":16.35,"action":"SELL","assetType":"stocks","date":"2026-09-10T17:51:29.805Z","comment":"Closed remaining SNXX to reduce risk and rise cash.","stopLoss":0}
@@ -160,7 +159,6 @@
 {"ticker":"SNDK @1800 CALL","shares":2,"price":14.4,"action":"BUY","assetType":"options","date":"2026-09-11T11:11:24","comment":"","stopLoss":0,"Expiry Date":"2026-09-18"}
 {"ticker":"SNDK @1800 CALL","shares":2,"price":3.4,"action":"BUY","assetType":"options","date":"2026-09-14T19:00:00.000Z","comment":"Added more to reduce average.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTX","shares":700,"price":13.77,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:15:28.652Z","comment":"Holding MSTX too long but unfortunately it didn't worked out and ahead of FOMC we closed this position with taking loss.","stopLoss":0}
-{"ticker":"INTC","shares":77,"price":97.69,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:16:53.852Z","comment":"Ahead of FOMC we closed intel to reduce risk suggested from prof.","stopLoss":0}
 {"ticker":"BE","shares":27,"price":253.4,"action":"BUY","assetType":"stocks","date":"2026-09-16T18:18:39.099Z","comment":"Suggested by prof .","stopLoss":0}
 {"ticker":"BE","shares":14,"price":269.17,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:19:52.073Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
 {"ticker":"BE","shares":14,"price":269.74,"action":"SELL","assetType":"stocks","date":"2026-09-16T18:20:00.813Z","comment":"Quick sell from portfolio drawer","stopLoss":0}
@@ -237,6 +235,6 @@
 {"ticker":"MU $1150 CALL","shares":1,"price":8,"action":"SELL","assetType":"options","date":"2026-10-05T17:21:25.355Z","comment":"Trimmed 1 MU call to reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"MSTR","shares":44,"price":161.44,"action":"BUY","assetType":"stocks","date":"2026-10-05T10:47:02","comment":"","stopLoss":0}
 {"ticker":"MSTR $167.5 CALL","shares":6,"price":2.72,"action":"BUY","assetType":"options","date":"2026-10-06T12:59:15","comment":"","stopLoss":0,"Expiry Date":"2026-10-09"}
-{"ticker":"INTC","shares":63,"price":113.46,"action":"BUY","assetType":"stocks","date":"2026-10-07T09:37:07","comment":"","stopLoss":0}
 {"ticker":"MU $1150 CALL","shares":1,"price":12,"action":"SELL","assetType":"options","date":"2026-10-07T19:38:00.533Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SNDK","shares":4,"price":1698.07,"action":"BUY","assetType":"stocks","date":"2026-10-07T12:46:15","comment":"","stopLoss":0}
+{"ticker":"INTC","shares":63,"price":113.46,"action":"BUY","assetType":"stocks","date":"2026-10-07T19:47:20.078Z","comment":"Ahead of FOMC we closed intel to reduce risk suggested from prof.","stopLoss":109}

@@ -239,3 +239,4 @@
 {"ticker":"MSTR $167.5 CALL","shares":6,"price":2.72,"action":"BUY","assetType":"options","date":"2026-10-06T12:59:15","comment":"","stopLoss":0,"Expiry Date":"2026-10-09"}
 {"ticker":"INTC","shares":63,"price":113.46,"action":"BUY","assetType":"stocks","date":"2026-10-07T09:37:07","comment":"","stopLoss":0}
 {"ticker":"MU $1150 CALL","shares":1,"price":12,"action":"SELL","assetType":"options","date":"2026-10-07T19:38:00.533Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"SNDK","shares":4,"price":1698.07,"action":"BUY","assetType":"stocks","date":"2026-10-07T12:46:15","comment":"","stopLoss":0}

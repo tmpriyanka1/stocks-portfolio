@@ -238,3 +238,4 @@
 {"ticker":"MU $1150 CALL","shares":1,"price":12,"action":"SELL","assetType":"options","date":"2026-10-07T19:38:00.533Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SNDK","shares":4,"price":1698.07,"action":"BUY","assetType":"stocks","date":"2026-10-07T12:46:15","comment":"","stopLoss":0}
 {"ticker":"INTC","shares":63,"price":113.46,"action":"BUY","assetType":"stocks","date":"2026-10-07T19:47:20.078Z","comment":"Ahead of FOMC we closed intel to reduce risk suggested from prof.","stopLoss":109}
+{"ticker":"SPY $775 CALL","shares":5,"price":9.33,"action":"BUY","assetType":"options","date":"2026-10-07T12:22","comment":"","stopLoss":775,"Expiry Date":"2026-10-23"}

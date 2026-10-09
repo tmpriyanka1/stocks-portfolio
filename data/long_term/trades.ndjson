@@ -244,3 +244,4 @@
 {"ticker":"INTC","shares":63,"price":106.61,"action":"SELL","assetType":"stocks","date":"2026-10-08T19:00:00.000Z","comment":"Closed Intel because it hits SL suggested by Prof.","stopLoss":0}
 {"ticker":"SNDK","shares":4,"price":1647.28,"action":"SELL","assetType":"stocks","date":"2026-10-08T19:00:00.000Z","comment":"Closed SNDK because it hits SL suggested by Prof.","stopLoss":0}
 {"ticker":"MSTR","shares":44,"price":149.45,"action":"SELL","assetType":"stocks","date":"2026-10-08T19:00:00.000Z","comment":"BitCoin pull backed  below 82K so we closed MSTR.","stopLoss":0}
+{"ticker":"BMNR","shares":350,"price":23.7,"action":"SELL","assetType":"stocks","date":"2026-10-08T19:00:00.000Z","comment":"BitCoin pull backed  below 82K so we closed BMNR..","stopLoss":0}

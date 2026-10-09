@@ -241,3 +241,4 @@
 {"ticker":"MSTR $167.5 CALL","shares":5,"price":2.72,"action":"BUY","assetType":"options","date":"2026-10-09T16:49:48.966Z","comment":"","stopLoss":0,"Expiry Date":"2026-10-09"}
 {"ticker":"MSTR $167.5 CALL","shares":5,"price":0.01,"action":"SELL","assetType":"options","date":"2026-10-09T16:50:43.620Z","comment":"Closed MSTR calls with full loss unfortunately it didn't reach our target before time decay.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $775 CALL","shares":5,"price":7.44,"action":"SELL","assetType":"options","date":"2026-10-08T19:00:00.000Z","comment":"Closed SPY calls because it reaches SL and to reduce risk we closed them with loss.","stopLoss":0,"Expiry Date":""}
+{"ticker":"INTC","shares":63,"price":106.61,"action":"SELL","assetType":"stocks","date":"2026-10-08T19:00:00.000Z","comment":"Closed Intel because it hits SL suggested by Prof.","stopLoss":0}

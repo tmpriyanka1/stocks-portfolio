@@ -239,3 +239,4 @@
 {"ticker":"INTC","shares":63,"price":113.46,"action":"BUY","assetType":"stocks","date":"2026-10-07T19:47:20.078Z","comment":"Ahead of FOMC we closed intel to reduce risk suggested from prof.","stopLoss":109}
 {"ticker":"SPY $775 CALL","shares":5,"price":9.33,"action":"BUY","assetType":"options","date":"2026-10-07T12:22","comment":"","stopLoss":775,"Expiry Date":"2026-10-23"}
 {"ticker":"MSTR $167.5 CALL","shares":5,"price":2.72,"action":"BUY","assetType":"options","date":"2026-10-09T16:49:48.966Z","comment":"","stopLoss":0,"Expiry Date":"2026-10-09"}
+{"ticker":"MSTR $167.5 CALL","shares":5,"price":0.01,"action":"SELL","assetType":"options","date":"2026-10-09T16:50:43.620Z","comment":"Closed MSTR calls with full loss unfortunately it didn't reach our target before time decay.","stopLoss":0,"Expiry Date":""}

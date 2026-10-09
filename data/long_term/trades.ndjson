@@ -246,3 +246,4 @@
 {"ticker":"MSTR","shares":44,"price":149.45,"action":"SELL","assetType":"stocks","date":"2026-10-08T19:00:00.000Z","comment":"BitCoin pull backed  below 82K so we closed MSTR.","stopLoss":0}
 {"ticker":"BMNR","shares":350,"price":23.7,"action":"SELL","assetType":"stocks","date":"2026-10-08T19:00:00.000Z","comment":"BitCoin pull backed  below 82K so we closed BMNR..","stopLoss":0}
 {"ticker":"CRDO","shares":32,"price":220.31,"action":"BUY","assetType":"stocks","date":"2026-10-08T10:02:23","comment":"","stopLoss":0}
+{"ticker":"MU","shares":7,"price":1039.36,"action":"BUY","assetType":"stocks","date":"2026-10-08T10:02:53","comment":"","stopLoss":0}

@@ -248,3 +248,4 @@
 {"ticker":"CRDO","shares":32,"price":220.31,"action":"BUY","assetType":"stocks","date":"2026-10-08T10:02:23","comment":"","stopLoss":0}
 {"ticker":"MU","shares":7,"price":1039.36,"action":"BUY","assetType":"stocks","date":"2026-10-08T10:02:53","comment":"","stopLoss":0}
 {"ticker":"SNXX","shares":350,"price":11.82,"action":"SELL","assetType":"stocks","date":"2026-10-12T17:31:21.780Z","comment":"SNDK hits SL.","stopLoss":0}
+{"ticker":"MU","shares":7,"price":981.76,"action":"SELL","assetType":"stocks","date":"2026-10-12T17:31:41.280Z","comment":"Quick sell from portfolio drawer","stopLoss":0}

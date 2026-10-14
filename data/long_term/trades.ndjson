@@ -248,3 +248,4 @@
 {"ticker":"CRDO","shares":32,"price":202.46,"action":"SELL","assetType":"stocks","date":"2026-10-12T19:34:19.470Z","comment":"CRDO hits SL.","stopLoss":0}
 {"ticker":"MRVL","shares":28,"price":267.07,"action":"BUY","assetType":"stocks","date":"2026-10-12T19:36:52.499Z","comment":"Hits SL so we closed MRVL.","stopLoss":0}
 {"ticker":"GGLL","shares":49,"price":106.14,"action":"BUY","assetType":"stocks","date":"2026-10-13T10:19:23","comment":"","stopLoss":0}
+{"ticker":"GGLL","shares":48,"price":105.1,"action":"BUY","assetType":"stocks","date":"2026-10-13T19:00:00.000Z","comment":"Quick buy from portfolio drawer","stopLoss":0}

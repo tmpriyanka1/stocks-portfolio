@@ -256,3 +256,4 @@
 {"ticker":"QQQ $730 CALL","shares":2,"price":12.4,"action":"BUY","assetType":"options","date":"2026-10-14T09:55:34","comment":"","stopLoss":0,"Expiry Date":"2026-10-30"}
 {"ticker":"QQQ $730 CALL","shares":7,"price":7.4,"action":"BUY","assetType":"options","date":"2026-10-15T16:56:35.814Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"QQQ $730 CALL","shares":5,"price":9.56,"action":"SELL","assetType":"options","date":"2026-10-15T16:58:28.918Z","comment":"Trimmed QQQ calls to locked in profits and reduce risk.","stopLoss":0,"Expiry Date":""}
+{"ticker":"QQQ $730 CALL","shares":4,"price":10.28,"action":"SELL","assetType":"options","date":"2026-10-15T18:53:39.597Z","comment":"Closed QQQ calls to locked in profits.","stopLoss":0,"Expiry Date":""}

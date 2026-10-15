@@ -254,3 +254,4 @@
 {"ticker":"SPY $780 PUT","shares":4,"price":11.97,"action":"SELL","assetType":"options","date":"2026-10-14T17:24:02.806Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"MRVL","shares":28,"price":234.83,"action":"SELL","assetType":"stocks","date":"2026-10-15T16:55:20.391Z","comment":"Closed MRVL position because it breaks the support.","stopLoss":0}
 {"ticker":"QQQ $730 CALL","shares":2,"price":12.4,"action":"BUY","assetType":"options","date":"2026-10-14T09:55:34","comment":"","stopLoss":0,"Expiry Date":"2026-10-30"}
+{"ticker":"QQQ $730 CALL","shares":7,"price":7.4,"action":"BUY","assetType":"options","date":"2026-10-15T16:56:35.814Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}

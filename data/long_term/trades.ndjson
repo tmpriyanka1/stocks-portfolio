@@ -258,3 +258,4 @@
 {"ticker":"QQQ $730 CALL","shares":5,"price":9.56,"action":"SELL","assetType":"options","date":"2026-10-15T16:58:28.918Z","comment":"Trimmed QQQ calls to locked in profits and reduce risk.","stopLoss":0,"Expiry Date":""}
 {"ticker":"QQQ $730 CALL","shares":4,"price":10.28,"action":"SELL","assetType":"options","date":"2026-10-15T18:53:39.597Z","comment":"Closed QQQ calls to locked in profits.","stopLoss":0,"Expiry Date":""}
 {"ticker":"GGLL","shares":97,"price":99.02,"action":"SELL","assetType":"stocks","date":"2026-10-16T15:56:48.271Z","comment":"Price is under all moving averages and suggested by prof so we closed GGLL with loss.","stopLoss":0}
+{"ticker":"SPY $763 CALL","shares":14,"price":7.49,"action":"BUY","assetType":"options","date":"2026-10-16T14:27:25","comment":"","stopLoss":0,"Expiry Date":"2026-10-23"}

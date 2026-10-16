@@ -260,3 +260,4 @@
 {"ticker":"GGLL","shares":97,"price":99.02,"action":"SELL","assetType":"stocks","date":"2026-10-16T15:56:48.271Z","comment":"Price is under all moving averages and suggested by prof so we closed GGLL with loss.","stopLoss":0}
 {"ticker":"SPY $763 CALL","shares":14,"price":7.6,"action":"BUY","assetType":"options","date":"2026-10-16T21:28:24.132Z","comment":"","stopLoss":0,"Expiry Date":"2026-10-23"}
 {"ticker":"SPY $763 CALL","shares":14,"price":6.5,"action":"SELL","assetType":"options","date":"2026-10-16T21:30:36.780Z","comment":"Closed SPY calls because it hits our SL.","stopLoss":0,"Expiry Date":""}
+{"ticker":"MU $1150 CALL","shares":1,"price":0.01,"action":"SELL","assetType":"options","date":"2026-10-16T21:31:42.196Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}

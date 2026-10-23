@@ -269,3 +269,4 @@
 {"ticker":"SPY $765 CALL","shares":14,"price":11.8,"action":"SELL","assetType":"options","date":"2026-10-22T18:22:20.517Z","comment":"Closed Spy calls with profit when it hits our target.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $765 CALL","shares":3,"price":11.65,"action":"BUY","assetType":"options","date":"2026-10-22T12:57:29","comment":"","stopLoss":0,"Expiry Date":"2026-11-13"}
 {"ticker":"SPY $765 CALL","shares":3,"price":9.71,"action":"SELL","assetType":"options","date":"2026-10-23T14:53:54.672Z","comment":"Closed spy calls with loss because it hits our SL.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $760 CALL","shares":14,"price":12.33,"action":"BUY","assetType":"options","date":"2026-10-23T07:53:57","comment":"","stopLoss":0,"Expiry Date":"2026-11-13"}

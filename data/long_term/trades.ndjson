@@ -271,3 +271,4 @@
 {"ticker":"SPY $765 CALL","shares":3,"price":9.71,"action":"SELL","assetType":"options","date":"2026-10-23T14:53:54.672Z","comment":"Closed spy calls with loss because it hits our SL.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $760 CALL","shares":14,"price":12.33,"action":"BUY","assetType":"options","date":"2026-10-23T07:53:57","comment":"","stopLoss":0,"Expiry Date":"2026-11-13"}
 {"ticker":"SPY $760 CALL","shares":14,"price":15.44,"action":"SELL","assetType":"options","date":"2026-10-26T17:25:05.928Z","comment":"Entered calls after Thursday's big VIX spike, held through the weekend expecting a relief bounce, and exited Monday for a +25% gain.","stopLoss":0,"Expiry Date":""}
+{"ticker":"IBIT","shares":105,"price":45.35,"action":"SELL","assetType":"stocks","date":"2026-10-26T17:27:13.877Z","comment":"We we looking for bitcoin to hold above support level but it didn't so we closed IBIT with little loss.","stopLoss":0}

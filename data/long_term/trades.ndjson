@@ -265,14 +265,10 @@
 {"ticker":"IBIT","shares":105,"price":47.87,"action":"BUY","assetType":"stocks","date":"2026-10-21T09:45:38","comment":"","stopLoss":0}
 {"ticker":"SPY $775 PUT","shares":14,"price":14,"action":"SELL","assetType":"options","date":"2026-10-22T14:07:05.287Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $775 PUT","shares":7,"price":16.2,"action":"SELL","assetType":"options","date":"2026-10-22T14:33:14.051Z","comment":"First trimmed spy puts to reduce risk and later closed all spy calls with profit to reduce risk.","stopLoss":0,"Expiry Date":""}
-{"ticker":"SPY $765 CALL","shares":14,"price":11.1,"action":"BUY","assetType":"options","date":"2026-10-22T07:53:11","comment":"","stopLoss":0,"Expiry Date":"2026-11-13"}
-{"ticker":"SPY $765 CALL","shares":14,"price":11.8,"action":"SELL","assetType":"options","date":"2026-10-22T18:22:20.517Z","comment":"Closed Spy calls with profit when it hits our target.","stopLoss":0,"Expiry Date":""}
-{"ticker":"SPY $765 CALL","shares":3,"price":11.65,"action":"BUY","assetType":"options","date":"2026-10-22T12:57:29","comment":"","stopLoss":0,"Expiry Date":"2026-11-13"}
-{"ticker":"SPY $765 CALL","shares":3,"price":9.71,"action":"SELL","assetType":"options","date":"2026-10-23T14:53:54.672Z","comment":"Closed spy calls with loss because it hits our SL.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $760 CALL","shares":14,"price":12.33,"action":"BUY","assetType":"options","date":"2026-10-23T07:53:57","comment":"","stopLoss":0,"Expiry Date":"2026-11-13"}
 {"ticker":"SPY $760 CALL","shares":14,"price":15.44,"action":"SELL","assetType":"options","date":"2026-10-26T17:25:05.928Z","comment":"Entered calls after Thursday's big VIX spike, held through the weekend expecting a relief bounce, and exited Monday for a +25% gain.","stopLoss":0,"Expiry Date":""}
 {"ticker":"IBIT","shares":105,"price":45.35,"action":"SELL","assetType":"stocks","date":"2026-10-26T17:27:13.877Z","comment":"We we looking for bitcoin to hold above support level but it didn't so we closed IBIT with little loss.","stopLoss":0}
 {"ticker":"SOXL","shares":55,"price":90.96,"action":"BUY","assetType":"stocks","date":"2026-10-26T09:16:32","comment":"Added SOXL because SPY buy alert triggered.","stopLoss":80}
 {"ticker":"NET","shares":15,"price":331.88,"action":"BUY","assetType":"stocks","date":"2026-10-26T09:17:20","comment":"","stopLoss":0}
 {"ticker":"NTRA","shares":12,"price":404.99,"action":"BUY","assetType":"stocks","date":"2026-10-26T09:17:45","comment":"","stopLoss":0}
-{"ticker":"SPY $765 CALL","shares":5,"price":14.2,"action":"BUY","assetType":"options","date":"2026-10-27T07:10:13","comment":"","stopLoss":0,"Expiry Date":"2026-11-20"}
+{"ticker":"SPY $765 CALL","shares":5,"price":13.5,"action":"BUY","assetType":"options","date":"2026-10-27T16:19:49.967Z","comment":"Closed spy calls with loss because it hits our SL.","stopLoss":0,"Expiry Date":"2026-11-20"}

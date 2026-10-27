@@ -275,3 +275,4 @@
 {"ticker":"SPY $765 CALL","shares":5,"price":15.12,"action":"SELL","assetType":"options","date":"2026-10-27T16:23:01.891Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"DELL","shares":10,"price":502.59,"action":"BUY","assetType":"stocks","date":"2026-10-27T13:06:03","comment":"","stopLoss":0}
 {"ticker":"TSLA","shares":13,"price":408.14,"action":"BUY","assetType":"stocks","date":"2026-10-27T13:06:35","comment":"","stopLoss":0}
+{"ticker":"NET","shares":15,"price":328.56,"action":"SELL","assetType":"stocks","date":"2026-10-27T20:11:36.274Z","comment":"Prof suggested to pick snow instead of NET.  NET and SNOW both are high beta stocks so, we closed NET with almost breakeven.","stopLoss":0}

@@ -22,7 +22,6 @@
 {"ticker":"QQQ $670 PUT","shares":10,"price":4.2,"action":"BUY","assetType":"options","date":"2026-08-04T19:00:00.000Z","comment":"Added 10 more on dip","stopLoss":0,"Expiry Date":""}
 {"ticker":"AEHR","shares":105,"price":98,"action":"BUY","assetType":"stocks","date":"2026-08-06T07:13:43","comment":"Bought based on the daily chart timeframe and showed a bullish breakout suggusted by prof.","stopLoss":0}
 {"ticker":"AEHR","shares":105,"price":104.36,"action":"SELL","assetType":"stocks","date":"2026-08-06T14:49:57.568Z","comment":"Took profits at 7% to lock in gains quickly and avoid holding through volatility","stopLoss":0}
-{"ticker":"DELL","shares":14,"price":443.12,"action":"BUY","assetType":"stocks","date":"2026-08-06T16:23:00.233Z","comment":"Position adjusted via Edit Asset form","stopLoss":400}
 {"ticker":"ORCL","shares":49,"price":145.96,"action":"SELL","assetType":"stocks","date":"2026-08-07T19:00:00.000Z","comment":"Locked-In 27% gains.","stopLoss":0}
 {"ticker":"SLV","shares":140,"price":57.55,"action":"BUY","assetType":"stocks","date":"2026-08-07T10:17:49","comment":"Took a position in SLV by analyzing strong bullish candle in chart.","stopLoss":0}
 {"ticker":"MSFT $500 PUT","shares":3,"price":21.350000000000005,"action":"BUY","assetType":"options","date":"2026-08-11T14:46:35.690Z","comment":"Position adjusted via Edit Asset form","stopLoss":0,"Expiry Date":"2026-09-18"}
@@ -30,7 +29,6 @@
 {"ticker":"AMAT","shares":14,"price":522.94,"action":"SELL","assetType":"stocks","date":"2026-08-11T19:00:00.000Z","comment":"Sold before earnings—didn't want to hold through the release.","stopLoss":0}
 {"ticker":"LULU","shares":49,"price":123.2,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:46:48.335Z","comment":"Position adjusted via Edit Asset form","stopLoss":121}
 {"ticker":"LITE","shares":7,"price":873.65,"action":"BUY","assetType":"stocks","date":"2026-08-12T13:58:16.065Z","comment":"Position adjusted via Edit Asset form","stopLoss":0}
-{"ticker":"DELL","shares":14,"price":462.8,"action":"SELL","assetType":"stocks","date":"2026-08-12T14:16:19.161Z","comment":"Locked in a little profit and exited DELL because the price looks overextended and our cash is below our 50% target.","stopLoss":0}
 {"ticker":"LITE","shares":7,"price":922.57,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:51:13.550Z","comment":"Locked in 5% profit and exited from LITE","stopLoss":0}
 {"ticker":"CRDO","shares":28,"price":269.94,"action":"SELL","assetType":"stocks","date":"2026-08-12T16:53:29.208Z","comment":"Closed CRDO at breakeven after holding through heavy losses.","stopLoss":0}
 {"ticker":"QQQ $670 PUT","shares":20,"price":1.39,"action":"SELL","assetType":"options","date":"2026-08-12T17:04:53.159Z","comment":"Took a loss on the Aug 31st QQQ $670 puts because the premium value was dropping and we didn't have enough time to hold. We are moving this cash into another position with a September expiry option.","stopLoss":0,"Expiry Date":""}
@@ -273,7 +271,7 @@
 {"ticker":"SPY $765 CALL","shares":5,"price":13.5,"action":"BUY","assetType":"options","date":"2026-10-27T16:19:49.967Z","comment":"Closed spy calls with loss because it hits our SL.","stopLoss":0,"Expiry Date":"2026-11-20"}
 {"ticker":"SOXL","shares":55,"price":90.95,"action":"BUY","assetType":"stocks","date":"2026-10-27T16:21:43.510Z","comment":"Added SOXL because SPY buy alert triggered.","stopLoss":90}
 {"ticker":"SPY $765 CALL","shares":5,"price":15.12,"action":"SELL","assetType":"options","date":"2026-10-27T16:23:01.891Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
-{"ticker":"DELL","shares":10,"price":502.59,"action":"BUY","assetType":"stocks","date":"2026-10-27T13:06:03","comment":"","stopLoss":0}
 {"ticker":"TSLA","shares":13,"price":408.14,"action":"BUY","assetType":"stocks","date":"2026-10-27T13:06:35","comment":"","stopLoss":0}
 {"ticker":"NET","shares":15,"price":328.56,"action":"SELL","assetType":"stocks","date":"2026-10-27T20:11:36.274Z","comment":"Prof suggested to pick snow instead of NET.  NET and SNOW both are high beta stocks so, we closed NET with almost breakeven.","stopLoss":0}
 {"ticker":"TSLA","shares":13,"price":408.14,"action":"BUY","assetType":"stocks","date":"2026-10-27T12:16:38","comment":"Prof suggested this because TSLA broke above a 6 month downtrend with strong institutional buying pressure.","stopLoss":0}
+{"ticker":"DELL","shares":10,"price":502.59,"action":"BUY","assetType":"stocks","date":"2026-10-27T20:21:34.842Z","comment":"DELL suggested by prof,  it broke short term downtrend and it rise along with Semis and AI.","stopLoss":0}

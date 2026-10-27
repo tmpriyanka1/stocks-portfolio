@@ -274,3 +274,4 @@
 {"ticker":"IBIT","shares":105,"price":45.35,"action":"SELL","assetType":"stocks","date":"2026-10-26T17:27:13.877Z","comment":"We we looking for bitcoin to hold above support level but it didn't so we closed IBIT with little loss.","stopLoss":0}
 {"ticker":"SOXL","shares":55,"price":90.96,"action":"BUY","assetType":"stocks","date":"2026-10-26T09:16:32","comment":"Added SOXL because SPY buy alert triggered.","stopLoss":80}
 {"ticker":"NET","shares":15,"price":331.88,"action":"BUY","assetType":"stocks","date":"2026-10-26T09:17:20","comment":"","stopLoss":0}
+{"ticker":"NTRA","shares":12,"price":404.99,"action":"BUY","assetType":"stocks","date":"2026-10-26T09:17:45","comment":"","stopLoss":0}

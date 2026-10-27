@@ -272,3 +272,4 @@
 {"ticker":"NTRA","shares":12,"price":404.99,"action":"BUY","assetType":"stocks","date":"2026-10-26T09:17:45","comment":"","stopLoss":0}
 {"ticker":"SPY $765 CALL","shares":5,"price":13.5,"action":"BUY","assetType":"options","date":"2026-10-27T16:19:49.967Z","comment":"Closed spy calls with loss because it hits our SL.","stopLoss":0,"Expiry Date":"2026-11-20"}
 {"ticker":"SOXL","shares":55,"price":90.95,"action":"BUY","assetType":"stocks","date":"2026-10-27T16:21:43.510Z","comment":"Added SOXL because SPY buy alert triggered.","stopLoss":90}
+{"ticker":"SPY $765 CALL","shares":5,"price":15.12,"action":"SELL","assetType":"options","date":"2026-10-27T16:23:01.891Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}

@@ -278,3 +278,4 @@
 {"ticker":"NTRA","shares":12,"price":426.76,"action":"SELL","assetType":"stocks","date":"2026-10-28T14:46:54.350Z","comment":"Price entered into the resistance so we closed NTRA with little profit.","stopLoss":0}
 {"ticker":"SPY $775 PUT","shares":28,"price":7.2,"action":"BUY","assetType":"options","date":"2026-10-28T10:18:35","comment":"","stopLoss":0,"Expiry Date":"2026-11-05"}
 {"ticker":"SPY $775 PUT","shares":7,"price":7.2,"action":"BUY","assetType":"options","date":"2026-10-28T20:25:03.340Z","comment":"Added another 7 at previous avg because we expected a bigger pullback.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $775 PUT","shares":14,"price":8.36,"action":"SELL","assetType":"options","date":"2026-10-28T20:27:08.909Z","comment":"Trimmed at pullback.","stopLoss":0,"Expiry Date":""}

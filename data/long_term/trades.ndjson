@@ -275,3 +275,4 @@
 {"ticker":"DELL","shares":10,"price":502.59,"action":"BUY","assetType":"stocks","date":"2026-10-27T20:21:34.842Z","comment":"DELL suggested by prof,  it broke short term downtrend and it rise along with Semis and AI.","stopLoss":0}
 {"ticker":"SNOW","shares":9,"price":338.26,"action":"BUY","assetType":"stocks","date":"2026-10-27T13:22:17","comment":"SNOW suggested by prof, software sector is gaining, above moving averages and its just starting its uptrend.","stopLoss":0}
 {"ticker":"TSLA","shares":13,"price":408.14,"action":"BUY","assetType":"stocks","date":"2026-10-27T20:26:41.804Z","comment":"Prof suggested this because TSLA broke above a 6 month downtrend with strong institutional buying pressure.","stopLoss":0}
+{"ticker":"NTRA","shares":12,"price":426.76,"action":"SELL","assetType":"stocks","date":"2026-10-28T14:46:54.350Z","comment":"Price entered into the resistance so we closed NTRA with little profit.","stopLoss":0}

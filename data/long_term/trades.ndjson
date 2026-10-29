@@ -281,3 +281,4 @@
 {"ticker":"SPY $775 PUT","shares":14,"price":8.36,"action":"SELL","assetType":"options","date":"2026-10-28T20:27:08.909Z","comment":"Trimmed at pullback.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $775 PUT","shares":7,"price":7.88,"action":"SELL","assetType":"options","date":"2026-10-28T20:27:32.319Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $775 PUT","shares":14,"price":7.26,"action":"SELL","assetType":"options","date":"2026-10-28T20:35:40.371Z","comment":"We was expecting a bigger pullback on SPY after the FOMC meeting, but the it came in  dovish. Price didn't give us the pullback move we wanted, so we closed the final 14 contracts at breakeven. But overall we are in profit of 2000","stopLoss":0,"Expiry Date":""}
+{"ticker":"DELL","shares":10,"price":474.04,"action":"SELL","assetType":"stocks","date":"2026-10-29T18:38:02.615Z","comment":"Closed DELL to reduce risk ahead of INTEL earnings.","stopLoss":0}

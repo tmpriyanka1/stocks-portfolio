@@ -286,3 +286,4 @@
 {"ticker":"SNOW","shares":9,"price":304.5,"action":"SELL","assetType":"stocks","date":"2026-10-30T17:49:21.936Z","comment":"Closed SNOW when it hits SL and market is in very bearish.","stopLoss":0}
 {"ticker":"SOXL","shares":55,"price":80,"action":"SELL","assetType":"stocks","date":"2026-10-30T17:49:47.855Z","comment":"Closed SOXL when it hits SL and market is in very bearish.","stopLoss":0}
 {"ticker":"SPY $755 CALL","shares":25,"price":14.5,"action":"BUY","assetType":"options","date":"2026-10-30T10:50:20","comment":"","stopLoss":0,"Expiry Date":"2026-11-20"}
+{"ticker":"SPY $755 CALL","shares":25,"price":13.54,"action":"SELL","assetType":"options","date":"2026-10-30T17:52:10.273Z","comment":"We expected SPY should bounce a little from its low but unfortunately it breaks our SL.","stopLoss":0,"Expiry Date":""}

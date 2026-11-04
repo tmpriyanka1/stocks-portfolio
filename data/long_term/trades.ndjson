@@ -289,3 +289,4 @@
 {"ticker":"SPY $755 CALL","shares":25,"price":13.54,"action":"SELL","assetType":"options","date":"2026-10-30T17:52:10.273Z","comment":"We expected SPY should bounce a little from its low but unfortunately it breaks our SL.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SLV","shares":160,"price":44.33,"action":"BUY","assetType":"stocks","date":"2026-10-30T10:52:37","comment":"","stopLoss":0}
 {"ticker":"SPY $760 CALL","shares":3,"price":14.52,"action":"SELL","assetType":"options","date":"2026-11-04T15:03:31.268Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $765 PUT","shares":4,"price":14.95,"action":"BUY","assetType":"options","date":"2026-11-04T07:03:37","comment":"","stopLoss":0,"Expiry Date":"2026-12-31"}

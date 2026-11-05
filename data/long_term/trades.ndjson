@@ -294,3 +294,4 @@
 {"ticker":"SPY $765 PUT","shares":4,"price":24,"action":"SELL","assetType":"options","date":"2026-11-05T15:22:58.681Z","comment":"Closed Spy puts when it reaches our first target price .","stopLoss":0,"Expiry Date":""}
 {"ticker":"TSLA","shares":13,"price":348.29,"action":"SELL","assetType":"stocks","date":"2026-11-05T15:32:41.663Z","comment":"Due to midterm elections tesla dropped so we closed our position.","stopLoss":0}
 {"ticker":"SPY $755 CALL","shares":21,"price":43.02,"action":"BUY","assetType":"options","date":"2026-11-05T07:57:59","comment":"","stopLoss":0,"Expiry Date":"2027-06-30"}
+{"ticker":"LABU","shares":20,"price":215.41,"action":"SELL","assetType":"stocks","date":"2026-11-05T17:34:33.266Z","comment":"Expected a bounce but unfortunately it didn’t and spy value below 740. So we closed Labu with loss","stopLoss":0}

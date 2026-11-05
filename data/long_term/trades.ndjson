@@ -291,3 +291,4 @@
 {"ticker":"SPY $760 CALL","shares":3,"price":14.52,"action":"SELL","assetType":"options","date":"2026-11-04T15:03:31.268Z","comment":"Quick sell from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $765 PUT","shares":4,"price":14.95,"action":"BUY","assetType":"options","date":"2026-11-04T07:03:37","comment":"","stopLoss":0,"Expiry Date":"2026-12-31"}
 {"ticker":"LABU","shares":20,"price":256.71,"action":"BUY","assetType":"stocks","date":"2026-11-04T12:36:53","comment":"","stopLoss":0}
+{"ticker":"SPY $765 PUT","shares":4,"price":24,"action":"SELL","assetType":"options","date":"2026-11-05T15:22:58.681Z","comment":"Closed Spy puts when it reaches our first target price .","stopLoss":0,"Expiry Date":""}

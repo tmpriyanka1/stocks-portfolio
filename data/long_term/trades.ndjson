@@ -298,3 +298,4 @@
 {"ticker":"SPY $755 CALL","shares":21,"price":47.81,"action":"SELL","assetType":"options","date":"2026-11-09T18:13:37.054Z","comment":"Closed all our SPY calls to lock in the profits. Even though we had more time left on the contracts, holding through the CPI release is a coin flip. If the market pulls back after CPI like we expect, we can buy again.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPXW $7500 PUT","shares":1,"price":25,"action":"BUY","assetType":"options","date":"2026-11-09T10:14:13","comment":"","stopLoss":0,"Expiry Date":"2026-11-11"}
 {"ticker":"SPXW $7500 PUT","shares":1,"price":38.2,"action":"SELL","assetType":"options","date":"2026-11-10T16:05:07.218Z","comment":"Closed SPX call with almost 60% profit ahead of expiry.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $755 CALL","shares":23,"price":44.11,"action":"BUY","assetType":"options","date":"2026-11-10T10:30:26","comment":"","stopLoss":0,"Expiry Date":"2027-06-17"}

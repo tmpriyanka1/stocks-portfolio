@@ -34,4 +34,4 @@
 {"ticker":"SPY $740 CALL","shares":14,"price":10.2,"action":"SELL","assetType":"options","date":"2026-11-06T16:05:03.609Z","comment":"SPY calls trimmed to half with little loss which will expire next week  to reduce risk of hold more contracts.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $740 CALL","shares":10,"price":11.74,"action":"SELL","assetType":"options","date":"2026-11-09T15:44:41.925Z","comment":"Trimmed SPY calls to lockin profits and to reduce risks.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $740 CALL","shares":4,"price":13.1,"action":"SELL","assetType":"options","date":"2026-11-09T15:46:18.871Z","comment":"Closed all spy calls when it reaches around our target 750.","stopLoss":0,"Expiry Date":""}
-{"ticker":"NVDA $175 CALL","shares":4,"price":32.9,"action":"BUY","assetType":"options","date":"2026-11-10T20:20:04.310Z","comment":"","stopLoss":0,"Expiry Date":"2028-01-21"}
+{"ticker":"NVDA $175 CALL","shares":7,"price":32.9,"action":"BUY","assetType":"options","date":"2026-11-10T20:20:12.642Z","comment":"","stopLoss":0,"Expiry Date":"2028-01-21"}

@@ -1,6 +1,6 @@
 {
-  "AAOX": 2.182,
-  "ORCL": 128.07,
+  "AAOX": 2.2595,
+  "ORCL": 129.08,
   "ORCL $150 CALL": 2.08,
   "AVGO $400 CALL": 0.01,
   "AMZN $250 CALL": 15,
@@ -10,7 +10,8 @@
   "SPY $777 PUT": 8.83,
   "SPY $768 CALL": 1.24,
   "SPY $772 PUT": 6.41,
-  "SPY $765 PUT": 17.73,
-  "SPY $740 CALL": 19.23,
-  "NVDA $175 CALL": 37.7
+  "SPY $765 PUT": 16.99,
+  "SPY $740 CALL": 20.81,
+  "NVDA $175 CALL": 38.2,
+  "SPY $762 PUT": 9.1
 }

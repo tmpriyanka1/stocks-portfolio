@@ -300,3 +300,4 @@
 {"ticker":"SPY $762 PUT","shares":28,"price":10.81,"action":"SELL","assetType":"options","date":"2026-11-12T13:30:22.353Z","comment":"Closed all spy puts with 18% profit before market opens at pullback.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $755 CALL","shares":4,"price":49.21,"action":"BUY","assetType":"options","date":"2026-11-12T07:30:02","comment":"","stopLoss":0,"Expiry Date":"2027-06-17"}
 {"ticker":"SPY $762 PUT","shares":42,"price":7.700000000000001,"action":"BUY","assetType":"options","date":"2026-11-12T16:23:37.147Z","comment":"","stopLoss":0,"Expiry Date":"2026-11-30"}
+{"ticker":"SPY $762 PUT","shares":42,"price":7.700000000000001,"action":"BUY","assetType":"options","date":"2026-11-12T16:24:55.804Z","comment":"","stopLoss":0,"Expiry Date":"2026-11-30"}

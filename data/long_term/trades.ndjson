@@ -300,3 +300,4 @@
 {"ticker":"SPY $755 CALL","shares":14,"price":47,"action":"BUY","assetType":"options","date":"2026-11-13T15:15:46.742Z","comment":"Spy reached to resistance and expects market to pullbacks so we closed spy calls.","stopLoss":0,"Expiry Date":"2027-06-17"}
 {"ticker":"SPY $755 CALL","shares":7,"price":43.04,"action":"BUY","assetType":"options","date":"2026-11-16T19:29:32.321Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $755 CALL","shares":5,"price":41.16,"action":"BUY","assetType":"options","date":"2026-11-16T19:29:56.967Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $748 CALL","shares":21,"price":8.27,"action":"BUY","assetType":"options","date":"2026-11-16T11:31:41","comment":"","stopLoss":0,"Expiry Date":"2026-11-30"}

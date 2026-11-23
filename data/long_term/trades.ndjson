@@ -305,3 +305,4 @@
 {"ticker":"SOXS","shares":42,"price":70.93,"action":"SELL","assetType":"stocks","date":"2026-11-20T14:59:35.995Z","comment":"We have been holding SOXS for too long waiting to breakeven, so we decided this price is the right point to sell and take a loss, as we expect a reversal on SOXS later on.","stopLoss":0}
 {"ticker":"SPY $748 CALL","shares":104,"price":0.29,"action":"BUY","assetType":"options","date":"2026-11-23T15:32:40.467Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $748 CALL","shares":104,"price":1.53,"action":"SELL","assetType":"options","date":"2026-11-23T15:34:08.113Z","comment":"Trimmed  spy calls to reduce risk ahead of expiry.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SPY $748 CALL","shares":21,"price":1.63,"action":"SELL","assetType":"options","date":"2026-11-23T15:38:22.233Z","comment":"Closed remaing SPy calls ahead of expiry.","stopLoss":0,"Expiry Date":""}

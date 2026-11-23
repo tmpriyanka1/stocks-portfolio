@@ -40,3 +40,4 @@
 {"ticker":"SPY $748 CALL","shares":21,"price":11.31,"action":"BUY","assetType":"options","date":"2026-11-13T07:32:37","comment":"","stopLoss":0,"Expiry Date":"2026-11-30"}
 {"ticker":"SPY $748 CALL","shares":21,"price":13.63,"action":"SELL","assetType":"options","date":"2026-11-13T20:00:00.000Z","comment":"Closed SPY calls to lock in profits and avoid time decay over the weekend.","stopLoss":0,"Expiry Date":""}
 {"ticker":"QQQ $635 CALL","shares":14,"price":20.12,"action":"BUY","assetType":"options","date":"2026-11-20T11:29:47","comment":"","stopLoss":0,"Expiry Date":"2026-12-31"}
+{"ticker":"QQQ $635 CALL","shares":7,"price":36.5,"action":"SELL","assetType":"options","date":"2026-11-23T15:39:23.147Z","comment":"Trimmed QQQ calls for 80% prof before market opens to locked in profits.","stopLoss":0,"Expiry Date":""}

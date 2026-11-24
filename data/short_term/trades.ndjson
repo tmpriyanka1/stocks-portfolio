@@ -42,3 +42,4 @@
 {"ticker":"QQQ $635 CALL","shares":14,"price":20.12,"action":"BUY","assetType":"options","date":"2026-11-20T11:29:47","comment":"","stopLoss":0,"Expiry Date":"2026-12-31"}
 {"ticker":"QQQ $635 CALL","shares":7,"price":36.5,"action":"SELL","assetType":"options","date":"2026-11-23T15:39:23.147Z","comment":"Trimmed QQQ calls for 80% prof before market opens to locked in profits.","stopLoss":0,"Expiry Date":""}
 {"ticker":"QQQ $635 CALL","shares":7,"price":39.2,"action":"SELL","assetType":"options","date":"2026-11-23T15:40:33.123Z","comment":"Closed remaining QQQ calls to locked in profits  and suggested by professor.","stopLoss":0,"Expiry Date":""}
+{"ticker":"QQQ 640 CALL","shares":2,"price":25,"action":"BUY","assetType":"options","date":"2026-11-24T07:59:10","comment":"","stopLoss":0,"Expiry Date":"2026-12-31"}

@@ -306,3 +306,4 @@
 {"ticker":"SPY $748 CALL","shares":104,"price":0.29,"action":"BUY","assetType":"options","date":"2026-11-23T15:32:40.467Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $748 CALL","shares":104,"price":1.53,"action":"SELL","assetType":"options","date":"2026-11-23T15:34:08.113Z","comment":"Trimmed  spy calls to reduce risk ahead of expiry.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $748 CALL","shares":21,"price":1.63,"action":"SELL","assetType":"options","date":"2026-11-23T15:38:22.233Z","comment":"Closed remaing SPy calls ahead of expiry.","stopLoss":0,"Expiry Date":""}
+{"ticker":"SOXL","shares":210,"price":35.15,"action":"BUY","assetType":"stocks","date":"2026-11-24T06:35:11","comment":"","stopLoss":0}

@@ -305,3 +305,4 @@
 {"ticker":"SPY $748 CALL","shares":104,"price":1.53,"action":"SELL","assetType":"options","date":"2026-11-23T15:34:08.113Z","comment":"Trimmed  spy calls to reduce risk ahead of expiry.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SPY $748 CALL","shares":21,"price":1.63,"action":"SELL","assetType":"options","date":"2026-11-23T15:38:22.233Z","comment":"Closed remaing SPy calls ahead of expiry.","stopLoss":0,"Expiry Date":""}
 {"ticker":"SOXL","shares":210,"price":33.03,"action":"BUY","assetType":"stocks","date":"2026-11-24T18:42:48.070Z","comment":"Closed SOXL when it hits SL and market is in very bearish.","stopLoss":0}
+{"ticker":"SOXL","shares":210,"price":32.35,"action":"SELL","assetType":"stocks","date":"2026-11-24T20:35:56.012Z","comment":"Closed SOXL to reduce risk and  we are holding spy and QQQ calls.","stopLoss":0}

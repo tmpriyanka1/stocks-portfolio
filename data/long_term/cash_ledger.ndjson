@@ -5,3 +5,4 @@
 {"ticker":"CASH","shares":0,"price":3000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-09-01T06:42:05","comment":"Salary","author":"admin"}
 {"ticker":"CASH","shares":0,"price":3000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-09-30T14:17:26","comment":"September Salary","author":"admin"}
 {"ticker":"CASH","shares":0,"price":3000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-11-04T07:02:27","comment":"October Salary","author":"admin"}
+{"ticker":"CASH","shares":0,"price":3000,"action":"WITHDRAWAL","assetType":"CASH","date":"2026-11-25T13:19:22","comment":"Instead of transferring this month's salary to Priya's account, the funds were transferred directly into the kid's account to rise the cash.","author":"admin"}

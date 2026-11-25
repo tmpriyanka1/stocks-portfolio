@@ -44,3 +44,4 @@
 {"ticker":"QQQ $635 CALL","shares":7,"price":39.2,"action":"SELL","assetType":"options","date":"2026-11-23T15:40:33.123Z","comment":"Closed remaining QQQ calls to locked in profits  and suggested by professor.","stopLoss":0,"Expiry Date":""}
 {"ticker":"QQQ 640 CALL","shares":2,"price":25,"action":"BUY","assetType":"options","date":"2026-11-24T07:59:10","comment":"","stopLoss":0,"Expiry Date":"2026-12-31"}
 {"ticker":"NVDA $175 CALL","shares":5,"price":22.35,"action":"BUY","assetType":"options","date":"2026-11-25T15:31:13.344Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
+{"ticker":"QQQ 640 CALL","shares":8,"price":14.52,"action":"BUY","assetType":"options","date":"2026-11-25T15:32:15.154Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}

@@ -47,3 +47,4 @@
 {"ticker":"QQQ 640 CALL","shares":8,"price":14.52,"action":"BUY","assetType":"options","date":"2026-11-25T15:32:15.154Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"QQQ 640 CALL","shares":4,"price":14.26,"action":"BUY","assetType":"options","date":"2026-11-25T15:32:39.172Z","comment":"Quick buy from portfolio drawer","stopLoss":0,"Expiry Date":""}
 {"ticker":"QQQ 640 CALL","shares":10,"price":22.8,"action":"SELL","assetType":"options","date":"2026-11-25T21:09:51.648Z","comment":"Trimmed QQQ calls to locked in some profits.","stopLoss":0,"Expiry Date":""}
+{"ticker":"QQQ 640 CALL","shares":4,"price":23.32,"action":"SELL","assetType":"options","date":"2026-11-25T21:11:07.801Z","comment":"Closed all QQQ calls at closing to locked in profits and reduce risk of premium decay during Thanksgiving long weekend.","stopLoss":0,"Expiry Date":""}
